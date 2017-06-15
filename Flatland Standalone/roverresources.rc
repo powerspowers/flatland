@@ -1,0 +1,538 @@
+//Microsoft Developer Studio generated resource script.
+//
+#include "resource.h"
+
+#define APSTUDIO_READONLY_SYMBOLS
+/////////////////////////////////////////////////////////////////////////////
+//
+// Generated from the TEXTINCLUDE 2 resource.
+//
+//POWERS #include "afxres.h"
+#include "winres.h"
+
+/////////////////////////////////////////////////////////////////////////////
+#undef APSTUDIO_READONLY_SYMBOLS
+
+/////////////////////////////////////////////////////////////////////////////
+// English (U.S.) resources
+
+#if !defined(AFX_RESOURCE_DLL) || defined(AFX_TARG_ENU)
+#ifdef _WIN32
+LANGUAGE LANG_ENGLISH, SUBLANG_ENGLISH_US
+#pragma code_page(1252)
+#endif //_WIN32
+
+#ifndef _MAC
+/////////////////////////////////////////////////////////////////////////////
+//
+// Version
+//
+
+VS_VERSION_INFO VERSIONINFO
+ FILEVERSION 3,5,0,1
+ PRODUCTVERSION 3,5,0,1
+ FILEFLAGSMASK 0x3fL
+#ifdef _DEBUG
+ FILEFLAGS 0x1L
+#else
+ FILEFLAGS 0x0L
+#endif
+ FILEOS 0x40004L
+ FILETYPE 0x2L
+ FILESUBTYPE 0x0L
+BEGIN
+    BLOCK "StringFileInfo"
+    BEGIN
+        BLOCK "040904e4"
+        BEGIN
+            VALUE "Comments", "\0"
+            VALUE "CompanyName", "Flatland Online Inc.\0"
+            VALUE "FileDescription", "Flatland Rover\0"
+            VALUE "FileExtents", "3dml\0"
+            VALUE "FileOpenName", "Flatland 3DML file (*.3dml)\0"
+            VALUE "FileVersion", "3.5.1\0"
+            VALUE "InternalName", "NPRover\0"
+            VALUE "LegalCopyright", "Copyright © 1998-2003 Flatland Online Inc.\0"
+            VALUE "LegalTrademarks", "\0"
+            VALUE "MIMEType", "model/vnd.flatland.3dml\0"
+            VALUE "OriginalFilename", "NPRover.dll\0"
+            VALUE "PrivateBuild", "\0"
+            VALUE "ProductName", "Flatland Rover\0"
+            VALUE "ProductVersion", "3.5.1\0"
+            VALUE "SpecialBuild", "\0"
+        END
+    END
+    BLOCK "VarFileInfo"
+    BEGIN
+        VALUE "Translation", 0x409, 1252
+    END
+END
+
+#endif    // !_MAC
+
+
+#ifdef APSTUDIO_INVOKED
+/////////////////////////////////////////////////////////////////////////////
+//
+// TEXTINCLUDE
+//
+
+1 TEXTINCLUDE DISCARDABLE 
+BEGIN
+    "resource.h\0"
+END
+
+2 TEXTINCLUDE DISCARDABLE 
+BEGIN
+    "#include ""afxres.h""\r\n"
+    "\0"
+END
+
+3 TEXTINCLUDE DISCARDABLE 
+BEGIN
+    "\r\n"
+    "\0"
+END
+
+#endif    // APSTUDIO_INVOKED
+
+
+/////////////////////////////////////////////////////////////////////////////
+//
+// Cursor
+//
+
+IDC_ARROW_N             CURSOR  DISCARDABLE     "bitmaps\\arrow_n.cur"
+IDC_ARROW_S             CURSOR  DISCARDABLE     "bitmaps\\arrow_s.cur"
+IDC_ARROW_E             CURSOR  DISCARDABLE     "bitmaps\\arrow_e.cur"
+IDC_ARROW_W             CURSOR  DISCARDABLE     "bitmaps\\arrow_w.cur"
+IDC_ARROW_NE            CURSOR  DISCARDABLE     "bitmaps\\arrow_ne.cur"
+IDC_ARROW_SE            CURSOR  DISCARDABLE     "bitmaps\\arrow_se.cur"
+IDC_ARROW_SW            CURSOR  DISCARDABLE     "bitmaps\\arrow_sw.cur"
+IDC_ARROW_NW            CURSOR  DISCARDABLE     "bitmaps\\arrow_nw.cur"
+IDC_HAND                CURSOR  DISCARDABLE     "bitmaps\\hand.cur"
+
+/////////////////////////////////////////////////////////////////////////////
+//
+// Dialog
+//
+
+IDD_LIGHT DIALOG DISCARDABLE  0, 0, 53, 94
+STYLE DS_MODALFRAME | DS_CENTERMOUSE | WS_POPUP
+FONT 8, "MS Sans Serif"
+BEGIN
+    CONTROL         "Slider1",IDC_SLIDER1,"msctls_trackbar32",TBS_AUTOTICKS | 
+                    TBS_VERT | WS_TABSTOP,2,2,21,89
+    LTEXT           "Brightest",IDC_STATIC,24,6,29,8
+    LTEXT           "Darkest",IDC_STATIC,24,79,29,8
+    LTEXT           "Normal",IDC_STATIC,24,42,29,8
+END
+
+IDD_PROGRESS DIALOG DISCARDABLE  0, 0, 186, 101
+STYLE DS_MODALFRAME | DS_CENTER | WS_MINIMIZEBOX | WS_POPUP | WS_CAPTION | 
+    WS_SYSMENU
+CAPTION "Downloading in progress"
+FONT 8, "MS Sans Serif"
+BEGIN
+    PUSHBUTTON      "Cancel",IDB_CANCEL,72,80,50,14
+    CONTROL         "Progress1",IDC_PROGRESS_BAR,"msctls_progress32",
+                    WS_BORDER,7,58,172,14
+    LTEXT           "Progress text",IDC_PROGRESS_TEXT,7,7,172,11
+    LTEXT           "File status",IDC_FILE_STATUS,7,43,172,8
+    LTEXT           "File size",IDC_FILE_SIZE,7,31,172,8
+END
+
+IDD_PASSWORD DIALOG DISCARDABLE  0, 0, 186, 68
+STYLE DS_MODALFRAME | WS_POPUP | WS_CAPTION | WS_SYSMENU
+CAPTION "Username and password required"
+FONT 8, "MS Sans Serif"
+BEGIN
+    DEFPUSHBUTTON   "OK",IDOK,33,47,50,14
+    PUSHBUTTON      "Cancel",IDCANCEL,97,47,50,14
+    EDITTEXT        IDC_STREAM_USERNAME,45,7,134,13,ES_AUTOHSCROLL
+    LTEXT           "Username:",IDC_STATIC,7,9,35,11
+    EDITTEXT        IDC_STREAM_PASSWORD,46,25,133,13,ES_PASSWORD | 
+                    ES_AUTOHSCROLL
+    LTEXT           "Password:",IDC_STATIC,7,27,35,11
+END
+
+IDD_OPTIONS DIALOG DISCARDABLE  0, 0, 245, 103
+STYLE DS_MODALFRAME | DS_CENTERMOUSE | WS_POPUP | WS_CAPTION
+CAPTION "Options"
+FONT 8, "MS Sans Serif"
+BEGIN
+    DEFPUSHBUTTON   "OK",IDB_OK,75,82,44,14
+    PUSHBUTTON      "Cancel",IDB_CANCEL,127,82,44,14
+    CONTROL         "Download sounds",IDB_DOWNLOAD_SOUNDS,"Button",
+                    BS_AUTOCHECKBOX | WS_TABSTOP,13,20,72,10
+    CONTROL         "Spin2",IDC_SPIN_VIEWING_DISTANCE,"msctls_updown32",
+                    UDS_SETBUDDYINT | UDS_ARROWKEYS,31,52,11,14
+    EDITTEXT        IDC_EDIT_VIEWING_DISTANCE,13,52,17,14,ES_AUTOHSCROLL | 
+                    ES_NUMBER
+    LTEXT           "Viewing distance",IDC_STATIC,46,55,54,8
+    GROUPBOX        "Performance options",IDC_STATIC,6,7,102,68,BS_FLAT
+    CONTROL         "Enable 3D acceleration",IDB_3D_ACCELERATION,"Button",
+                    BS_AUTOCHECKBOX | WS_TABSTOP,13,36,90,10
+    GROUPBOX        "Debug options",IDC_STATIC,116,7,122,68,BS_FLAT
+    CONTROL         "Show errors and warnings",IDB_SHOW_ERRORS_AND_WARNINGS,
+                    "Button",BS_AUTORADIOBUTTON,123,20,102,10
+    CONTROL         "Show errors only",IDB_SHOW_ERRORS_ONLY,"Button",
+                    BS_AUTORADIOBUTTON,123,33,105,9
+    CONTROL         "Let spot decide",IDB_LET_SPOT_DECIDE,"Button",
+                    BS_AUTORADIOBUTTON,123,46,107,9
+    CONTROL         "Be silent",IDB_BE_SILENT,"Button",BS_AUTORADIOBUTTON,
+                    123,59,107,10
+END
+
+IDD_BLOCKSET_MANAGER DIALOGEX 0, 0, 419, 254
+STYLE DS_MODALFRAME | WS_POPUP | WS_CAPTION
+CAPTION "Blockset Manager"
+FONT 8, "MS Sans Serif", 0, 0, 0x1
+BEGIN
+    DEFPUSHBUTTON   "Close",IDB_OK,362,231,50,14
+    CONTROL         "Custom1",IDC_BLOCKSETS,"SysListView32",LVS_REPORT | 
+                    LVS_SORTASCENDING | WS_TABSTOP,7,7,404,215,
+                    WS_EX_CLIENTEDGE | WS_EX_STATICEDGE
+    PUSHBUTTON      "Delete",IDB_DELETE,59,231,50,14,WS_DISABLED
+    PUSHBUTTON      "Force update",IDB_UPDATE,7,231,50,14,WS_DISABLED
+    EDITTEXT        IDC_EDIT_UPDATE_PERIOD,259,231,16,14,ES_AUTOHSCROLL | 
+                    ES_NUMBER
+    CONTROL         "Spin1",IDC_SPIN_UPDATE_PERIOD,"msctls_updown32",
+                    UDS_SETBUDDYINT | UDS_ARROWKEYS,275,231,11,14
+    CONTROL         "Days between updates:",IDC_STATIC,"Static",
+                    SS_LEFTNOWORDWRAP | SS_CENTERIMAGE | WS_GROUP,182,231,77,
+                    14
+END
+
+IDD_REGISTER DIALOG DISCARDABLE  0, 0, 323, 196
+STYLE DS_MODALFRAME | DS_CENTERMOUSE | WS_POPUP | WS_CAPTION | WS_SYSMENU
+CAPTION "Register Flatland Rover"
+FONT 8, "MS Sans Serif"
+BEGIN
+    PUSHBUTTON      "Unlock Flatland Rover later",IDB_UNLOCK_LATER,165,175,
+                    100,14
+    LTEXT           "Registration is a two-step process:",IDC_STATIC,7,7,309,
+                    11
+    LTEXT           "1. Visit our on-line order form, and purchase a license via credit card.  You will receive a license ID and a password, which you should write down and keep in a safe place.",
+                    IDC_STATIC,7,20,309,19
+    LTEXT           "2. Unlock your copy of Flatland Rover using your license ID and password.  You must be connected to the Internet in order to do this, since your license ID and password must be verified by our on-line server.",
+                    IDC_STATIC,7,143,309,27
+    PUSHBUTTON      "Purchase a license via credit card",
+                    IDB_PURCHASE_LICENSE,100,44,118,14
+    DEFPUSHBUTTON   "Unlock Flatland Rover now",IDB_UNLOCK_NOW,61,175,100,14
+    LTEXT           "If you do not have a credit card, you can purchase a license via US check or money order.  Make the $US30 payable to Flatland, and send it to the following address:",
+                    IDC_STATIC,7,65,309,20
+    CTEXT           "4104 24th St #569\r\nSan Francisco, CA 94104\r\nUSA",
+                    IDC_STATIC,7,88,309,26
+    LTEXT           "Be sure to include a valid e-mail address with your check or money order, so that we can send you the license ID and password as soon as we have processed your order.",
+                    IDC_STATIC,7,120,309,20
+END
+
+IDD_UNREGISTERED DIALOG DISCARDABLE  0, 0, 240, 114
+STYLE DS_MODALFRAME | DS_CENTER | WS_POPUP | WS_CAPTION | WS_SYSMENU
+CAPTION "Unregistered copy of Flatland Rover"
+FONT 8, "MS Sans Serif"
+BEGIN
+    LTEXT           "This copy of Flatland Rover is currently unregistered.",
+                    IDC_STATIC,7,7,226,13
+    LTEXT           "During the evalution period you will see this message at most once a day.  After the evaluation period has expired, you will see this message every time you use Flatland Rover.",
+                    IDC_STATIC,7,36,226,29
+    LTEXT           "There are X days left in your evaluation period.",
+                    IDC_DAYS_LEFT,7,22,226,11
+    LTEXT           "You may register your copy of Flatland Rover at any time from the command menu on the task bar.",
+                    IDC_STATIC,7,66,226,17
+    PUSHBUTTON      "Register Now",IDB_REGISTER_NOW,45,93,70,14
+    PUSHBUTTON      "Register Later",IDB_REGISTER_LATER,122,93,70,14
+END
+
+IDD_EXPIRED DIALOG DISCARDABLE  0, 0, 214, 57
+STYLE DS_MODALFRAME | DS_CENTER | WS_POPUP | WS_CAPTION | WS_SYSMENU
+CAPTION "Unregistered copy of Flatland Rover"
+FONT 8, "MS Sans Serif"
+BEGIN
+    LTEXT           "The evaluation period for this unregistered copy of Flatland Rover has expired.  You will need to register in order to avoid seeing this message.",
+                    IDC_STATIC,7,7,200,27
+    PUSHBUTTON      "Register Now",IDB_REGISTER_NOW,32,36,70,14
+    PUSHBUTTON      "Register Later",IDB_REGISTER_LATER,107,36,70,14
+END
+
+IDD_PROCEZTRIG1 DIALOG DISCARDABLE  0, 0, 225, 90
+STYLE DS_MODALFRAME | DS_CENTERMOUSE | WS_POPUP | WS_CAPTION | WS_SYSMENU
+CAPTION "Unlock via Internet"
+FONT 8, "MS Sans Serif"
+BEGIN
+    EDITTEXT        IDC_LICENSEID,60,26,93,15,ES_NUMBER
+    EDITTEXT        IDC_PASSWORD,60,44,93,15,ES_PASSWORD
+    PUSHBUTTON      "&Proxy",IDC_PROXY,171,34,45,14
+    DEFPUSHBUTTON   "OK",IDOK,110,70,50,14
+    PUSHBUTTON      "Cancel",IDCANCEL,166,70,50,14
+    LTEXT           "License ID:",IDC_LICENSEIDLBL,12,28,42,9
+    LTEXT           "Password:",IDC_PASSWORDLBL,12,47,41,9
+    LTEXT           "0",IDC_PTRADDR,12,75,57,9,NOT WS_VISIBLE
+    CONTROL         "Enter your order information:",IDC_STATIC,"Static",
+                    SS_LEFTNOWORDWRAP | WS_GROUP,12,7,204,12
+END
+
+IDD_PROXYDLG DIALOG DISCARDABLE  0, 0, 204, 74
+STYLE DS_MODALFRAME | DS_CENTERMOUSE | WS_POPUP | WS_CAPTION | WS_SYSMENU
+CAPTION "Proxy Server Address"
+FONT 8, "MS Sans Serif"
+BEGIN
+    EDITTEXT        IDC_PROXYADDR,60,15,109,15
+    DEFPUSHBUTTON   "OK",IDOK,88,50,50,14
+    PUSHBUTTON      "Cancel",IDCANCEL,144,50,50,14
+    LTEXT           "Proxy Server:",IDC_PROXYADDRLBL,12,17,42,9
+    LTEXT           "0",IDC_PTRADDR,9,58,57,9,NOT WS_VISIBLE
+    LTEXT           "Example: proxy.domain.com:80",IDC_STATIC,60,32,106,8
+END
+
+IDD_EXCEPTION_REPORT DIALOG DISCARDABLE  0, 0, 299, 137
+STYLE DS_SYSMODAL | DS_MODALFRAME | DS_CENTER | WS_POPUP | WS_CAPTION
+CAPTION "Exception Report"
+FONT 8, "MS Sans Serif"
+BEGIN
+    DEFPUSHBUTTON   "OK",IDOK,122,116,50,14
+    EDITTEXT        IDC_EXCEPTION_DESC,7,32,285,76,ES_MULTILINE | 
+                    ES_AUTOVSCROLL | ES_AUTOHSCROLL | ES_READONLY | 
+                    WS_VSCROLL
+    LTEXT           "An fatal error occurred in Flatland Rover.  Please cut and paste the following description of the error into an e-mail message, and send it to bugs@flatland.com.",
+                    IDC_STATIC,7,7,285,18
+END
+
+IDD_HELP DIALOG DISCARDABLE  0, 0, 294, 111
+STYLE DS_MODALFRAME | DS_CENTERMOUSE | WS_POPUP | WS_CAPTION
+CAPTION "Help"
+FONT 8, "MS Sans Serif"
+BEGIN
+    DEFPUSHBUTTON   "OK",IDB_OK,126,91,44,14
+    GROUPBOX        "Keyboard controls",-1,6,7,95,78,BS_FLAT
+    GROUPBOX        "Mouse controls",-1,110,7,177,37,BS_FLAT
+    GROUPBOX        "Key modifiers",-1,110,47,177,38,BS_FLAT
+    CONTROL         "Move forward\nMove back\nTurn left\nTurn right\nLook up\nLook down\nMove faster\nMove slower",
+                    -1,"Static",SS_LEFTNOWORDWRAP | WS_GROUP,45,17,47,65
+    CONTROL         "Left button\nRight button",IDC_STATIC_BOLD1,"Static",
+                    SS_LEFTNOWORDWRAP | WS_GROUP,115,19,49,19
+    LTEXT           "Move around and select hyperlinks\nLook around without moving",
+                    -1,165,19,115,18
+    CONTROL         "Shift\nCtrl",IDC_STATIC_BOLD2,"Static",
+                    SS_LEFTNOWORDWRAP | WS_GROUP,115,59,19,19
+    CONTROL         "Move left or right, rather than turn left or right.\nRun, rather than walk.",
+                    -1,"Static",SS_LEFTNOWORDWRAP | WS_GROUP,138,59,143,18
+    LTEXT           "­\n¯\n¬\n®\n",IDC_STATIC_SYMBOL,21,18,14,31
+    LTEXT           "A\nZ\n+\n-",IDC_STATIC_BOLD3,21,50,12,34
+END
+
+IDD_ABOUT DIALOGEX 0, 0, 218, 111
+STYLE DS_MODALFRAME | DS_CENTERMOUSE | WS_POPUP | WS_CAPTION
+CAPTION "About Flatland Rover"
+FONT 8, "MS Sans Serif"
+BEGIN
+    DEFPUSHBUTTON   "OK",IDB_OK,86,91,44,14
+    CTEXT           "Flatland Rover, version 3.5.1\nCopyright © 1998-2003 Flatland Online Inc.",
+                    IDC_STATIC_BOLD4,6,7,205,19,0,WS_EX_STATICEDGE
+    CTEXT           "SimKin component © 2000-2001 Simon Whiteside.",-1,6,30,
+                    205,11
+    CTEXT           "Expat component © 1998-2000 Thai Open Source Software Center Ltd, and Clark Cooper.",
+                    -1,6,41,205,18
+    CTEXT           "JPEG component © 1991-1996 Thomas G. Lane.",-1,6,61,205,
+                    10
+    CTEXT           "Zlib component © 1995-1998 Jean-loup Gailly and Mark Adler.",
+                    -1,6,74,205,12
+END
+
+IDD_SNAPSHOT DIALOG DISCARDABLE  0, 0, 203, 92
+STYLE DS_MODALFRAME | DS_CENTER | WS_POPUP | WS_CAPTION
+CAPTION "Take snapshot"
+FONT 8, "MS Sans Serif"
+BEGIN
+    DEFPUSHBUTTON   "OK",IDB_OK,8,71,44,14
+    PUSHBUTTON      "Cancel",IDB_CANCEL,55,71,43,14
+    LTEXT           "Width:",IDC_STATIC,19,23,22,10
+    LTEXT           "Height:",IDC_STATIC,19,43,22,10
+    EDITTEXT        IDC_EDIT_SNAPSHOT_WIDTH,47,20,28,15,ES_RIGHT | 
+                    ES_AUTOHSCROLL | ES_NUMBER
+    EDITTEXT        IDC_EDIT_SNAPSHOT_HEIGHT,47,40,28,15,ES_RIGHT | 
+                    ES_AUTOHSCROLL | ES_NUMBER
+    CONTROL         "Spin4",IDC_SPIN_SNAPSHOT_WIDTH,"msctls_updown32",
+                    UDS_SETBUDDYINT | UDS_ARROWKEYS,75,22,11,14
+    CONTROL         "Spin5",IDC_SPIN_SNAPSHOT_HEIGHT,"msctls_updown32",
+                    UDS_SETBUDDYINT | UDS_ARROWKEYS,75,40,11,14
+    GROUPBOX        "Snapshot size",IDC_STATIC,8,7,90,58
+    GROUPBOX        "Snapshot position",IDC_STATIC,106,7,90,78
+    CONTROL         "Current view",IDB_CURRENT_VIEW,"Button",
+                    BS_AUTORADIOBUTTON,119,19,54,11
+    CONTROL         "Top NW corner",IDB_TOP_NW_CORNER,"Button",
+                    BS_AUTORADIOBUTTON,119,30,63,12
+    CONTROL         "Top NE corner",IDB_TOP_NE_CORNER,"Button",
+                    BS_AUTORADIOBUTTON,119,42,63,12
+    CONTROL         "Top SW corner",IDB_TOP_SW_CORNER,"Button",
+                    BS_AUTORADIOBUTTON,119,54,63,12
+    CONTROL         "Top SE corner",IDB_TOP_SE_CORNER,"Button",
+                    BS_AUTORADIOBUTTON,119,66,60,12
+END
+
+IDD_CHATMESSAGE DIALOGEX 0, 0, 263, 73
+STYLE DS_MODALFRAME | WS_POPUP | WS_CAPTION | WS_SYSMENU
+EXSTYLE WS_EX_TOOLWINDOW
+CAPTION "Chat Message"
+FONT 8, "MS Sans Serif", 0, 0, 0x1
+BEGIN
+    DEFPUSHBUTTON   "Send",IDB_OK,206,52,50,14
+    EDITTEXT        IDC_CHATMESSAGE,7,52,190,14,ES_AUTOHSCROLL
+    EDITTEXT        IDC_CHATTEXT,7,6,249,41,ES_MULTILINE | ES_READONLY | 
+                    WS_VSCROLL
+END
+
+
+/////////////////////////////////////////////////////////////////////////////
+//
+// DESIGNINFO
+//
+
+#ifdef APSTUDIO_INVOKED
+GUIDELINES DESIGNINFO DISCARDABLE 
+BEGIN
+    IDD_LIGHT, DIALOG
+    BEGIN
+        LEFTMARGIN, 2
+        RIGHTMARGIN, 51
+        TOPMARGIN, 2
+        BOTTOMMARGIN, 91
+    END
+
+    IDD_PROGRESS, DIALOG
+    BEGIN
+        LEFTMARGIN, 7
+        RIGHTMARGIN, 179
+        TOPMARGIN, 7
+        BOTTOMMARGIN, 94
+    END
+
+    IDD_PASSWORD, DIALOG
+    BEGIN
+        LEFTMARGIN, 7
+        RIGHTMARGIN, 179
+        TOPMARGIN, 7
+        BOTTOMMARGIN, 61
+    END
+
+    IDD_OPTIONS, DIALOG
+    BEGIN
+        LEFTMARGIN, 6
+        RIGHTMARGIN, 238
+        TOPMARGIN, 7
+        BOTTOMMARGIN, 96
+    END
+
+    IDD_BLOCKSET_MANAGER, DIALOG
+    BEGIN
+        LEFTMARGIN, 7
+        RIGHTMARGIN, 412
+        TOPMARGIN, 7
+        BOTTOMMARGIN, 245
+    END
+
+    IDD_REGISTER, DIALOG
+    BEGIN
+        LEFTMARGIN, 7
+        RIGHTMARGIN, 316
+        TOPMARGIN, 7
+        BOTTOMMARGIN, 189
+    END
+
+    IDD_UNREGISTERED, DIALOG
+    BEGIN
+        LEFTMARGIN, 7
+        RIGHTMARGIN, 233
+        TOPMARGIN, 7
+        BOTTOMMARGIN, 107
+    END
+
+    IDD_EXPIRED, DIALOG
+    BEGIN
+        LEFTMARGIN, 7
+        RIGHTMARGIN, 207
+        TOPMARGIN, 7
+        BOTTOMMARGIN, 50
+    END
+
+    IDD_EXCEPTION_REPORT, DIALOG
+    BEGIN
+        LEFTMARGIN, 7
+        RIGHTMARGIN, 292
+        TOPMARGIN, 7
+        BOTTOMMARGIN, 130
+    END
+
+    IDD_HELP, DIALOG
+    BEGIN
+        LEFTMARGIN, 6
+        RIGHTMARGIN, 287
+        TOPMARGIN, 7
+        BOTTOMMARGIN, 105
+    END
+
+    IDD_ABOUT, DIALOG
+    BEGIN
+        LEFTMARGIN, 6
+        RIGHTMARGIN, 211
+        TOPMARGIN, 7
+        BOTTOMMARGIN, 105
+    END
+
+    IDD_SNAPSHOT, DIALOG
+    BEGIN
+        LEFTMARGIN, 8
+        RIGHTMARGIN, 196
+        TOPMARGIN, 7
+        BOTTOMMARGIN, 85
+    END
+
+    IDD_CHATMESSAGE, DIALOG
+    BEGIN
+        LEFTMARGIN, 7
+        RIGHTMARGIN, 256
+        TOPMARGIN, 6
+        BOTTOMMARGIN, 66
+    END
+END
+#endif    // APSTUDIO_INVOKED
+
+
+/////////////////////////////////////////////////////////////////////////////
+//
+// GIF
+//
+
+IDR_COMMAND0            GIF     DISCARDABLE     "Bitmaps\\command0.gif"
+IDR_BUILDER0            GIF     DISCARDABLE     "Bitmaps\\Builder0.gif"
+IDR_BUILDER1            GIF     DISCARDABLE     "Bitmaps\\Builder1.gif"
+IDR_COMMAND1            GIF     DISCARDABLE     "Bitmaps\\command1.gif"
+IDR_DIRECTORY0          GIF     DISCARDABLE     "Bitmaps\\Directory0.gif"
+IDR_DIRECTORY1          GIF     DISCARDABLE     "Bitmaps\\Directory1.gif"
+IDR_HISTORY0            GIF     DISCARDABLE     "Bitmaps\\History0.gif"
+IDR_HISTORY1            GIF     DISCARDABLE     "Bitmaps\\History1.gif"
+IDR_LIGHT0              GIF     DISCARDABLE     "Bitmaps\\Light0.gif"
+IDR_LIGHT1              GIF     DISCARDABLE     "Bitmaps\\Light1.gif"
+IDR_LOGO                GIF     DISCARDABLE     "Bitmaps\\Logo.gif"
+IDR_OPTIONS0            GIF     DISCARDABLE     "Bitmaps\\Options0.gif"
+IDR_OPTIONS1            GIF     DISCARDABLE     "Bitmaps\\Options1.gif"
+IDR_RIGHT               GIF     DISCARDABLE     "Bitmaps\\Right.gif"
+IDR_SPLASH              GIF     DISCARDABLE     "Bitmaps\\Splash.gif"
+IDR_TITLE_BG            GIF     DISCARDABLE     "Bitmaps\\Title_bg.gif"
+IDR_TITLE_END           GIF     DISCARDABLE     "Bitmaps\\Title_end.gif"
+#endif    // English (U.S.) resources
+/////////////////////////////////////////////////////////////////////////////
+
+
+
+#ifndef APSTUDIO_INVOKED
+/////////////////////////////////////////////////////////////////////////////
+//
+// Generated from the TEXTINCLUDE 3 resource.
+//
+
+
+/////////////////////////////////////////////////////////////////////////////
+#endif    // not APSTUDIO_INVOKED
+
