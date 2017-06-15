@@ -25,9 +25,9 @@
 #include <objbase.h>
 #include <cguid.h>
 #include <ddraw.h>
-#include <d3d8.h>
-#include <d3dx8.h>
-#include <dsound.h>
+#include "DirectX\d3d8.h"
+#include "DirectX\d3dx8.h"
+#include "DirectX\dsound.h"
 #ifdef STREAMING_MEDIA
 #include <mmstream.h>
 #include <amstream.h>

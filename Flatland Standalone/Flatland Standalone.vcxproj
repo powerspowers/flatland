@@ -29,7 +29,7 @@
     <ConfigurationType>Application</ConfigurationType>
     <UseDebugLibraries>true</UseDebugLibraries>
     <PlatformToolset>v140</PlatformToolset>
-    <CharacterSet>Unicode</CharacterSet>
+    <CharacterSet>MultiByte</CharacterSet>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'" Label="Configuration">
     <ConfigurationType>Application</ConfigurationType>
@@ -83,10 +83,10 @@
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <ClCompile>
-      <PrecompiledHeader>Use</PrecompiledHeader>
+      <PrecompiledHeader>NotUsing</PrecompiledHeader>
       <WarningLevel>Level3</WarningLevel>
       <Optimization>Disabled</Optimization>
-      <PreprocessorDefinitions>WIN32;_DEBUG;_WINDOWS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions> _CRT_SECURE_NO_WARNINGS;WIN32;_DEBUG;_WINDOWS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
@@ -144,19 +144,155 @@
     <Text Include="ReadMe.txt" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="Classes.h" />
+    <ClInclude Include="Collision\Col.h" />
+    <ClInclude Include="Collision\Collision.h" />
+    <ClInclude Include="Collision\Mat.h" />
+    <ClInclude Include="Collision\Maths.h" />
+    <ClInclude Include="Collision\Vec.h" />
+    <ClInclude Include="DirectX\d3d8.h" />
+    <ClInclude Include="DirectX\d3d8caps.h" />
+    <ClInclude Include="DirectX\d3d8types.h" />
+    <ClInclude Include="DirectX\d3dx8.h" />
+    <ClInclude Include="DirectX\d3dx8core.h" />
+    <ClInclude Include="DirectX\d3dx8effect.h" />
+    <ClInclude Include="DirectX\d3dx8math.h" />
+    <ClInclude Include="DirectX\d3dx8mesh.h" />
+    <ClInclude Include="DirectX\d3dx8shape.h" />
+    <ClInclude Include="DirectX\d3dx8tex.h" />
+    <ClInclude Include="DirectX\ddraw.h" />
+    <ClInclude Include="DirectX\dsound.h" />
+    <ClInclude Include="DirectX\dxfile.h" />
+    <ClInclude Include="Fileio.h" />
     <ClInclude Include="Flatland Standalone.h" />
+    <ClInclude Include="Image.h" />
+    <ClInclude Include="Jpeg\JCHUFF.H" />
+    <ClInclude Include="Jpeg\jconfig.h" />
+    <ClInclude Include="Jpeg\JDCT.H" />
+    <ClInclude Include="Jpeg\JDHUFF.H" />
+    <ClInclude Include="Jpeg\JERROR.H" />
+    <ClInclude Include="Jpeg\JINCLUDE.H" />
+    <ClInclude Include="Jpeg\JMEMSYS.H" />
+    <ClInclude Include="Jpeg\JMORECFG.H" />
+    <ClInclude Include="Jpeg\JPEGINT.H" />
+    <ClInclude Include="Jpeg\JPEGLIB.H" />
+    <ClInclude Include="Jpeg\JVERSION.H" />
+    <ClInclude Include="Light.h" />
+    <ClInclude Include="Main.h" />
+    <ClInclude Include="Memory.h" />
+    <ClInclude Include="Parser.h" />
+    <ClInclude Include="Platform.h" />
+    <ClInclude Include="Plugin.h" />
+    <ClInclude Include="Plugin\jni.h" />
+    <ClInclude Include="Plugin\jni_md.h" />
+    <ClInclude Include="Plugin\jri.h" />
+    <ClInclude Include="Plugin\jritypes.h" />
+    <ClInclude Include="Plugin\jri_md.h" />
+    <ClInclude Include="Plugin\npapi.h" />
+    <ClInclude Include="Plugin\npupp.h" />
+    <ClInclude Include="Render.h" />
     <ClInclude Include="Resource.h" />
+    <ClInclude Include="Spans.h" />
     <ClInclude Include="stdafx.h" />
+    <ClInclude Include="Tags.h" />
     <ClInclude Include="targetver.h" />
+    <ClInclude Include="Tokens.h" />
+    <ClInclude Include="Unzip\INFBLOCK.H" />
+    <ClInclude Include="Unzip\INFCODES.H" />
+    <ClInclude Include="Unzip\INFFAST.H" />
+    <ClInclude Include="Unzip\INFFIXED.H" />
+    <ClInclude Include="Unzip\INFTREES.H" />
+    <ClInclude Include="Unzip\INFUTIL.H" />
+    <ClInclude Include="Unzip\UNZIP.H" />
+    <ClInclude Include="Unzip\ZCONF.H" />
+    <ClInclude Include="Unzip\ZLIB.H" />
+    <ClInclude Include="Unzip\ZUTIL.H" />
+    <ClInclude Include="Utils.h" />
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="Classes.cpp" />
+    <ClCompile Include="Collision\Col.cpp" />
+    <ClCompile Include="Collision\Collision.cpp" />
+    <ClCompile Include="Collision\Mat.cpp" />
+    <ClCompile Include="Collision\Maths.cpp" />
+    <ClCompile Include="Collision\Vec.cpp" />
+    <ClCompile Include="Fileio.cpp" />
     <ClCompile Include="Flatland Standalone.cpp" />
+    <ClCompile Include="Image.cpp" />
+    <ClCompile Include="Jpeg\JCAPIMIN.C" />
+    <ClCompile Include="Jpeg\JCAPISTD.C" />
+    <ClCompile Include="Jpeg\JCCOEFCT.C" />
+    <ClCompile Include="Jpeg\JCCOLOR.C" />
+    <ClCompile Include="Jpeg\JCDCTMGR.C" />
+    <ClCompile Include="Jpeg\JCHUFF.C" />
+    <ClCompile Include="Jpeg\JCINIT.C" />
+    <ClCompile Include="Jpeg\JCMAINCT.C" />
+    <ClCompile Include="Jpeg\JCMARKER.C" />
+    <ClCompile Include="Jpeg\JCMASTER.C" />
+    <ClCompile Include="Jpeg\JCOMAPI.C" />
+    <ClCompile Include="Jpeg\JCPARAM.C" />
+    <ClCompile Include="Jpeg\JCPHUFF.C" />
+    <ClCompile Include="Jpeg\JCPREPCT.C" />
+    <ClCompile Include="Jpeg\JCSAMPLE.C" />
+    <ClCompile Include="Jpeg\JCTRANS.C" />
+    <ClCompile Include="Jpeg\JDAPIMIN.C" />
+    <ClCompile Include="Jpeg\JDAPISTD.C" />
+    <ClCompile Include="Jpeg\JDATADST.C" />
+    <ClCompile Include="Jpeg\JDATASRC.C" />
+    <ClCompile Include="Jpeg\JDCOEFCT.C" />
+    <ClCompile Include="Jpeg\JDCOLOR.C" />
+    <ClCompile Include="Jpeg\JDDCTMGR.C" />
+    <ClCompile Include="Jpeg\JDHUFF.C" />
+    <ClCompile Include="Jpeg\JDINPUT.C" />
+    <ClCompile Include="Jpeg\JDMAINCT.C" />
+    <ClCompile Include="Jpeg\JDMARKER.C" />
+    <ClCompile Include="Jpeg\JDMASTER.C" />
+    <ClCompile Include="Jpeg\JDMERGE.C" />
+    <ClCompile Include="Jpeg\JDPHUFF.C" />
+    <ClCompile Include="Jpeg\JDPOSTCT.C" />
+    <ClCompile Include="Jpeg\JDSAMPLE.C" />
+    <ClCompile Include="Jpeg\JDTRANS.C" />
+    <ClCompile Include="Jpeg\JERROR.C" />
+    <ClCompile Include="Jpeg\JFDCTFLT.C" />
+    <ClCompile Include="Jpeg\JFDCTFST.C" />
+    <ClCompile Include="Jpeg\JFDCTINT.C" />
+    <ClCompile Include="Jpeg\JIDCTFLT.C" />
+    <ClCompile Include="Jpeg\JIDCTFST.C" />
+    <ClCompile Include="Jpeg\JIDCTINT.C" />
+    <ClCompile Include="Jpeg\JIDCTRED.C" />
+    <ClCompile Include="Jpeg\JMEMMGR.C" />
+    <ClCompile Include="Jpeg\JMEMNOBS.C" />
+    <ClCompile Include="Jpeg\JQUANT1.C" />
+    <ClCompile Include="Jpeg\JQUANT2.C" />
+    <ClCompile Include="Jpeg\JUTILS.C" />
+    <ClCompile Include="Light.cpp" />
+    <ClCompile Include="Main.cpp" />
+    <ClCompile Include="Memory.cpp" />
+    <ClCompile Include="Parser.cpp" />
+    <ClCompile Include="Plugin.cpp" />
+    <ClCompile Include="Plugin\npwin.cpp" />
+    <ClCompile Include="Render.cpp" />
+    <ClCompile Include="Spans.cpp" />
     <ClCompile Include="stdafx.cpp">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Create</PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Create</PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Create</PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Create</PrecompiledHeader>
     </ClCompile>
+    <ClCompile Include="Unzip\ADLER32.C" />
+    <ClCompile Include="Unzip\CRC32.C" />
+    <ClCompile Include="Unzip\INFBLOCK.C" />
+    <ClCompile Include="Unzip\INFCODES.C" />
+    <ClCompile Include="Unzip\INFFAST.C" />
+    <ClCompile Include="Unzip\INFLATE.C" />
+    <ClCompile Include="Unzip\INFTREES.C" />
+    <ClCompile Include="Unzip\INFUTIL.C" />
+    <ClCompile Include="Unzip\MINIUNZ.C" />
+    <ClCompile Include="Unzip\UNCOMPR.C" />
+    <ClCompile Include="Unzip\UNZIP.C" />
+    <ClCompile Include="Unzip\ZUTIL.C" />
+    <ClCompile Include="Utils.cpp" />
+    <ClCompile Include="Win32.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="Flatland Standalone.rc" />
@@ -164,6 +300,9 @@
   <ItemGroup>
     <Image Include="Flatland Standalone.ico" />
     <Image Include="small.ico" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="DirectX\d3dx8math.inl" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

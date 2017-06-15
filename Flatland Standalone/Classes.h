@@ -12,7 +12,6 @@
 #endif
 
 #include "collision\collision.h"
-#include "ode\ode.h"
 
 // Type definitions for various integer types.
 
@@ -1436,9 +1435,6 @@ struct block {
 	block_def *block_def_ptr;		// Pointer to block definition.
 	square *square_ptr;				// Pointer to square (if not movable).
 	vertex translation;				// Translation of block in world space.
-	dBodyID bodyid;					// the body id in the ODE physics engine
-	dGeomID geomid;					// the geom id in the ODE physics engine
-	dReal q[4];						// quaternions for the box - to see if its stopped
 	int current_frame;				// the current frame being displayed
 	int current_loop;				// The current loop that is playing
 	int next_loop;					// The next loop that will be played
@@ -1520,9 +1516,6 @@ struct world {
 	int levels;						// Number of levels in square map.
 	square *square_map;				// Map of squares.
 	float audio_scale;				// Audio scale (in metres per unit).
-	dWorldID world_id;				// World object in ODE
-	dSpaceID space_id;				// Collision space object in ODE
-	dJointGroupID contactgroup;     // Contact joints produced every cycle by the ODE collider
 	vertex gravity;					// The gravity value
 
 	world();

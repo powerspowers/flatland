@@ -11,8 +11,7 @@
 #include <math.h>
 #include <direct.h>
 #include "Classes.h"
-//#include "Multi.h"
-#include <npapi.h>
+#include "Plugin\npapi.h"
 #include "Fileio.h"
 #include "Image.h"
 #include "Main.h"
@@ -1802,7 +1801,7 @@ NPP_New(NPMIMEType pluginType, NPP instance_ptr, uint16 mode, int16 argc,
 	// Determine which browser we are running under.
 
 	user_agent = NPN_UserAgent(instance_ptr);
-	strlwr(user_agent);
+	_strlwr(user_agent);
 	if (strstr(user_agent, "opera")) {
 		web_browser_ID = OPERA;
 		web_browser_version = "Opera";
@@ -1847,7 +1846,7 @@ NPP_New(NPMIMEType pluginType, NPP instance_ptr, uint16 mode, int16 argc,
 	// in the instance data structure as the inactive window text.
 
 	for (index = 0; index < argc; index++)
-		if (!stricmp(argn[index], "text"))
+		if (!_stricmp(argn[index], "text"))
 			break;
 	if (index < argc)
 		inst_data_ptr->window_text = argv[index];
@@ -2161,7 +2160,7 @@ NPP_NewStream(NPP instance_ptr, NPMIMEType type, NPStream *stream_ptr,
 	// If the stream URL matches the javascript URL, we're going to stream it
 	// into oblivion.
 
-	if (!stricmp(stream_ptr->url, javascript_URL)) {
+	if (!_stricmp(stream_ptr->url, javascript_URL)) {
 		*stype_ptr = NP_NORMAL;
 		javascript_URL = "";
 	}

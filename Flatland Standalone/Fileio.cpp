@@ -688,7 +688,7 @@ parse_part_tag(blockset *blockset_ptr, block_def *block_def_ptr)
 
 	part_ptr = part_list;
 	while (part_ptr != NULL) {
-		if (!stricmp(part_name, part_ptr->name))
+		if (!_stricmp(part_name, part_ptr->name))
 			error("Duplicate part name \"%s\"", part_name);
 		part_ptr = part_ptr->next_part_ptr;
 	}
@@ -2172,7 +2172,7 @@ parse_blockset_tag(void)
 	// Verify the blockset URL points to a ".bset" file.
 
 	ext_ptr = strrchr(blockset_href, '.');
-	if (ext_ptr == NULL || stricmp(ext_ptr, ".bset")) {
+	if (ext_ptr == NULL || _stricmp(ext_ptr, ".bset")) {
 		warning("URL %s is not a blockset", blockset_href);
 		return;
 	}
@@ -3209,7 +3209,7 @@ parse_create_part_tag(block_def *block_def_ptr)
 
 			for (part_no = 0; part_no < block_def_ptr->parts; part_no++) {
 				part_ptr = &block_def_ptr->part_list[part_no];
-				if (!stricmp(curr_part_name, part_ptr->name))
+				if (!_stricmp(curr_part_name, part_ptr->name))
 					break;
 			}
 
@@ -3326,13 +3326,13 @@ parse_action_tag(block_def *block_def_ptr, bool need_location_param)
 
 		curr_part_name = strtok(action_part_name,",");
 
-		if (!stricmp(curr_part_name,"*") || curr_part_name == NULL) 
+		if (!_stricmp(curr_part_name,"*") || curr_part_name == NULL) 
 			trigger_ptr->partindex = ALL_PARTS;
 		else {
 		  
 			// Search for this name in the block definition's part list.
             for (part_no = 0; part_no < block_def_ptr->parts; part_no++) {
-				if (!stricmp(curr_part_name, block_def_ptr->part_list[part_no].name)) 
+				if (!_stricmp(curr_part_name, block_def_ptr->part_list[part_no].name)) 
 					break;
 			}
 
@@ -3911,7 +3911,7 @@ parse_script_tag(block_def *block_def_ptr, bool need_location_param)
 	if (parsed_attribute[ACTION_PART_NAME] && !need_location_param) {
 		curr_part_name = strtok(action_part_name,",");
 
-		if (!stricmp(curr_part_name,"*") || curr_part_name == NULL) {
+		if (!_stricmp(curr_part_name,"*") || curr_part_name == NULL) {
 			trigger_ptr->partindex = ALL_PARTS;
 		}
 		else {
@@ -3919,7 +3919,7 @@ parse_script_tag(block_def *block_def_ptr, bool need_location_param)
 			// Search for this name in the block definition's part list.
             for (part_no = 0; part_no < block_def_ptr->parts; part_no++) {
 				part_ptr = &block_def_ptr->part_list[part_no];
-				if (!stricmp(curr_part_name, part_ptr->name))
+				if (!_stricmp(curr_part_name, part_ptr->name))
 					break;
 			}
 
@@ -4952,9 +4952,9 @@ read_config_line(char *line, char *name, char *value)
 void
 read_config_bool(const char *value_string, int *value)
 {
-	if (!stricmp(value_string, "yes"))
+	if (!_stricmp(value_string, "yes"))
 		*value = 1;
-	else if (!stricmp(value_string, "no"))
+	else if (!_stricmp(value_string, "no"))
 		*value = 0;
 }
 
@@ -4975,7 +4975,7 @@ read_config_enum(const char *value_string, int *value,
 				 value_def *value_def_list, int value_defs)
 {
 	for (int index = 0; index < value_defs; index++)
-		if (!stricmp(value_def_list[index].str, value_string)) {
+		if (!_stricmp(value_def_list[index].str, value_string)) {
 			*value = value_def_list[index].value;
 			return;
 		}
@@ -5020,33 +5020,33 @@ load_config_file(void)
 
 	if ((fp = fopen(config_file_path, "r")) != NULL) {
 		if (read_string(fp, line, 80) && 
-			!strnicmp(line, "Flatland Rover configuration:", 29))
+			!_strnicmp(line, "Flatland Rover configuration:", 29))
 			while (read_string(fp, line, 80)) {
 				read_config_line(line, name, value);
-				if (!stricmp(name, "3D acceleration")) {
+				if (!_stricmp(name, "3D acceleration")) {
 					read_config_bool(value, &acceleration_mode_value);
 					acceleration_mode = acceleration_mode_value ? TRY_HARDWARE :
 						TRY_SOFTWARE;
-				} else if (!stricmp(name, "download sounds"))
+				} else if (!_stricmp(name, "download sounds"))
 					read_config_bool(value, &download_sounds_value);
-				else if (!stricmp(name, "viewing distance"))
+				else if (!_stricmp(name, "viewing distance"))
 					read_config_int(value, &visible_block_radius_value);
-				else if (!stricmp(name, "move rate")) {
+				else if (!_stricmp(name, "move rate")) {
 					if (read_config_float(value, &curr_move_rate_value))
 						curr_move_rate_value *= UNITS_PER_BLOCK;
-				} else if (!stricmp(name, "turn rate"))
+				} else if (!_stricmp(name, "turn rate"))
 					read_config_float(value, &curr_rotate_rate_value);
-				else if (!stricmp(name, "minimum blockset update period")) {
+				else if (!_stricmp(name, "minimum blockset update period")) {
 					if (read_config_int(value, &min_blockset_update_period))
 						min_blockset_update_period *= SECONDS_PER_DAY;
-				} else if (!stricmp(name, "last Rover update"))
+				} else if (!_stricmp(name, "last Rover update"))
 					read_config_int(value, &last_rover_update);
-				else if (!stricmp(name, "last spot directory update"))
+				else if (!_stricmp(name, "last spot directory update"))
 					read_config_int(value, &last_spot_dir_update);
-				else if (!stricmp(name, "debug option"))
+				else if (!_stricmp(name, "debug option"))
 					read_config_enum(value, &user_debug_level_value,
 						debug_option_value_list, DEBUG_OPTION_VALUES);
-				else if (!stricmp(name, "brightness"))
+				else if (!_stricmp(name, "brightness"))
 					read_config_float(value, &brightness_value);
 			}
 		else

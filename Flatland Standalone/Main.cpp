@@ -14,7 +14,6 @@
 #include "Fileio.h"
 #include "Image.h"
 #include "Light.h"
-//#include "Multi.h"
 #include "Main.h"
 #include "Memory.h"
 #include "Parser.h"
@@ -24,7 +23,6 @@
 #include "Plugin.h"
 #include "Utils.h"
 //POWERS #include "SimKin.h"
-#include "ode/ode.h"
 
 // Version string.
 
@@ -985,7 +983,7 @@ add_recent_spot(const char *label, const char *URL)
 		// entry.
 
 		for (index = 0; index < recent_spots; index++)
-			if (!stricmp(recent_spot_list[index].URL, URL))
+			if (!_stricmp(recent_spot_list[index].URL, URL))
 				break;
 
 		// If a duplicate was found, but it's already the most recent, then 
@@ -1034,7 +1032,6 @@ start_up_spot(void)
 	string spot_file_name;
 	trigger *trigger_ptr;
 	int curr_time;
-	dGeomID groundid;
 
 	// Hide any label that might be shown.
 
@@ -1052,7 +1049,6 @@ start_up_spot(void)
 	curr_area_square_ptr = NULL;
 	curr_popup_block_ptr = NULL;
 	curr_popup_square_ptr = NULL;
-
 
 	// Clear player-related data.
 
@@ -1076,6 +1072,7 @@ start_up_spot(void)
 	active_clock_action_count = 0;
 
 	// Initialize the trigger hash table
+
 	trigger_hash.clear();
 
 	// Initialise various global lists.
@@ -1090,6 +1087,7 @@ start_up_spot(void)
 	fixed_block_list = NULL;
 
 	// Initialize the trigger count (used for networking)
+
 	curr_triggerid = 0;
 	curr_playerid = -2;
 
@@ -1101,7 +1099,6 @@ start_up_spot(void)
 	orb_light_ptr = NULL;
 	ground_block_def_ptr = NULL;
 	player_block_ptr = NULL;
-	//client_block_ptr = NULL;
 
 	// Create custom blockset and the world object.
 
@@ -1111,24 +1108,6 @@ start_up_spot(void)
 		display_low_memory_error();
 		return(false);
 	}
-
-	
-	// Make the physics model and collision
-	world_ptr->world_id = dWorldCreate();
-	world_ptr->space_id = dHashSpaceCreate (0);
-	//world_ptr->space_id = dSimpleSpaceCreate (0);
-	world_ptr->contactgroup = dJointGroupCreate (0);
-	//dWorldSetGravity (world_ptr->world_id, 0, 0, -9.81);
-	
-	dCreatePlane (world_ptr->space_id,0,0,1,140);
-	//groundid = dCreateBox (world_ptr->space_id,2560,2650,10);
-	//dGeomSetBody(groundid,0);
-	//dGeomSetPosition(groundid,0,0,0);
-	//dRFromAxisAngle
-	//dGeomSetRotation
-
-	
-	//dGeomSetPosition (dCreateBox (world_ptr->space_id,5000.0,50.0,5000.0),0.0,50.0,0.0);
 
 	// Clear the block symbol table.
 
@@ -1185,11 +1164,6 @@ start_up_spot(void)
 		}
 		return(false);
 	}
-
-	// set the gravity
-	dWorldSetGravity (world_ptr->world_id, (dReal)world_ptr->gravity.x, (dReal)world_ptr->gravity.z, (dReal)world_ptr->gravity.y);
-	//dWorldSetGravity (world_ptr->world_id, 0, (dReal)0.5, 0);
-
 
 	// If this spot is web-based...
 
@@ -1478,11 +1452,6 @@ shut_down_spot(void)
 	curr_side_delta.set(0.0f);
 	curr_look_delta.set(0.0f);
 
-	// Destroy the physics model and collision
-	dWorldDestroy(world_ptr->world_id);
-	dSpaceDestroy(world_ptr->space_id);
-	dJointGroupDestroy (world_ptr->contactgroup);
-
 	// Clean up the renderer data structures.
 
 	clean_up_renderer();
@@ -1523,7 +1492,7 @@ handle_exit(const char *exit_URL, const char *exit_target, bool is_spot_URL)
 		// If this is a spot URL, or the file name ends with ".3dml"...
 
 		ext_ptr = strrchr(file_name, '.');
-		if (is_spot_URL || (ext_ptr != NULL && !stricmp(ext_ptr, ".3dml"))) {
+		if (is_spot_URL || (ext_ptr != NULL && !_stricmp(ext_ptr, ".3dml"))) {
 			string spot_URL;
 
 			// If there is a custom texture or wave currently being downloaded,
@@ -1543,7 +1512,7 @@ handle_exit(const char *exit_URL, const char *exit_target, bool is_spot_URL)
 			// then teleport to the specified entrance.
 
 			spot_URL = create_URL(URL_dir, file_name);
-			if (spot_loaded.get() && !stricmp(spot_URL, curr_spot_URL)) {
+			if (spot_loaded.get() && !_stricmp(spot_URL, curr_spot_URL)) {
 				teleport(entrance_name);
 				return(true);
 			}
@@ -1567,7 +1536,7 @@ handle_exit(const char *exit_URL, const char *exit_target, bool is_spot_URL)
 
 			// Set a flag indicating if the spot is on the web or not.
 
-			spot_on_web = !strnicmp(curr_URL, "http://", 7);
+			spot_on_web = !_strnicmp(curr_URL, "http://", 7);
 			
 			// Delete the image caches, and if a spot was loaded shut it down
 			// before recreating the image caches.
@@ -1601,7 +1570,7 @@ handle_exit(const char *exit_URL, const char *exit_target, bool is_spot_URL)
 		// Else if the URL is javascript, request that it be executed but any
 		// data that might be downloaded be thrown away.
 
-		else if (!strnicmp(URL, "javascript:", 11)) {
+		else if (!_strnicmp(URL, "javascript:", 11)) {
 			javascript_URL = URL;
 			javascript_URL_download_requested.send_event(true);
 		}
@@ -3341,49 +3310,6 @@ compute_frustum_plane_equations(void)
 	compute_frustum_plane_offset(FRUSTUM_BOTTOM_PLANE, 6);
 }
 
-
-//------------------------------------------------------------------------------
-// Process the collisions produced by the Physics engine
-//------------------------------------------------------------------------------
-static void physicsCallback (void *data, dGeomID o1, dGeomID o2)
-{
-  int i,n;
-
-  // exit without doing anything if the two bodies are connected by a joint
-	dBodyID b1 = dGeomGetBody(o1);
-	dBodyID b2 = dGeomGetBody(o2);
-
-	if (b1 && b2 && dAreConnected (b1,b2)) 
-		return;
-
-	dContact contact[6];		
-
-
-	if (int numc = dCollide (o1,o2,6,&contact[0].geom,sizeof(dContact))) {
-		set_title("contacts %d",numc);
-		for (i=0; i<numc; i++) {
-
-			contact[i].surface.mode = dContactBounce;// | dContactSoftCFM | dContactSoftERP; //dContactApprox1_1 | dContactApprox1_2; //dContactSlip1 | dContactSlip2 | dContactApprox1_1 | dContactApprox1_2;
-
-			contact[i].surface.mu = dInfinity;
-			//contact[i].surface.soft_erp = 0.01;
-			//contact[i].surface.soft_cfm = 0.01;
-			//contact[0].surface.slip1 = 0.1;
-
-			//contact[0].surface.slip2 = 0.1;
-			contact[i].surface.bounce = 0.3f;
-			contact[i].surface.bounce_vel = 0.05f;		
-
-			dJointID c = dJointCreateContact (world_ptr->world_id,world_ptr->contactgroup,&contact[i]);
-			dJointAttach (c,b1,b2);
-		}
-	}
-
-}
-
-
-
-
 //------------------------------------------------------------------------------
 // Render next frame.
 //------------------------------------------------------------------------------
@@ -3403,14 +3329,6 @@ render_next_frame(void)
 	hyperlink *exit_ptr;
 	block *block_ptr;
 	float old_visible_radius;
-	int j, gindex;
-	const dReal *pos, *R;
-	const dReal *q1;
-	dGeomID gid;
-	dReal sqw,sqx,sqy,sqz,new_x,new_y,new_z;
-
-
-
 
 	// Update the current time in milliseconds, and compute the elapsed time in
 	// seconds.
@@ -3757,52 +3675,6 @@ render_next_frame(void)
 	player_block_replaced = false;
 	if (!execute_active_trigger_list())
 		return(false);
-
-	// see if the physics engine needs to fire off
-	if (curr_time_ms - physicstimer_time_ms > 30) {
-		
-		dSpaceCollide (world_ptr->space_id,0,&physicsCallback);
-        dWorldStep (world_ptr->world_id,0.25);
-		dJointGroupEmpty (world_ptr->contactgroup);
-
-		// update all the blocks that are tied to physics
-		block_ptr = movable_block_list;
-		while (block_ptr != NULL) {
-			if (block_ptr->block_def_ptr->physics) {
-			
-				pos = dGeomGetPosition (block_ptr->geomid);
-				q1 = dBodyGetQuaternion (block_ptr->bodyid);
-			
-				block_ptr->translation.x = (float)pos[0] / TEXELS_PER_UNIT;
-				block_ptr->translation.y = (float)pos[2] / TEXELS_PER_UNIT;
-				block_ptr->translation.z = (float)pos[1] / TEXELS_PER_UNIT;
-
-				if (q1[0] != block_ptr->q[0] ||
-					q1[1] != block_ptr->q[1] ||
-					q1[2] != block_ptr->q[2] ||
-					q1[3] != block_ptr->q[3])
-				{
-					block_ptr->q[0] = q1[0];
-					block_ptr->q[1] = q1[1];
-					block_ptr->q[2] = q1[2];
-					block_ptr->q[3] = q1[3];
-
-					sqw = q1[0]*q1[0];
-					sqx = q1[1]*q1[1];    
-					sqy = q1[2]*q1[2];    
-					sqz = q1[3]*q1[3]; 
-					
-					block_ptr->rotate_y((float)atan2(2.0 * (q1[1]*q1[3] + q1[2]*q1[0]),(sqx - sqy - sqz + sqw)));
-					block_ptr->rotate_z((float)asin(-2.0 * (q1[1]*q1[2] - q1[3]*q1[0])));
-					block_ptr->rotate_x((float)atan2(-2.0 * (q1[3]*q1[2] + q1[1]*q1[0]),(-sqx - sqy + sqz + sqw)));
-					//block_ptr->rotate_x((float)atan2(2.0 * (q1[1]*q1[2] + q1[3]*q1[0]),(sqx - sqy - sqz + sqw)));
-					//block_ptr->rotate_y((float)asin(-2.0 * (q1[1]*q1[3] - q1[2]*q1[0])));
-					//block_ptr->rotate_z((float)atan2(-2.0 * (q1[2]*q1[3] + q1[1]*q1[0]),(-sqx - sqy + sqz + sqw)));	
-				}
-			}
-			block_ptr = block_ptr->next_block_ptr;
-		}
-	}
 
 	// Check if global timer is ready - if so then activate triggers tied 
 	// to the master clock + update the physics simulation
@@ -4470,7 +4342,7 @@ load_spot(void)
 
 	// Set a flag indicating if the spot is on the web or not.
 
-	spot_on_web = !strnicmp(curr_URL, "http://", 7);
+	spot_on_web = !_strnicmp(curr_URL, "http://", 7);
 			
 #ifdef REGISTRATION
 
@@ -4882,16 +4754,5 @@ player_thread(void *arg_list)
 		shut_down_player_window();
 	}
 
-	// Shut down the network server
-	/*
-	if (isnetworked) {
-		multiplayer.EndConnection();
-		isnetworked = false;
-	}
-	*/
-
 	shut_down_player();
-
-	// end the ODE system
-	dCloseODE();
 }

@@ -13,6 +13,33 @@
       <UniqueIdentifier>{67DA6AB6-F800-4c08-8B7A-83BB121AAD01}</UniqueIdentifier>
       <Extensions>rc;ico;cur;bmp;dlg;rc2;rct;bin;rgs;gif;jpg;jpeg;jpe;resx;tiff;tif;png;wav;mfcribbon-ms</Extensions>
     </Filter>
+    <Filter Include="Header Files\Jpeg">
+      <UniqueIdentifier>{a7a800fc-848f-4ab2-9637-0ff54d0807ba}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Header Files\Collision">
+      <UniqueIdentifier>{2364d831-df96-4980-b0d0-a48f1dca13fc}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\Collision">
+      <UniqueIdentifier>{bc7f9ef7-7fc5-4e74-9af5-cafdfc7b6428}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Header Files\Unzip">
+      <UniqueIdentifier>{3355978a-1680-49fe-bbf8-e4012c1c57b4}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\Unzip">
+      <UniqueIdentifier>{e0f4f808-d9cf-4440-bfb5-921e8d36bcf8}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\Jpeg">
+      <UniqueIdentifier>{3c077a9c-b1ab-4630-be87-cc1b818abad3}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Header Files\DirectX">
+      <UniqueIdentifier>{9879e7ed-57a4-4467-a772-ebcd6597fe8f}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Header Files\Plugin">
+      <UniqueIdentifier>{f060d391-1aa8-47ae-bd6c-071099db9afb}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\Plugin">
+      <UniqueIdentifier>{3ee4c68f-aab6-4dd2-97d7-52a2a2e2bde9}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <Text Include="ReadMe.txt" />
@@ -30,6 +57,186 @@
     <ClInclude Include="Flatland Standalone.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="Classes.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Fileio.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Image.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Light.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Main.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Memory.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Parser.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Platform.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Render.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Spans.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Tags.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Tokens.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Utils.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Collision\Col.h">
+      <Filter>Header Files\Collision</Filter>
+    </ClInclude>
+    <ClInclude Include="Collision\Collision.h">
+      <Filter>Header Files\Collision</Filter>
+    </ClInclude>
+    <ClInclude Include="Collision\Mat.h">
+      <Filter>Header Files\Collision</Filter>
+    </ClInclude>
+    <ClInclude Include="Collision\Maths.h">
+      <Filter>Header Files\Collision</Filter>
+    </ClInclude>
+    <ClInclude Include="Collision\Vec.h">
+      <Filter>Header Files\Collision</Filter>
+    </ClInclude>
+    <ClInclude Include="Unzip\INFBLOCK.H">
+      <Filter>Header Files\Unzip</Filter>
+    </ClInclude>
+    <ClInclude Include="Unzip\INFCODES.H">
+      <Filter>Header Files\Unzip</Filter>
+    </ClInclude>
+    <ClInclude Include="Unzip\INFFAST.H">
+      <Filter>Header Files\Unzip</Filter>
+    </ClInclude>
+    <ClInclude Include="Unzip\INFFIXED.H">
+      <Filter>Header Files\Unzip</Filter>
+    </ClInclude>
+    <ClInclude Include="Unzip\INFTREES.H">
+      <Filter>Header Files\Unzip</Filter>
+    </ClInclude>
+    <ClInclude Include="Unzip\INFUTIL.H">
+      <Filter>Header Files\Unzip</Filter>
+    </ClInclude>
+    <ClInclude Include="Unzip\UNZIP.H">
+      <Filter>Header Files\Unzip</Filter>
+    </ClInclude>
+    <ClInclude Include="Unzip\ZCONF.H">
+      <Filter>Header Files\Unzip</Filter>
+    </ClInclude>
+    <ClInclude Include="Unzip\ZLIB.H">
+      <Filter>Header Files\Unzip</Filter>
+    </ClInclude>
+    <ClInclude Include="Unzip\ZUTIL.H">
+      <Filter>Header Files\Unzip</Filter>
+    </ClInclude>
+    <ClInclude Include="Jpeg\JCHUFF.H">
+      <Filter>Header Files\Jpeg</Filter>
+    </ClInclude>
+    <ClInclude Include="Jpeg\jconfig.h">
+      <Filter>Header Files\Jpeg</Filter>
+    </ClInclude>
+    <ClInclude Include="Jpeg\JDCT.H">
+      <Filter>Header Files\Jpeg</Filter>
+    </ClInclude>
+    <ClInclude Include="Jpeg\JDHUFF.H">
+      <Filter>Header Files\Jpeg</Filter>
+    </ClInclude>
+    <ClInclude Include="Jpeg\JERROR.H">
+      <Filter>Header Files\Jpeg</Filter>
+    </ClInclude>
+    <ClInclude Include="Jpeg\JINCLUDE.H">
+      <Filter>Header Files\Jpeg</Filter>
+    </ClInclude>
+    <ClInclude Include="Jpeg\JMEMSYS.H">
+      <Filter>Header Files\Jpeg</Filter>
+    </ClInclude>
+    <ClInclude Include="Jpeg\JMORECFG.H">
+      <Filter>Header Files\Jpeg</Filter>
+    </ClInclude>
+    <ClInclude Include="Jpeg\JPEGINT.H">
+      <Filter>Header Files\Jpeg</Filter>
+    </ClInclude>
+    <ClInclude Include="Jpeg\JPEGLIB.H">
+      <Filter>Header Files\Jpeg</Filter>
+    </ClInclude>
+    <ClInclude Include="Jpeg\JVERSION.H">
+      <Filter>Header Files\Jpeg</Filter>
+    </ClInclude>
+    <ClInclude Include="DirectX\d3d8.h">
+      <Filter>Header Files\DirectX</Filter>
+    </ClInclude>
+    <ClInclude Include="DirectX\d3d8caps.h">
+      <Filter>Header Files\DirectX</Filter>
+    </ClInclude>
+    <ClInclude Include="DirectX\d3d8types.h">
+      <Filter>Header Files\DirectX</Filter>
+    </ClInclude>
+    <ClInclude Include="DirectX\d3dx8.h">
+      <Filter>Header Files\DirectX</Filter>
+    </ClInclude>
+    <ClInclude Include="DirectX\d3dx8core.h">
+      <Filter>Header Files\DirectX</Filter>
+    </ClInclude>
+    <ClInclude Include="DirectX\d3dx8effect.h">
+      <Filter>Header Files\DirectX</Filter>
+    </ClInclude>
+    <ClInclude Include="DirectX\d3dx8math.h">
+      <Filter>Header Files\DirectX</Filter>
+    </ClInclude>
+    <ClInclude Include="DirectX\d3dx8mesh.h">
+      <Filter>Header Files\DirectX</Filter>
+    </ClInclude>
+    <ClInclude Include="DirectX\d3dx8shape.h">
+      <Filter>Header Files\DirectX</Filter>
+    </ClInclude>
+    <ClInclude Include="DirectX\d3dx8tex.h">
+      <Filter>Header Files\DirectX</Filter>
+    </ClInclude>
+    <ClInclude Include="DirectX\ddraw.h">
+      <Filter>Header Files\DirectX</Filter>
+    </ClInclude>
+    <ClInclude Include="DirectX\dsound.h">
+      <Filter>Header Files\DirectX</Filter>
+    </ClInclude>
+    <ClInclude Include="DirectX\dxfile.h">
+      <Filter>Header Files\DirectX</Filter>
+    </ClInclude>
+    <ClInclude Include="Plugin.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Plugin\jni.h">
+      <Filter>Header Files\Plugin</Filter>
+    </ClInclude>
+    <ClInclude Include="Plugin\jni_md.h">
+      <Filter>Header Files\Plugin</Filter>
+    </ClInclude>
+    <ClInclude Include="Plugin\jri.h">
+      <Filter>Header Files\Plugin</Filter>
+    </ClInclude>
+    <ClInclude Include="Plugin\jri_md.h">
+      <Filter>Header Files\Plugin</Filter>
+    </ClInclude>
+    <ClInclude Include="Plugin\jritypes.h">
+      <Filter>Header Files\Plugin</Filter>
+    </ClInclude>
+    <ClInclude Include="Plugin\npapi.h">
+      <Filter>Header Files\Plugin</Filter>
+    </ClInclude>
+    <ClInclude Include="Plugin\npupp.h">
+      <Filter>Header Files\Plugin</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="stdafx.cpp">
@@ -37,6 +244,234 @@
     </ClCompile>
     <ClCompile Include="Flatland Standalone.cpp">
       <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="Classes.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="Fileio.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="Image.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="Light.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="Main.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="Memory.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="Parser.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="Render.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="Spans.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="Utils.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="Win32.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="Collision\Col.cpp">
+      <Filter>Source Files\Collision</Filter>
+    </ClCompile>
+    <ClCompile Include="Collision\Collision.cpp">
+      <Filter>Source Files\Collision</Filter>
+    </ClCompile>
+    <ClCompile Include="Collision\Mat.cpp">
+      <Filter>Source Files\Collision</Filter>
+    </ClCompile>
+    <ClCompile Include="Collision\Maths.cpp">
+      <Filter>Source Files\Collision</Filter>
+    </ClCompile>
+    <ClCompile Include="Collision\Vec.cpp">
+      <Filter>Source Files\Collision</Filter>
+    </ClCompile>
+    <ClCompile Include="Unzip\ADLER32.C">
+      <Filter>Source Files\Unzip</Filter>
+    </ClCompile>
+    <ClCompile Include="Unzip\CRC32.C">
+      <Filter>Source Files\Unzip</Filter>
+    </ClCompile>
+    <ClCompile Include="Unzip\INFBLOCK.C">
+      <Filter>Source Files\Unzip</Filter>
+    </ClCompile>
+    <ClCompile Include="Unzip\INFCODES.C">
+      <Filter>Source Files\Unzip</Filter>
+    </ClCompile>
+    <ClCompile Include="Unzip\INFFAST.C">
+      <Filter>Source Files\Unzip</Filter>
+    </ClCompile>
+    <ClCompile Include="Unzip\INFLATE.C">
+      <Filter>Source Files\Unzip</Filter>
+    </ClCompile>
+    <ClCompile Include="Unzip\INFTREES.C">
+      <Filter>Source Files\Unzip</Filter>
+    </ClCompile>
+    <ClCompile Include="Unzip\INFUTIL.C">
+      <Filter>Source Files\Unzip</Filter>
+    </ClCompile>
+    <ClCompile Include="Unzip\MINIUNZ.C">
+      <Filter>Source Files\Unzip</Filter>
+    </ClCompile>
+    <ClCompile Include="Unzip\UNCOMPR.C">
+      <Filter>Source Files\Unzip</Filter>
+    </ClCompile>
+    <ClCompile Include="Unzip\UNZIP.C">
+      <Filter>Source Files\Unzip</Filter>
+    </ClCompile>
+    <ClCompile Include="Unzip\ZUTIL.C">
+      <Filter>Source Files\Unzip</Filter>
+    </ClCompile>
+    <ClCompile Include="Jpeg\JCAPIMIN.C">
+      <Filter>Source Files\Jpeg</Filter>
+    </ClCompile>
+    <ClCompile Include="Jpeg\JCAPISTD.C">
+      <Filter>Source Files\Jpeg</Filter>
+    </ClCompile>
+    <ClCompile Include="Jpeg\JCCOEFCT.C">
+      <Filter>Source Files\Jpeg</Filter>
+    </ClCompile>
+    <ClCompile Include="Jpeg\JCCOLOR.C">
+      <Filter>Source Files\Jpeg</Filter>
+    </ClCompile>
+    <ClCompile Include="Jpeg\JCDCTMGR.C">
+      <Filter>Source Files\Jpeg</Filter>
+    </ClCompile>
+    <ClCompile Include="Jpeg\JCHUFF.C">
+      <Filter>Source Files\Jpeg</Filter>
+    </ClCompile>
+    <ClCompile Include="Jpeg\JCINIT.C">
+      <Filter>Source Files\Jpeg</Filter>
+    </ClCompile>
+    <ClCompile Include="Jpeg\JCMAINCT.C">
+      <Filter>Source Files\Jpeg</Filter>
+    </ClCompile>
+    <ClCompile Include="Jpeg\JCMARKER.C">
+      <Filter>Source Files\Jpeg</Filter>
+    </ClCompile>
+    <ClCompile Include="Jpeg\JCMASTER.C">
+      <Filter>Source Files\Jpeg</Filter>
+    </ClCompile>
+    <ClCompile Include="Jpeg\JCOMAPI.C">
+      <Filter>Source Files\Jpeg</Filter>
+    </ClCompile>
+    <ClCompile Include="Jpeg\JCPARAM.C">
+      <Filter>Source Files\Jpeg</Filter>
+    </ClCompile>
+    <ClCompile Include="Jpeg\JCPHUFF.C">
+      <Filter>Source Files\Jpeg</Filter>
+    </ClCompile>
+    <ClCompile Include="Jpeg\JCPREPCT.C">
+      <Filter>Source Files\Jpeg</Filter>
+    </ClCompile>
+    <ClCompile Include="Jpeg\JCSAMPLE.C">
+      <Filter>Source Files\Jpeg</Filter>
+    </ClCompile>
+    <ClCompile Include="Jpeg\JCTRANS.C">
+      <Filter>Source Files\Jpeg</Filter>
+    </ClCompile>
+    <ClCompile Include="Jpeg\JDAPIMIN.C">
+      <Filter>Source Files\Jpeg</Filter>
+    </ClCompile>
+    <ClCompile Include="Jpeg\JDAPISTD.C">
+      <Filter>Source Files\Jpeg</Filter>
+    </ClCompile>
+    <ClCompile Include="Jpeg\JDATADST.C">
+      <Filter>Source Files\Jpeg</Filter>
+    </ClCompile>
+    <ClCompile Include="Jpeg\JDATASRC.C">
+      <Filter>Source Files\Jpeg</Filter>
+    </ClCompile>
+    <ClCompile Include="Jpeg\JDCOEFCT.C">
+      <Filter>Source Files\Jpeg</Filter>
+    </ClCompile>
+    <ClCompile Include="Jpeg\JDCOLOR.C">
+      <Filter>Source Files\Jpeg</Filter>
+    </ClCompile>
+    <ClCompile Include="Jpeg\JDDCTMGR.C">
+      <Filter>Source Files\Jpeg</Filter>
+    </ClCompile>
+    <ClCompile Include="Jpeg\JDHUFF.C">
+      <Filter>Source Files\Jpeg</Filter>
+    </ClCompile>
+    <ClCompile Include="Jpeg\JDINPUT.C">
+      <Filter>Source Files\Jpeg</Filter>
+    </ClCompile>
+    <ClCompile Include="Jpeg\JDMAINCT.C">
+      <Filter>Source Files\Jpeg</Filter>
+    </ClCompile>
+    <ClCompile Include="Jpeg\JDMARKER.C">
+      <Filter>Source Files\Jpeg</Filter>
+    </ClCompile>
+    <ClCompile Include="Jpeg\JDMASTER.C">
+      <Filter>Source Files\Jpeg</Filter>
+    </ClCompile>
+    <ClCompile Include="Jpeg\JDMERGE.C">
+      <Filter>Source Files\Jpeg</Filter>
+    </ClCompile>
+    <ClCompile Include="Jpeg\JDPHUFF.C">
+      <Filter>Source Files\Jpeg</Filter>
+    </ClCompile>
+    <ClCompile Include="Jpeg\JDPOSTCT.C">
+      <Filter>Source Files\Jpeg</Filter>
+    </ClCompile>
+    <ClCompile Include="Jpeg\JDSAMPLE.C">
+      <Filter>Source Files\Jpeg</Filter>
+    </ClCompile>
+    <ClCompile Include="Jpeg\JDTRANS.C">
+      <Filter>Source Files\Jpeg</Filter>
+    </ClCompile>
+    <ClCompile Include="Jpeg\JERROR.C">
+      <Filter>Source Files\Jpeg</Filter>
+    </ClCompile>
+    <ClCompile Include="Jpeg\JFDCTFLT.C">
+      <Filter>Source Files\Jpeg</Filter>
+    </ClCompile>
+    <ClCompile Include="Jpeg\JFDCTFST.C">
+      <Filter>Source Files\Jpeg</Filter>
+    </ClCompile>
+    <ClCompile Include="Jpeg\JFDCTINT.C">
+      <Filter>Source Files\Jpeg</Filter>
+    </ClCompile>
+    <ClCompile Include="Jpeg\JIDCTFLT.C">
+      <Filter>Source Files\Jpeg</Filter>
+    </ClCompile>
+    <ClCompile Include="Jpeg\JIDCTFST.C">
+      <Filter>Source Files\Jpeg</Filter>
+    </ClCompile>
+    <ClCompile Include="Jpeg\JIDCTINT.C">
+      <Filter>Source Files\Jpeg</Filter>
+    </ClCompile>
+    <ClCompile Include="Jpeg\JIDCTRED.C">
+      <Filter>Source Files\Jpeg</Filter>
+    </ClCompile>
+    <ClCompile Include="Jpeg\JMEMMGR.C">
+      <Filter>Source Files\Jpeg</Filter>
+    </ClCompile>
+    <ClCompile Include="Jpeg\JMEMNOBS.C">
+      <Filter>Source Files\Jpeg</Filter>
+    </ClCompile>
+    <ClCompile Include="Jpeg\JQUANT1.C">
+      <Filter>Source Files\Jpeg</Filter>
+    </ClCompile>
+    <ClCompile Include="Jpeg\JQUANT2.C">
+      <Filter>Source Files\Jpeg</Filter>
+    </ClCompile>
+    <ClCompile Include="Jpeg\JUTILS.C">
+      <Filter>Source Files\Jpeg</Filter>
+    </ClCompile>
+    <ClCompile Include="Plugin.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="Plugin\npwin.cpp">
+      <Filter>Source Files\Plugin</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -51,5 +486,10 @@
     <Image Include="Flatland Standalone.ico">
       <Filter>Resource Files</Filter>
     </Image>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="DirectX\d3dx8math.inl">
+      <Filter>Header Files\DirectX</Filter>
+    </None>
   </ItemGroup>
 </Project>

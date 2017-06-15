@@ -12,7 +12,7 @@
 #include <math.h>
 #include <direct.h>
 #include <time.h>
-#include <unzip.h>
+#include "Unzip\unzip.h"
 #include "Classes.h"
 #include "Fileio.h"
 #include "Main.h"
@@ -649,10 +649,10 @@ create_URL(const char *URL_dir, const char *file_name)
 
 	if (file_name[0] == '/' || file_name[0] == '\\' ||
 		(strlen(file_name) > 1 && isalpha(file_name[0]) && file_name[1] == ':')
-		|| !strnicmp(file_name, "http:", 5) || !strnicmp(file_name, "file:", 5)
-		|| !strnicmp(file_name, "javascript:", 11) ||
-		!strnicmp(file_name, "mailto:", 7) || 
-		!strnicmp(file_name, "telnet:", 7) || !strnicmp(file_name, "ftp:", 4))
+		|| !_strnicmp(file_name, "http:", 5) || !_strnicmp(file_name, "file:", 5)
+		|| !_strnicmp(file_name, "javascript:", 11) ||
+		!_strnicmp(file_name, "mailto:", 7) || 
+		!_strnicmp(file_name, "telnet:", 7) || !_strnicmp(file_name, "ftp:", 4))
 		URL = file_name;
 
 	// Otherwise concatenate the URL directory and file name parameters to create
@@ -773,11 +773,11 @@ URL_to_file_path(const char *URL)
 	// If the URL begins with "file:///", "file://localhost/" or "file://",
 	// skip over it.
 
-	if (!strnicmp(URL, "file:///", 8))
+	if (!_strnicmp(URL, "file:///", 8))
 		file_path = URL + 8;
-	else if (!strnicmp(URL, "file://localhost/", 17))
+	else if (!_strnicmp(URL, "file://localhost/", 17))
 		file_path = URL + 17;
-	else if (!strnicmp(URL, "file://", 7))
+	else if (!_strnicmp(URL, "file://", 7))
 		file_path = URL + 7;
 	else
 		file_path = URL;
@@ -996,7 +996,7 @@ download_blockset(const char *URL, const char *name)
 	folder = strtok(file_dir, "/\\");
 	while (folder) {
 		cache_file_path = cache_file_path + folder;
-		mkdir(cache_file_path);
+		_mkdir(cache_file_path);
 		cache_file_path = cache_file_path + "\\";
 		folder = strtok(NULL, "/\\");
 	}
@@ -1049,7 +1049,7 @@ open_blockset(const char *blockset_URL, const char *blockset_name)
 
 	zip_archive_name = blockset_name;
 	zip_archive_name += " blockset";
-	if (!strnicmp(blockset_URL, "file://", 7)) {
+	if (!_strnicmp(blockset_URL, "file://", 7)) {
 		blockset_path = URL_to_file_path(blockset_URL);
 		if (!open_zip_archive(blockset_path, zip_archive_name))
 			return(false);
@@ -1375,7 +1375,7 @@ push_zip_file_with_ext(const char *file_ext, bool text_file)
 		// stack.
 
 		ext_ptr = strrchr(file_name, '.');
-		if (ext_ptr && !stricmp(ext_ptr, file_ext))
+		if (ext_ptr && !_stricmp(ext_ptr, file_ext))
 			return(push_curr_zip_file(file_name, text_file,
 				info.uncompressed_size));
 
@@ -1871,7 +1871,7 @@ get_token(const char *name)
 {
 	int index = 0;
 	while (symbol_table[index].name != NULL) {
-		if (!stricmp(name, symbol_table[index].name))
+		if (!_stricmp(name, symbol_table[index].name))
 			return(symbol_table[index].token);
 		index++;
 	}
@@ -2196,7 +2196,7 @@ token_in_value_is(const char *token_string, bool generate_error)
 	// doesn't match the parameter value string, return false.
 
 	if (*value_string_ptr == '\0' ||
-		strnicmp(value_string_ptr, token_string, strlen(token_string))) {
+		_strnicmp(value_string_ptr, token_string, strlen(token_string))) {
 		if (generate_error) {
 			bprintf(message, ERROR_MSG_SIZE, "<I>\"%s\"</I>", token_string);
 			bad_attribute_value(message, "");
@@ -3861,7 +3861,7 @@ parse_nested_entity_list(const char *end_tag_name)
 					"<I>%s</I>", file_token_string);
 			if ((strict_XML_compliance && strcmp(file_token_string, 
 				end_tag_name)) || (!strict_XML_compliance && 
-				stricmp(file_token_string, end_tag_name)) || 
+				_stricmp(file_token_string, end_tag_name)) || 
 				read_token() != TOKEN_CLOSE_TAG)
 				error(file_token_line_no, "Expected <I>&lt;/%s&gt;</I> rather "
 					"than <I>&lt;/%s&gt;</I>", end_tag_name, file_token_string);

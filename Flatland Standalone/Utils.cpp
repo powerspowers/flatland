@@ -14,13 +14,11 @@
 #include "Light.h"
 #include "Main.h"
 #include "Memory.h"
-//#include "Multi.h"
 #include "Parser.h"
 #include "Platform.h"
 #include "Plugin.h"
 //POWERS #include "SimKin.h"
 #include "Utils.h"
-#include "ode\ode.h"
 
 // Current load index.
 
@@ -34,7 +32,7 @@ static int adj_block_level[6] = { 0, 0, 1, 0, 0, -1 };
 
 
 //POWERS
-extern "C" { FILE _iob[3] = {*stdin, *stdout, *stderr}; }
+//extern "C" { FILE _iob[3] = {*stdin, *stdout, *stderr}; }
 
 // Flag indicating whether current URL has been opened.
 
@@ -126,7 +124,7 @@ get_block_def(const char *block_identifier)
 	else {
 		blockset_ptr = blockset_list_ptr->first_blockset_ptr;
 		while (blockset_ptr != NULL) {
-			if (!stricmp(blockset_name, blockset_ptr->name))
+			if (!_stricmp(blockset_name, blockset_ptr->name))
 				return(blockset_ptr->get_block_def(new_block_name));
 			blockset_ptr = blockset_ptr->next_blockset_ptr;
 		}
@@ -153,7 +151,7 @@ find_texture(blockset *blockset_ptr, const char *texture_URL,
 
 	texture_ptr = blockset_ptr->first_texture_ptr;
 	while (texture_ptr != NULL) {
-		if (!stricmp(texture_URL, texture_ptr->URL)) {
+		if (!_stricmp(texture_URL, texture_ptr->URL)) {
 			if (blockset_ptr != custom_blockset_ptr && !unlimited_size &&
 				(texture_ptr->width > 256 || texture_ptr->height > 256)) {
 				warning("Texture has width or height greater than 256 pixels");
@@ -205,7 +203,7 @@ load_texture(blockset *blockset_ptr, char *texture_URL, bool add_to_blockset,
 		blockset_ptr = blockset_list_ptr->first_blockset_ptr;
 		if (strlen(blockset_name) != 0) {
 			while (blockset_ptr != NULL) {
-				if (!stricmp(blockset_name, blockset_ptr->name))
+				if (!_stricmp(blockset_name, blockset_ptr->name))
 					break;
 				blockset_ptr = blockset_ptr->next_blockset_ptr;
 			}
@@ -494,7 +492,7 @@ find_wave(blockset *blockset_ptr, const char *wave_URL)
 
 	wave_ptr = blockset_ptr->first_wave_ptr;
 	while (wave_ptr != NULL) {
-		if (!stricmp(wave_URL, wave_ptr->URL))
+		if (!_stricmp(wave_URL, wave_ptr->URL))
 			return(wave_ptr);
 		wave_ptr = wave_ptr->next_wave_ptr;
 	}
@@ -535,7 +533,7 @@ load_wave(blockset *blockset_ptr, char *wave_URL)
 		blockset_ptr = blockset_list_ptr->first_blockset_ptr;
 		if (strlen(blockset_name) != 0) {
 			while (blockset_ptr != NULL) {
-				if (!stricmp(blockset_name, blockset_ptr->name))
+				if (!_stricmp(blockset_name, blockset_ptr->name))
 					break;
 				blockset_ptr = blockset_ptr->next_blockset_ptr;
 			}
@@ -647,7 +645,7 @@ find_entrances_in_block_list(const char *name, block *block_list,
 	block_ptr = block_list;
 	while (block_ptr != NULL) {
 		entrance_ptr = block_ptr->entrance_ptr;
-		if (entrance_ptr != NULL && !stricmp(entrance_ptr->name, name)) {
+		if (entrance_ptr != NULL && !_stricmp(entrance_ptr->name, name)) {
 			entrance_ptr->next_chosen_entrance_ptr = chosen_entrance_list;
 			chosen_entrance_list = entrance_ptr;
 			chosen_entrances++;
@@ -681,7 +679,7 @@ find_entrance(const char *name)
 
 	entrance *entrance_ptr = global_entrance_list;
 	while (entrance_ptr != NULL) {
-		if (!stricmp(entrance_ptr->name, name)) {
+		if (!_stricmp(entrance_ptr->name, name)) {
 			entrance_ptr->next_chosen_entrance_ptr = chosen_entrance_list;
 			chosen_entrance_list = entrance_ptr;
 			chosen_entrances++;
@@ -731,7 +729,7 @@ find_imagemap(const char *name)
 {
 	imagemap *imagemap_ptr = imagemap_list;
 	while (imagemap_ptr != NULL) {
-		if (!stricmp(imagemap_ptr->name, name))
+		if (!_stricmp(imagemap_ptr->name, name))
 			break;
 		imagemap_ptr = imagemap_ptr->next_imagemap_ptr;
 	}
@@ -1725,7 +1723,6 @@ add_movable_block(block_def *block_def_ptr, vertex translation)
 {
 	block *block_ptr;
 	trigger * trigger_ptr;
-	dMass m;
 
 	// Create a block from the given block definition, at the given map
 	// position.
@@ -1736,19 +1733,6 @@ add_movable_block(block_def *block_def_ptr, vertex translation)
 
 	block_ptr->next_block_ptr = movable_block_list;
 	movable_block_list = block_ptr;
-
-	// If this block has physics active then make an ode body object
-	if (block_def_ptr->physics) {
-		block_ptr->bodyid = dBodyCreate(world_ptr->world_id);
-		dBodySetPosition   (block_ptr->bodyid, (dReal)block_ptr->translation.x * TEXELS_PER_UNIT, (dReal)block_ptr->translation.z * TEXELS_PER_UNIT, (dReal)block_ptr->translation.y * TEXELS_PER_UNIT);
-		dMassSetBox (&m, (dReal)block_def_ptr->mass,(dReal)255.0, (dReal)255.0, (dReal)255.0);
-		dBodySetMass (block_ptr->bodyid, &m);
-
-		// now make the collision geom and add it to the Space
-		block_ptr->geomid = dCreateBox (world_ptr->space_id, (dReal)255.0, (dReal)255.0, (dReal)255.0);
-		dGeomSetBody (block_ptr->geomid, block_ptr->bodyid);
-		dGeomSetData (block_ptr->geomid, (void *)block_ptr);
-	}
 
 	// If this block has a start action on it fire it up
 	if (block_ptr->trigger_flags & START_UP) {
@@ -1761,9 +1745,6 @@ add_movable_block(block_def *block_def_ptr, vertex translation)
 			trigger_ptr = trigger_ptr->next_trigger_ptr;
 		}
 	}
-	
-	
-	
 	return(block_ptr);
 }
 
@@ -1919,16 +1900,8 @@ remove_movable_block(block *block_ptr)
 		prev_block_ptr->next_block_ptr = curr_block_ptr->next_block_ptr;
 
 	// check to see if there are any clock actions to remove
+
 	remove_clock_action_by_block(block_ptr);
-
-	// See if this block is part of the physics engine
-	if (block_ptr->block_def_ptr->physics) {
-		dGeomDestroy(block_ptr->geomid);
-		block_ptr->geomid = NULL;
-		dBodyDestroy (block_ptr->bodyid);
-		block_ptr->bodyid = NULL;
-	}
-
 
 	// Delete the block.
 
@@ -2573,7 +2546,7 @@ URL_downloaded(void)
 
 	// If the URL downloaded is not the requested URL, then ignore it.
 
-	if (stricmp(curr_URL, requested_URL))
+	if (_stricmp(curr_URL, requested_URL))
 		return(-1);
 
 	// Decode the URL and file path to remove encoded characters.
@@ -2989,7 +2962,7 @@ find_light(light *light_list, const char *light_name)
 {
 	light *light_ptr = light_list;
 	while (light_ptr != NULL) {
-		if (!stricmp(light_ptr->name, light_name))
+		if (!_stricmp(light_ptr->name, light_name))
 			break;
 		light_ptr = light_ptr->next_light_ptr;
 	}
@@ -3005,7 +2978,7 @@ find_sound(sound *sound_list, const char *sound_name)
 {
 	sound *sound_ptr = sound_list;
 	while (sound_ptr != NULL) {
-		if (!stricmp(sound_ptr->name, sound_name))
+		if (!_stricmp(sound_ptr->name, sound_name))
 			break;
 		sound_ptr = sound_ptr->next_sound_ptr;
 	}
@@ -3021,7 +2994,7 @@ find_popup(popup *popup_list, const char *popup_name)
 {
 	popup *popup_ptr = popup_list;
 	while (popup_ptr != NULL) {
-		if (!stricmp(popup_ptr->name, popup_name))
+		if (!_stricmp(popup_ptr->name, popup_name))
 			break;
 		popup_ptr = popup_ptr->next_popup_ptr;
 	}

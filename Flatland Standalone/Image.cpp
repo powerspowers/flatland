@@ -38,9 +38,9 @@
 #include <string.h>
 
 extern "C" {
-#include <jinclude.h>
-#include <jpeglib.h>
-#include <jerror.h>
+#include "Jpeg\jinclude.h"
+#include "Jpeg\jpeglib.h"
+#include "Jpeg\jerror.h"
 }
 
 #include "Classes.h"
@@ -474,7 +474,7 @@ read_GIF_extensions(void)
 
 			ch = read_byte();
 			read_block(buffer, ch);
-			if (!strnicmp((char *)buffer, "NETSCAPE2.0", 11))
+			if (!_strnicmp((char *)buffer, "NETSCAPE2.0", 11))
 				texture_loops = true;
 	  	}
 
@@ -742,8 +742,8 @@ load_GIF(void)
 	// Read and verify the header.
 
 	read_block(header, 6);
-	if (strnicmp((char *)header, id87, 6) &&
-	    strnicmp((char *)header, id89, 6))
+	if (_strnicmp((char *)header, id87, 6) &&
+	    _strnicmp((char *)header, id89, 6))
 		image_error("Not a GIF file");
 	
 	// Read screen dimensions from GIF screen descriptor.

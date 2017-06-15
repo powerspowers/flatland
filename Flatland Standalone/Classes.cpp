@@ -3142,7 +3142,6 @@ block_def::new_block(square *square_ptr)
 	block_ptr->block_origin = block_origin;
 	block_ptr->set_active_lights = true;
 	block_ptr->current_frame = -1;
-	block_ptr->bodyid = NULL;
 
 	// Initialise the polygon list.
 
