@@ -8925,6 +8925,7 @@ draw_pixmap(pixmap *pixmap_ptr, int brightness_index, int x, int y, int width,
 		image_width = pixmap_ptr->width * 2;
 		u = (clipped_x % pixmap_ptr->width) * 2;
 	} else {
+		transparency_mask32 = texture_pixel_format.alpha_comp_mask;
 		palette_ptr = pixmap_ptr->display_palette_list + 
 			brightness_index * pixmap_ptr->colours;
 		transparent_index = pixmap_ptr->transparent_index;

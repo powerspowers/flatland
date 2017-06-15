@@ -7,8 +7,11 @@
 extern bool
 create_player_window(HWND window_handle);
 
-bool
+extern bool
 init_flatland();
+
+extern void
+open_local_file(char *file_path);
 
 #define MAX_LOADSTRING 100
 
@@ -110,6 +113,12 @@ BOOL InitInstance(HINSTANCE hInstance, int nCmdShow)
    {
       return FALSE;
    }
+
+   if (!init_flatland()) {
+	   return FALSE;
+   }
+   create_player_window(hWnd);
+   open_local_file("c:\\Program Files (x86)\\Flatland\\splash.3dml");
 
    ShowWindow(hWnd, nCmdShow);
    UpdateWindow(hWnd);

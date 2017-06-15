@@ -305,6 +305,10 @@ create_player_window(HWND window_handle)
 {
 	RECT window_rect;
 
+	// Tell the player thread we're about to create the player window.
+
+	player_window_init_requested.send_event(true);
+
 	// Determine the size of the window.
 
 	GetClientRect(window_handle, &window_rect);
@@ -345,6 +349,15 @@ create_player_window(HWND window_handle)
 		player_window_created = true;
 		return(true);
 	}
+}
+
+void
+open_local_file(char *file_path)
+{
+	URL_was_opened.send_event(true);
+	downloaded_URL.set(file_path);
+	downloaded_file_path.set(file_path);
+	URL_was_downloaded.send_event(true);
 }
 
 //------------------------------------------------------------------------------
@@ -1284,6 +1297,8 @@ timer_event_callback(void)
 		// browser.
 
 		URL_was_opened.reset_event();
+		open_local_file(requested_URL);
+		/*
 		if (web_browser_ID == INTERNET_EXPLORER) {
 			if (strlen(requested_target) != 0)
 				NPN_GetURL(active_inst_data_ptr->instance_ptr, requested_URL,
@@ -1299,6 +1314,7 @@ timer_event_callback(void)
 				NPN_GetURLNotify(active_inst_data_ptr->instance_ptr,
 					requested_URL, NULL, NULL);
 		}
+		*/
 	}
 
 	// Check to see whether a URL cancel request has been signalled by the
