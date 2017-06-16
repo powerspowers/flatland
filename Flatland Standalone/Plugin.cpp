@@ -4,6 +4,7 @@
 // All Rights Reserved. 
 //******************************************************************************
 
+#include <Windows.h>
 #include <stdio.h>
 #include <stdarg.h>
 #include <string.h>
@@ -11,7 +12,6 @@
 #include <math.h>
 #include <direct.h>
 #include "Classes.h"
-#include "Plugin\npapi.h"
 #include "Fileio.h"
 #include "Image.h"
 #include "Main.h"
@@ -22,24 +22,6 @@
 #include "resource.h"
 //POWERS #include "SimKin.h"
 #include "Spans.h"
-
-
-// Structure used to hold a plugin instance's data.
-
-struct InstData {
-	bool		active_instance;	// TRUE if this is the active instance.
-	NPP			instance_ptr;		// Pointer to instance.
-	NPWindow	*window_ptr;		// Pointer to window.
-	string		spot_URL;			// Original spot URL.
-	string		window_text;		// Inactive window text.
-
-	InstData();
-	~InstData();
-};
-
-// Pointer to active plugin instance's data.
-
-static InstData *active_inst_data_ptr;
 
 // Important directories and file paths.
 
@@ -75,12 +57,6 @@ string requested_target;
 string requested_file_path;
 string requested_blockset_name;			// Set if requesting a blockset.
 string javascript_URL;					// Set if requesting a javascript URL.
-
-// Pointers to the current stream being downloaded.  Note that we don't support
-// multiple streams other than overlapping javascript streams, whose data is
-// ignored in any case.
-
-static NPStream *curr_stream_ptr;
 
 // Downloaded URL and file path.
 
@@ -160,9 +136,6 @@ const char *saved_spot_file_path;
 int snapshot_width, snapshot_height;
 int snapshot_position;
 const char *snapshot_file_path;
-
-// Chat message text
-char chat_message[256];
 
 // Key event queue, and the semaphore that protects it.
 
@@ -256,25 +229,6 @@ static byte alt_key_code;
 // Flag indicating if Rover started up successfully.
 
 static bool rover_started_up;
-
-//==============================================================================
-// InstData class.
-//==============================================================================
-
-// Default constructor initialises all fields.
-
-InstData::InstData()
-{
-	active_instance = false;
-	instance_ptr = NULL;
-	window_ptr = NULL;
-}
-
-// Default destructor does nothing.
-
-InstData::~InstData()
-{
-}
 
 //==============================================================================
 // Player window functions.
@@ -409,12 +363,10 @@ toggle_window_mode(void)
 
 	hardware_acceleration = !hardware_acceleration;
 
-	// Create the player window.  If this fails, make the active instance
-	// inactive.
+	// Create the player window.
 
 	if (!create_player_window()) {
-		active_inst_data_ptr->active_instance = false;
-		active_inst_data_ptr = NULL;
+		// TODO: Quit the app?
 	}
 
 	// Reset the title, and the label if there is one.
@@ -462,9 +414,7 @@ display_file_as_web_page(const char *file_path)
 			URL[9] = '|';
 	}
 
-	// Ask the browser to load this URL into a new window.
-
-	NPN_GetURL(active_inst_data_ptr->instance_ptr, URL, "_blank");
+	// TODO: Ask the browser to load this URL into a new window.
 }
 
 //------------------------------------------------------------------------------
@@ -474,7 +424,7 @@ display_file_as_web_page(const char *file_path)
 void
 display_web_page(const char *URL)
 {
-	NPN_GetURL(active_inst_data_ptr->instance_ptr, URL, "_blank");
+	// TODO
 }
 
 //------------------------------------------------------------------------------
@@ -592,8 +542,9 @@ set_mouse_cursor(void)
 static void
 launch_builder_web_page(const char *URL)
 {
-	if (URL != NULL)
-		NPN_GetURL(active_inst_data_ptr->instance_ptr, URL, "_blank");
+	if (URL != NULL) {
+		// TODO
+	}
 }
 
 //------------------------------------------------------------------------------
@@ -1055,8 +1006,7 @@ mouse_event_callback(int x, int y, int button_code, int task_bar_button_code)
 
 		switch (task_bar_button_code) {
 		case LOGO_BUTTON:
-			NPN_GetURL(active_inst_data_ptr->instance_ptr, FLATLAND_URL,
-				"_blank");
+			// TODO
 			break;
 		case RECENT_SPOTS_BUTTON:
 			disable_cursor_changes = true;
@@ -1107,8 +1057,7 @@ mouse_event_callback(int x, int y, int button_code, int task_bar_button_code)
 				open_help_window();
 				break;
 			case DOWNLOAD_ROVER_COMMAND:
-				NPN_GetURL(active_inst_data_ptr->instance_ptr,
-					"http://www.flatland.com/download", "_self");
+				// TODO
 				break;
 			case VIEW_3DML_SOURCE_COMMAND:
 				display_file_as_web_page(curr_spot_file_path);
@@ -1268,39 +1217,24 @@ timer_event_callback(void)
 
 		URL_was_opened.reset_event();
 		open_local_file(requested_URL);
-		/*
-		if (web_browser_ID == INTERNET_EXPLORER) {
-			if (strlen(requested_target) != 0)
-				NPN_GetURL(active_inst_data_ptr->instance_ptr, requested_URL,
-					requested_target);
-			else
-				NPN_GetURL(active_inst_data_ptr->instance_ptr, requested_URL,
-					NULL);
-		} else {
-			if (strlen(requested_target) != 0)
-				NPN_GetURLNotify(active_inst_data_ptr->instance_ptr,
-					requested_URL, requested_target, NULL);
-			else
-				NPN_GetURLNotify(active_inst_data_ptr->instance_ptr,
-					requested_URL, NULL, NULL);
-		}
-		*/
+		// TODO: Support URLs.
 	}
 
 	// Check to see whether a URL cancel request has been signalled by the
 	// player thread, and if there is currently a stream being downloaded,
 	// destroy it.
 
-	if (URL_cancel_requested.event_sent() && curr_stream_ptr != NULL)
-		NPN_DestroyStream(active_inst_data_ptr->instance_ptr, curr_stream_ptr,
-			NPRES_USER_BREAK);
+	if (URL_cancel_requested.event_sent()) {
+		// TODO
+	}
 
 	// Check to see whether a javascript URL download request has been signalled
 	// by the player thread, and if so send off the URL request to the browser.
 	// We don't bother with notification of failure.
 
-	if (javascript_URL_download_requested.event_sent())
-		NPN_GetURL(active_inst_data_ptr->instance_ptr, javascript_URL, NULL);
+	if (javascript_URL_download_requested.event_sent()) {
+		// TODO
+	}
 
 	// Check to see whether a display error request has been signalled by
 	// the player thread, and if so either display the error log if the player
@@ -1399,8 +1333,7 @@ resize_event_callback(void *window_handle, int width, int height)
 
 	// Create the frame buffer, and signal the player thread on it's success
 	// or failure.  On failure, wait for the player thread to signal that the
-	// player window has shut down, then destroy the main window and make the
-	// instance inactive.
+	// player window has shut down, then destroy the main window.
 
 	if ((hardware_acceleration && recreate_frame_buffer()) ||
 		(!hardware_acceleration && create_frame_buffer()))
@@ -1409,8 +1342,7 @@ resize_event_callback(void *window_handle, int width, int height)
 		main_window_resized.send_event(false);
 		player_window_shut_down.wait_for_event();
 		destroy_main_window();
-		active_inst_data_ptr->active_instance = false;
-		active_inst_data_ptr = NULL;
+		// TODO: Quit the app?
 	}
 
 	// Draw the current title, and label if there is one.
@@ -1437,40 +1369,17 @@ display_event_callback(void)
 
 	destroy_main_window();
 
-	// Create the player window.  If this fails, make the active instance
-	// inactive.
+	// Create the player window.
 
 	hardware_acceleration = (acceleration_mode == TRY_HARDWARE);
 	if (!create_player_window()) {
-		active_inst_data_ptr->active_instance = false;
-		active_inst_data_ptr = NULL;
+		// TODO: Quit the app?
 	}
 
 	// Reset the title, and label if there is one.
 
 	set_title(NULL);
 	show_label(NULL);
-}
-
-//==============================================================================
-// Plugin interface to browser.
-//==============================================================================
-
-//------------------------------------------------------------------------------
-// NPP_Initialize:
-// Provides global initialization for a plug-in, and returns an error value. 
-//
-// This function is called once when a plug-in is loaded, before the first
-// instance is created. You should allocate any memory or resources shared by
-// all instances of your plug-in at this time. After the last instance has been
-// deleted, NPP_Shutdown will be called, where you can release any memory or
-// resources allocated by NPP_Initialize. 
-//------------------------------------------------------------------------------
-
-NPError
-NPP_Initialize(void)
-{
-	return(NPERR_NO_ERROR);
 }
 
 bool
@@ -1568,16 +1477,11 @@ init_flatland(HWND window_handle)
 	load_config_file();
 
 	// Indicate the player is not active yet, there is no player window,
-	// no active plugin instance, and the browser window is not minimised.
+	// and the browser window is not minimised.
 
 	player_active = false;
 	player_window_created = false;
-	active_inst_data_ptr = NULL;
 	browser_window_minimised = false;
-
-	// Initialise the current stream pointer.
-
-	curr_stream_ptr = NULL;
 
 	// Initialise all variables that require synchronised access.
 
@@ -1619,37 +1523,8 @@ init_flatland(HWND window_handle)
 	return(true);
 }
 
-//------------------------------------------------------------------------------
-// NPP_GetJavaClass:
-// New in Netscape Navigator 3.0. 
-//
-// NPP_GetJavaClass is called during initialization to ask your plugin
-// what its associated Java class is. If you don't have one, just return
-// NULL. Otherwise, use the javah-generated "use_" function to both
-// initialize your class and return it. If you can't find your class, an
-// error will be signalled by "use_" and will cause the Navigator to
-// complain to the user.
-//------------------------------------------------------------------------------
-
-jref
-NPP_GetJavaClass(void)
-{
-	return(NULL);
-}
-
-//------------------------------------------------------------------------------
-// NPP_Shutdown:
-// Provides global deinitialization for a plug-in. 
-// 
-// This function is called once after the last instance of your plug-in is
-// destroyed. Use this function to release any memory or resources shared
-// across all instances of your plug-in. You should be a good citizen and
-// declare that you're not using your java class any more. This allows java to
-// unload it, freeing up memory.
-//------------------------------------------------------------------------------
-
 void
-NPP_Shutdown(void)
+shutdown_flatland(void)
 {
 	// If the player thread is active, signal it to terminate, and wait for it
 	// to do so.
@@ -1750,745 +1625,4 @@ NPP_Shutdown(void)
 #if MEM_TRACE
 	end_trace();
 #endif
-}
-
-//------------------------------------------------------------------------------
-// NPP_New:
-// Creates a new instance of a plug-in and returns an error value. 
-// 
-// NPP_New creates a new instance of your plug-in with MIME type specified
-// by pluginType. The parameter mode is NP_EMBED if the instance was created
-// by an EMBED tag, or NP_FULL if the instance was created by a separate file.
-// You can allocate any instance-specific private data in instance->pdata at
-// this time. The NPP pointer is valid until the instance is destroyed. 
-//------------------------------------------------------------------------------
-
-NPError 
-NPP_New(NPMIMEType pluginType, NPP instance_ptr, uint16 mode, int16 argc,
-		char *argn[], char *argv[], NPSavedData *saved_data_ptr)
-{
-	InstData *inst_data_ptr;
-	string user_agent;
-	char version_number[32];
-	HKEY key_handle;
-	DWORD version_size;
-	int index;
-
-	// Check for a NULL instance.
-
-	if (instance_ptr == NULL)
-		return(NPERR_INVALID_INSTANCE_ERROR);
-
-	// Determine which browser we are running under.
-
-	user_agent = NPN_UserAgent(instance_ptr);
-	_strlwr(user_agent);
-	if (strstr(user_agent, "opera")) {
-		web_browser_ID = OPERA;
-		web_browser_version = "Opera";
-	} else if (strstr(user_agent, "mozilla")) {
-		web_browser_ID = NAVIGATOR;
-		web_browser_version = "Navigator";
-		if (sscanf(user_agent, "mozilla/%s", version_number) == 1) {
-			web_browser_version += " ";
-			web_browser_version += version_number;
-		}
-	} else if (strstr(user_agent, "internet explorer")) {
-		web_browser_ID = INTERNET_EXPLORER;
-		web_browser_version = "MSIE";
-		if (RegOpenKeyEx(HKEY_LOCAL_MACHINE,
-			"Software\\Microsoft\\Internet Explorer\\", 0, 
-			KEY_QUERY_VALUE, &key_handle) == ERROR_SUCCESS) {
-			version_size = 16;
-			if (RegQueryValueEx(key_handle, "Version", NULL, NULL,
-				(LPBYTE)&version_number, &version_size) == ERROR_SUCCESS) {
-				web_browser_version += " ";
-				web_browser_version += version_number;
-			}
-			RegCloseKey(key_handle);
-		}
-	} else if (strstr(user_agent, "activex control")) {
-		web_browser_ID = ACTIVEX_CONTROL;
-		web_browser_version = "ActiveX control";
-	} else {
-		web_browser_ID = UNKNOWN_BROWSER;
-		web_browser_version = user_agent;
-	}
-
-	// Allocate the instance data structure, and initialise the instance
-	// pointer.
-
-	if ((instance_ptr->pdata = new InstData) == NULL)
-		return(NPERR_OUT_OF_MEMORY_ERROR);
-	inst_data_ptr = (InstData *)instance_ptr->pdata;
-	inst_data_ptr->instance_ptr = instance_ptr;
-
-	// Look for an argument with the name "TEXT", and if found store it's value
-	// in the instance data structure as the inactive window text.
-
-	for (index = 0; index < argc; index++)
-		if (!_stricmp(argn[index], "text"))
-			break;
-	if (index < argc)
-		inst_data_ptr->window_text = argv[index];
-	else
-		inst_data_ptr->window_text = "Click here to view spot";
-	
-	// If the player is active...
-
-	if (player_active) {
-
-		// If this is the first instance to be created, then make it the active
-		// one and send a request to the player thread to initialise the player
-		// window.
-
-		if (active_inst_data_ptr == NULL) {
-			active_inst_data_ptr = inst_data_ptr;
-			inst_data_ptr->active_instance = true;
-			player_window_init_requested.send_event(true);
-		} else
-			inst_data_ptr->active_instance = false;
-	}
-
-	// If the player is inactive, all instances are inactive.
-
-	else
-		inst_data_ptr->active_instance = false;
-	
-	// Return success status.
-
-	return(NPERR_NO_ERROR);
-}
-
-//------------------------------------------------------------------------------
-// NPP_Destroy:
-// Deletes a specific instance of a plug-in and returns an error value. 
-//
-// NPP_Destroy is called when a plug-in instance is deleted, typically because
-// the user has left the page containing the instance, closed the window, or
-// quit the application. You should delete any private instance-specific
-// information stored in instance->pdata.  If the instance being deleted is the
-// last instance created by your plug-in, NPP_Shutdown will subsequently be 
-// called, where you can delete any data allocated in NPP_Initialize to be
-// shared by all your plug-in's instances.  Note that you should not perform
-// any graphics operations in NPP_Destroy as the instance's window is no longer
-// guaranteed to be valid. 
-//------------------------------------------------------------------------------
-
-NPError 
-NPP_Destroy(NPP instance_ptr, NPSavedData **saved_data_handle)
-{
-	InstData *inst_data_ptr;
-	NPWindow *window_ptr;
-
-	// Check for a NULL instance.
-
-	if (instance_ptr == NULL)
-		return(NPERR_INVALID_INSTANCE_ERROR);
-	inst_data_ptr = (InstData *)instance_ptr->pdata;
-
-	// If the player thread is active...
-
-	if (player_active) {
-
-		// If this is the active instance, destroy the player window and make
-		// this instance inactive.
-		
-		if (inst_data_ptr == active_inst_data_ptr) {
-			destroy_player_window();
-			active_inst_data_ptr = NULL;
-		}
-
-		// Otherwise restore the plugin window.
-
-		else {
-			window_ptr = inst_data_ptr->window_ptr;
-			restore_plugin_window(window_ptr->window);
-		}
-	}
-
-	// Delete the instance data.
-
-	delete inst_data_ptr;
-	instance_ptr->pdata = NULL;
-	return(NPERR_NO_ERROR);
-}
-
-//------------------------------------------------------------------------------
-// Inactive plugin window callback procedure.
-//------------------------------------------------------------------------------
-
-static void
-inactive_window_callback(void *window_data_ptr)
-{
-	InstData *inst_data_ptr;
-	NPWindow *window_ptr;
-
-	// If the player is not active or this instance does not yet have a spot 
-	// URL, do nothing.
-
-	inst_data_ptr = (InstData *)window_data_ptr;
-	if (!player_active || strlen(inst_data_ptr->spot_URL) == 0)
-		return;
-
-	// If there is an active plugin window, make it inactive.
-
-	if (active_inst_data_ptr != NULL) {
-		window_ptr = active_inst_data_ptr->window_ptr;
-
-		// Destroy the player window.
-
-		destroy_player_window();
-
-		// Make the plugin window inactive.
-
-		set_plugin_window(window_ptr->window, active_inst_data_ptr,
-			active_inst_data_ptr->window_text, inactive_window_callback);
-
-		// Make the plugin instance inactive.
-
-		active_inst_data_ptr->active_instance = false;
-		active_inst_data_ptr = NULL;
-	}
-
-	// Signal the player thread that a new player window is requested.
-	
-	player_window_init_requested.send_event(true);
-
-	// Restore the inactive plugin window.
-
-	window_ptr = inst_data_ptr->window_ptr;
-	restore_plugin_window(window_ptr->window);
-
-	// Make the new instance active.
-
-	active_inst_data_ptr = inst_data_ptr;
-	active_inst_data_ptr->active_instance = true;
-
-	// Create the player window, and if this succeeds request that the 
-	// instance's spot URL be downloaded. 
-
-	if (create_player_window()) {
-		URL_was_opened.reset_event();
-		if (web_browser_ID == INTERNET_EXPLORER)
-			NPN_GetURL(active_inst_data_ptr->instance_ptr, 
-				active_inst_data_ptr->spot_URL, NULL);
-		else
-			NPN_GetURLNotify(active_inst_data_ptr->instance_ptr, 
-				active_inst_data_ptr->spot_URL, NULL, NULL);
-	}
-
-	// If the player window wasn't created, make this instance inactive again.
-
-	else {
-		active_inst_data_ptr->active_instance = false;
-		set_plugin_window(active_inst_data_ptr->window_ptr->window, 
-			active_inst_data_ptr, active_inst_data_ptr->window_text, 
-			inactive_window_callback);
-		active_inst_data_ptr = NULL;
-	}
-}
-
-//------------------------------------------------------------------------------
-// NPP_SetWindow:
-// Sets the window in which a plug-in draws, and returns an error value. 
-// 
-// NPP_SetWindow informs the plug-in instance specified by instance of the
-// the window denoted by window in which the instance draws.  This NPWindow
-// pointer is valid for the life of the instance, or until NPP_SetWindow is
-// called again with a different value.  Subsequent calls to NPP_SetWindow for
-// a given instance typically indicate that the window has been resized.  If
-// either window or window->window are NULL, the plug-in must not perform any
-// additional graphics operations on the window and should free any resources
-// associated with the window. 
-//------------------------------------------------------------------------------
-
-NPError 
-NPP_SetWindow(NPP instance_ptr, NPWindow *new_window_ptr)
-{
-	InstData *inst_data_ptr;
-	NPWindow *window_ptr;
-
-	// Check for a NULL instance.
-
-	if (instance_ptr == NULL)
-		return(NPERR_INVALID_INSTANCE_ERROR);
-
-	// PLUGIN DEVELOPERS:
-	// Before setting window to point to the new window, you may wish to
-	// compare the new window info to the previous window (if any) to note
-	// window size changes, etc.
-
-	inst_data_ptr = (InstData *)instance_ptr->pdata;
-	window_ptr = inst_data_ptr->window_ptr;
-	if (window_ptr != NULL) {
-
-		// If there is no new window, restore the existing plugin window if
-		// this is an inactive instance, and return.
-
-		if ((new_window_ptr == NULL) || (new_window_ptr->window == NULL)) {
-			if (inst_data_ptr != active_inst_data_ptr)
-				restore_plugin_window(window_ptr->window);
-			inst_data_ptr->window_ptr = NULL;
-			return(NPERR_NO_ERROR);
-		} 
-		
-		// If the new window is the same as the old window, just get out after
-		// recording the new window pointer.
-
-		else if (window_ptr->window == new_window_ptr->window) {
-			inst_data_ptr->window_ptr = new_window_ptr;
-			return(NPERR_NO_ERROR);
-		}
-			
-		// If the new window is different than the old window, then restore
-		// the old window if this is an inactive instance before continuing.
-		// NOTE: We don't want this path invoked for active windows, as it
-		// will play havoc with DirectX.  Current browsers don't invoke this
-		// path at all.
-
-		else if (inst_data_ptr != active_inst_data_ptr)
-			restore_plugin_window(window_ptr->window);
-	} 
-	
-	// We can just get out of here if there is no current window and there
-	// is no new window to use.
-
-	else if ((new_window_ptr == NULL) || (new_window_ptr->window == NULL)) {
-		inst_data_ptr->window_ptr = NULL;
-		return(NPERR_NO_ERROR);
-	}
-
-	// Set the window pointer in the instance data.
-
-	inst_data_ptr->window_ptr = new_window_ptr;
-	window_ptr = new_window_ptr;
-
-	// If this instance is the active one...
-
-	if (inst_data_ptr == active_inst_data_ptr) {
-
-		// If we don't yet have a player window, create it and signal the player
-		// thread, then wait for a signal from the player thread that the main
-		// window was initialised.  If either of these result in failure, the
-		// instance is made inactive.
-
-		if (!player_window_created) {
-
-			// Create the player window.  If this fails, make the active
-			// instance inactive.
-
-			if (!create_player_window()) {
-				active_inst_data_ptr->active_instance = false;
-				active_inst_data_ptr = NULL;
-			}
-		}
-	} 
-	
-	// If this is not the active instance, make the plugin window inactive.
-	
-	if (inst_data_ptr != active_inst_data_ptr)
-		set_plugin_window(window_ptr->window, inst_data_ptr,
-			inst_data_ptr->window_text, inactive_window_callback);
-
-	// Return success status.
-
-	return(NPERR_NO_ERROR);
-}
-
-//------------------------------------------------------------------------------
-// Progress window callback function: this is called if the user hit the cancel
-// button on the progress window.
-//------------------------------------------------------------------------------
-
-static void
-progress_window_callback(void)
-{
-	// Ask the browser to destroy the stream that is currently open, if there
-	// is one.
-
-	if (curr_stream_ptr != NULL)
-		NPN_DestroyStream(active_inst_data_ptr->instance_ptr, curr_stream_ptr,
-			NPRES_USER_BREAK);
-}
-
-//------------------------------------------------------------------------------
-// NPP_NewStream:
-// Notifies an instance of a new data stream and returns an error value. 
-// 
-// NPP_NewStream notifies the instance denoted by instance of the creation of
-// a new stream specifed by stream. The NPStream pointer is valid until the
-// stream is destroyed. The MIME type of the stream is provided by the
-// parameter type. 
-//------------------------------------------------------------------------------
-
-NPError 
-NPP_NewStream(NPP instance_ptr, NPMIMEType type, NPStream *stream_ptr,
-			  NPBool seekable, uint16 *stype_ptr)
-{
-	InstData *inst_data_ptr;
-	FILE *fp;
-
-	// Return an error if the instance is NULL.
-
-	if (instance_ptr == NULL)
-		return(NPERR_INVALID_INSTANCE_ERROR);
-
-	// If the stream URL matches the javascript URL, we're going to stream it
-	// into oblivion.
-
-	if (!_stricmp(stream_ptr->url, javascript_URL)) {
-		*stype_ptr = NP_NORMAL;
-		javascript_URL = "";
-	}
-
-	// Otherwise ask for the stream to be downloaded into a local file, and
-	// inform the player thread that the URL stream was opened.  We use this 
-	// flag to ignore the reason code passed to NPP_Notify(), and instead allow
-	// NPP_DestroyStream() to signal failure to the player thread.  This is
-	// necessary because Navigator 3.0 sends a NPRES_NETWORK_ERR reason code to
-	// NPP_Notify() even upon success.
-
-	else {
-
-		// Remember this as the current stream.
-
-		curr_stream_ptr = stream_ptr;
-
-		// If a requested file path was given, stream the URL into this file,
-		// otherwise let the browser choose a file path.
-
-		if (strlen(requested_file_path) > 0) {
-			*stype_ptr = NP_NORMAL;
-			if ((fp = fopen(requested_file_path, "wb")) != NULL)
-				fclose(fp);
-
-			// If requested_blockset_name is set, a blockset is being downloaded
-			// so open the progress window with an approapiate message.
-
-			if (strlen(requested_blockset_name) > 0)
-				open_progress_window(stream_ptr->end, progress_window_callback, 
-					"Downloading %s blockset.", requested_blockset_name);
-		} else
-			*stype_ptr = NP_ASFILE;
-
-		// Inform the player thread that the URL was opened.
-
-		URL_was_opened.send_event(true);
-		
-		// If the spot URL has not yet been set for this instance, then this is
-		// the original spot URL, which needs to be stored in the instance
-		// data structure.
-
-		inst_data_ptr = (InstData *)instance_ptr->pdata;
-		if (strlen(inst_data_ptr->spot_URL) == 0) {
-			inst_data_ptr->spot_URL = stream_ptr->url;
-			inst_data_ptr->spot_URL = decode_URL(inst_data_ptr->spot_URL);
-		}
-	}
-
-	// Return success code.
-
-	return(NPERR_NO_ERROR);
-}
-
-// PLUGIN DEVELOPERS:
-// These next 2 functions are directly relevant in a plug-in which handles the
-// data in a streaming manner.  If you want zero bytes because no buffer space
-// is YET available, return 0.  As long as the stream has not been written to
-// the plugin, Navigator will continue trying to send bytes.  If the plugin
-// doesn't want them, just return some large number from NPP_WriteReady(), and
-// ignore them in NPP_Write().  For a NP_ASFILE stream, they are still called
-// but can safely be ignored using this strategy.
-
-//------------------------------------------------------------------------------
-// NPP_WriteReady:
-// Returns the maximum number of bytes that an instance is prepared to accept
-// from the stream. 
-// 
-// NPP_WriteReady determines the maximum number of bytes that the instance will
-// consume from the stream in a subsequent call NPP_Write. This function allows
-// Netscape to only send as much data to the instance as the instance is
-// capable of handling at a time, allowing more efficient use of resources
-// within both Netscape and the plug-in. 
-//------------------------------------------------------------------------------
-
-int32 
-NPP_WriteReady(NPP instance_ptr, NPStream *stream_ptr)
-{
-	// Allow Netscape to send as much as it likes.
-
-	return(0x7fffffff);
-}
-
-//------------------------------------------------------------------------------
-// NPP_Write:
-// Delivers data from a stream and returns the number of bytes written. 
-// 
-// NPP_Write is called after a call to NPP_NewStream in which the plug-in
-// requested a normal-mode stream, in which the data in the stream is delivered
-// progressively over a series of calls to NPP_WriteReady and NPP_Write. The
-// function delivers a buffer buf of len bytes of data from the stream
-// identified by stream to the instance. The parameter offset is the logical
-// position of buf from the beginning of the data in the stream. 
-//
-// The function returns the number of bytes written (consumed by the instance).
-// A negative return value causes an error on the stream, which will
-// subsequently be destroyed via a call to NPP_DestroyStream. 
-// 
-// Note that a plug-in must consume at least as many bytes as it indicated in
-// the preceeding NPP_WriteReady call. All data consumed must be either
-// processed immediately or copied to memory allocated by the plug-in: the buf
-// parameter is not persistent. 
-//------------------------------------------------------------------------------
-
-int32 
-NPP_Write(NPP instance_ptr, NPStream *stream_ptr, int32 offset, int32 len,
-		  void *buffer_ptr)
-{
-	FILE *fp;
-	
-	// If the stream is not recognised, or does not have a requested file path,
-	// then just ignore it.
-
-	if (stream_ptr != curr_stream_ptr || strlen(requested_file_path) == 0)
-		return(len);
-
-	// Open the destination file, and write the supplied buffer contents to the
-	// file at the given file offset.
-
-	if ((fp = fopen(requested_file_path, "rb+")) != NULL) {
-		fseek(fp, offset, SEEK_SET);
-		fwrite(buffer_ptr, len, 1, fp);
-		fclose(fp);
-	}
-
-	// If a requested blockset name was specified, update the progress window.
-
-	if (strlen(requested_blockset_name) > 0)
-		update_progress_window(offset + len, stream_ptr->end);
-
-	// Return the number of bytes written.
-
-	return(len);
-}
-
-//------------------------------------------------------------------------------
-// NPP_DestroyStream:
-// Indicates the closure and deletion of a stream, and returns an error value. 
-// 
-// The NPP_DestroyStream function is called when the stream identified by
-// stream for the plug-in instance denoted by instance will be destroyed. You
-// should delete any private data allocated in stream->pdata at this time. 
-//------------------------------------------------------------------------------
-
-NPError 
-NPP_DestroyStream(NPP instance_ptr, NPStream *stream_ptr, NPError reason)
-{
-	InstData *inst_data_ptr;
-
-	// Check for NULL instance.
-
-	if (instance_ptr == NULL)
-		return(NPERR_INVALID_INSTANCE_ERROR);
-
-	// Signal the plugin if the file was not downloaded successfully.  If the
-	// URL was streamed into a requested file, also signal the plugin if the
-	// file *was* downloaded successfully.
-
-	inst_data_ptr = (InstData *)instance_ptr->pdata;
-	if (inst_data_ptr == active_inst_data_ptr) {
-
-		// Set the download URL.
-
-		downloaded_URL.set((char *)stream_ptr->url);
-
-		// If a requested file path was set, set the downloaded file path,
-		// and send an event to the player thread informing it whether the
-		// download was successful or not.
-
-		if (strlen(requested_file_path) > 0) {
-			downloaded_file_path.set(requested_file_path);
-			URL_was_downloaded.send_event(reason == NPRES_DONE);
-
-			// If a blockset was been downloaded, close the progress window and
-			// delete the partial blockset file if the download failed.
-
-			if (strlen(requested_blockset_name) > 0) {
-				close_progress_window();
-				if (reason != NPRES_DONE)
-					remove(requested_file_path);
-			}
-		} 
-		
-		// If no requested file path was set, send an event to the player thread
-		// if the download was not successful.
-
-		else if (reason != NPRES_DONE)
-			URL_was_downloaded.send_event(false);
-
-		// Reset the current stream pointer.
-
-		curr_stream_ptr = NULL;
-	}
-	return(NPERR_NO_ERROR);
-}
-
-//------------------------------------------------------------------------------
-// NPP_StreamAsFile:
-// Provides a local file name for the data from a stream. 
-// 
-// NPP_StreamAsFile provides the instance with a full path to a local file,
-// identified by fname, for the stream specified by stream. NPP_StreamAsFile is
-// called as a result of the plug-in requesting mode NP_ASFILEONLY or
-// NP_ASFILE in a previous call to NPP_NewStream. If an error occurs while
-// retrieving the data or writing the file, fname may be NULL. 
-//------------------------------------------------------------------------------
-
-void 
-NPP_StreamAsFile(NPP instance_ptr, NPStream *stream_ptr, const char *file_name)
-{
-	InstData *inst_data_ptr;
-
-	// Check for NULL instance.
-
-	if (instance_ptr == NULL)
-		return;
-	inst_data_ptr = (InstData *)instance_ptr->pdata;
-
-	// If this is the active instance...
-
-	if (inst_data_ptr == active_inst_data_ptr) {
-
-		// If the file name is NULL, the URL was not downloaded.  This error
-		// ought to be reported via NPP_Notify(), but for some reason it comes
-		// here and NPP_Notify() gets a success notification.
-
-		if (file_name == NULL) {
-			downloaded_URL.set((char *)stream_ptr->url);
-			URL_was_downloaded.send_event(false);
-		}
-
-		// Signal the player thread that the URL was downloaded, making sure the
-		// downloaded URL and local file path is set.
-
-		else {
-			downloaded_URL.set((char *)stream_ptr->url);
-			downloaded_file_path.set((char *)file_name);
-			URL_was_downloaded.send_event(true);
-		}
-
-		// Reset the current stream pointer.
-
-		curr_stream_ptr = NULL;
-	}
-}
-
-//------------------------------------------------------------------------------
-// NPP_URLNotify:
-// Notifies the instance of the completion of a URL request. 
-//
-// NPP_URLNotify is called when Netscape completes a NPN_GetURLNotify or
-// NPN_PostURLNotify request, to inform the plug-in that the request,
-// identified by url, has completed for the reason specified by reason.  The
-// most common reason code is NPRES_DONE, indicating simply that the request
-// completed normally.  Other possible reason codes are NPRES_USER_BREAK,
-// indicating that the request was halted due to a user action (for example,
-// clicking the "Stop" button), and NPRES_NETWORK_ERR, indicating that the
-// request could not be completed (for example, because the URL could not be
-// found).  The complete list of reason codes is found in npapi.h. 
-// 
-// The parameter notifyData is the same plug-in-private value passed as an
-// argument to the corresponding NPN_GetURLNotify or NPN_PostURLNotify
-// call, and can be used by your plug-in to uniquely identify the request. 
-//------------------------------------------------------------------------------
-
-void
-NPP_URLNotify(NPP instance_ptr, const char *URL, NPReason reason, 
-			  void *notifyData_ptr)
-{
-	InstData *inst_data_ptr;
-
-	// If the instance pointer is NULL or URL_was_opened is TRUE, ignore
-	// the reason code.
-
-	if (instance_ptr == NULL || URL_was_opened.event_value)
-		return;
-
-	// If the reason parameter is anything other than NPRES_DONE, inform the
-	// plugin that the URL was not downloaded.
-
-	inst_data_ptr = (InstData *)instance_ptr->pdata;
-	if (inst_data_ptr == active_inst_data_ptr && reason != NPRES_DONE) {
-		downloaded_URL.set((char *)URL);
-		URL_was_downloaded.send_event(false);
-		curr_stream_ptr = NULL;
-	}
-}
-
-//------------------------------------------------------------------------------
-// NPP_Print:
-// Handle a print request.
-//------------------------------------------------------------------------------
-
-void 
-NPP_Print(NPP instance_ptr, NPPrint *printInfo_ptr)
-{
-	if (instance_ptr == NULL || printInfo_ptr == NULL)
-		return;
-
-	if (printInfo_ptr->mode == NP_FULL) {
-		    
-	    // PLUGIN DEVELOPERS:
-	    //	If your plugin would like to take over printing completely when
-		// it is in full-screen mode, set printInfo->pluginPrinted to TRUE
-		// and print your plugin as you see fit.  If your plugin wants
-		// Netscape	to handle printing in this case, set 
-		// printInfo->pluginPrinted to FALSE (the default) and do nothing.
-		// If you do want to handle printing yourself, printOne is true if
-		// the print button	(as opposed to the print menu) was clicked.
-		// On the Macintosh, platformPrint is a THPrint; on Windows,
-		// platformPrint is a structure (defined in npapi.h) containing the
-		// printer name, port,etc.
-
-		void *platformPrint = printInfo_ptr->print.fullPrint.platformPrint;
-		NPBool printOne = printInfo_ptr->print.fullPrint.printOne;
-		
-		// Do the default.
-
-		printInfo_ptr->print.fullPrint.pluginPrinted = FALSE;
-	} else {
-		
-		// If not fullscreen, we must be embedded.
-
-		// PLUGIN DEVELOPERS:
-		// If your plugin is embedded, or is full-screen but you returned
-		// false in pluginPrinted above, NPP_Print will be called with mode
-		// == NP_EMBED.  The NPWindow in the printInfo gives the location
-		// and dimensions of the embedded plugin on the printed page.  On
-		// the Macintosh, platformPrint is the printer port; on	Windows,
-		// platformPrint is the handle to the printing device context.
-
-		NPWindow *printWindow =	&(printInfo_ptr->print.embedPrint.window);
-		void *platformPrint = printInfo_ptr->print.embedPrint.platformPrint;
-	}
-}
-
-//------------------------------------------------------------------------------
-// NPP_HandleEvent:
-// Mac-only, but stub must be present for Windows.
-// Delivers a platform-specific event to the instance. 
-// 
-// On the Macintosh, event is a pointer to a standard Macintosh EventRecord.
-// All standard event types are passed to the instance as appropriate.  In
-// general, return TRUE if you handle the event and FALSE if you ignore the
-// event. 
-//------------------------------------------------------------------------------
-
-int16
-NPP_HandleEvent(NPP instance_ptr, void *event_ptr)
-{
-	// Do nothing--this is not a Mac.
-
-	return(0);
 }

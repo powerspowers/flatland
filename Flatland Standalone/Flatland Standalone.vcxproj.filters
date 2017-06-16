@@ -34,12 +34,6 @@
     <Filter Include="Header Files\DirectX">
       <UniqueIdentifier>{9879e7ed-57a4-4467-a772-ebcd6597fe8f}</UniqueIdentifier>
     </Filter>
-    <Filter Include="Header Files\Plugin">
-      <UniqueIdentifier>{f060d391-1aa8-47ae-bd6c-071099db9afb}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="Source Files\Plugin">
-      <UniqueIdentifier>{3ee4c68f-aab6-4dd2-97d7-52a2a2e2bde9}</UniqueIdentifier>
-    </Filter>
   </ItemGroup>
   <ItemGroup>
     <Text Include="ReadMe.txt" />
@@ -215,27 +209,6 @@
     </ClInclude>
     <ClInclude Include="Plugin.h">
       <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="Plugin\jni.h">
-      <Filter>Header Files\Plugin</Filter>
-    </ClInclude>
-    <ClInclude Include="Plugin\jni_md.h">
-      <Filter>Header Files\Plugin</Filter>
-    </ClInclude>
-    <ClInclude Include="Plugin\jri.h">
-      <Filter>Header Files\Plugin</Filter>
-    </ClInclude>
-    <ClInclude Include="Plugin\jri_md.h">
-      <Filter>Header Files\Plugin</Filter>
-    </ClInclude>
-    <ClInclude Include="Plugin\jritypes.h">
-      <Filter>Header Files\Plugin</Filter>
-    </ClInclude>
-    <ClInclude Include="Plugin\npapi.h">
-      <Filter>Header Files\Plugin</Filter>
-    </ClInclude>
-    <ClInclude Include="Plugin\npupp.h">
-      <Filter>Header Files\Plugin</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
@@ -469,9 +442,6 @@
     </ClCompile>
     <ClCompile Include="Plugin.cpp">
       <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="Plugin\npwin.cpp">
-      <Filter>Source Files\Plugin</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>

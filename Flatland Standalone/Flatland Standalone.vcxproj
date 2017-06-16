@@ -185,13 +185,6 @@
     <ClInclude Include="Parser.h" />
     <ClInclude Include="Platform.h" />
     <ClInclude Include="Plugin.h" />
-    <ClInclude Include="Plugin\jni.h" />
-    <ClInclude Include="Plugin\jni_md.h" />
-    <ClInclude Include="Plugin\jri.h" />
-    <ClInclude Include="Plugin\jritypes.h" />
-    <ClInclude Include="Plugin\jri_md.h" />
-    <ClInclude Include="Plugin\npapi.h" />
-    <ClInclude Include="Plugin\npupp.h" />
     <ClInclude Include="Render.h" />
     <ClInclude Include="Resource.h" />
     <ClInclude Include="Spans.h" />
@@ -272,7 +265,6 @@
     <ClCompile Include="Memory.cpp" />
     <ClCompile Include="Parser.cpp" />
     <ClCompile Include="Plugin.cpp" />
-    <ClCompile Include="Plugin\npwin.cpp" />
     <ClCompile Include="Render.cpp" />
     <ClCompile Include="Spans.cpp" />
     <ClCompile Include="stdafx.cpp">
