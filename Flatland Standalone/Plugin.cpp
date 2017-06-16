@@ -133,9 +133,6 @@ event polygon_info_requested;
 // Global variables that require synchronised access, and the semaphores that
 // protect them.
 
-#ifdef REGISTRATION
-semaphore<int> activation_status;
-#endif
 semaphore<int> user_debug_level;
 semaphore<bool> spot_loaded;
 semaphore<bool> selection_active;
@@ -1129,19 +1126,10 @@ mouse_event_callback(int x, int y, int button_code, int task_bar_button_code)
 			case ROVER_HELP_COMMAND:
 				open_help_window();
 				break;
-#ifdef REGISTRATION
-			case REGISTER_ROVER_COMMAND:
-				registration_requested.send_event(true);
-				break;
-			case CHECK_FOR_NEW_ROVER_COMMAND:
-				check_for_update_requested.send_event(true);
-				break;
-#else
 			case DOWNLOAD_ROVER_COMMAND:
 				NPN_GetURL(active_inst_data_ptr->instance_ptr,
 					"http://www.flatland.com/download", "_self");
 				break;
-#endif
 			case VIEW_3DML_SOURCE_COMMAND:
 				display_file_as_web_page(curr_spot_file_path);
 				break;
@@ -1575,9 +1563,6 @@ init_flatland(HWND window_handle)
 	// Create the semaphores for all variables that require synchornised 
 	// access.
 
-#ifdef REGISTRATION
-	activation_status.create_semaphore();
-#endif
 	user_debug_level.create_semaphore();
 	spot_loaded.create_semaphore();
 	selection_active.create_semaphore();
@@ -1719,9 +1704,6 @@ NPP_Shutdown(void)
 
 	// Destroy semaphores for all variables that required synchronised access.
 
-#ifdef REGISTRATION
-	activation_status.destroy_semaphore();
-#endif
 	user_debug_level.destroy_semaphore();
 	spot_loaded.destroy_semaphore();
 	selection_active.destroy_semaphore();

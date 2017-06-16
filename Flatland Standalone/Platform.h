@@ -30,12 +30,7 @@
 
 #define ABOUT_ROVER_COMMAND				1
 #define ROVER_HELP_COMMAND				2
-#ifdef REGISTRATION
-#define REGISTER_ROVER_COMMAND			3
-#define CHECK_FOR_NEW_ROVER_COMMAND		4
-#else
 #define DOWNLOAD_ROVER_COMMAND			5
-#endif
 #define VIEW_3DML_SOURCE_COMMAND		6
 #define SAVE_3DML_SOURCE_COMMAND		7
 #define TAKE_SNAPSHOT_COMMAND			8
@@ -679,18 +674,3 @@ void
 stop_streaming_thread(void);
 
 #endif // STREAMING_MEDIA
-
-#ifdef REGISTRATION
-
-// Functions to handle software activation (called by the player thread only).
-
-int
-get_activation_status(bool show_error);
-
-void
-show_activation_status(bool expired);
-
-void
-show_registration_window(void);
-
-#endif

@@ -4343,29 +4343,6 @@ load_spot(void)
 	// Set a flag indicating if the spot is on the web or not.
 
 	spot_on_web = !_strnicmp(curr_URL, "http://", 7);
-			
-#ifdef REGISTRATION
-
-	// If the spot URL comes from the web rather than the local hard drive,
-	// do a check of the activation status of Rover (displaying an error 
-	// message if necessary), and show the registration window once a day
-	// during the demo period, and every time once the demo period has expired.
-
-	if (spot_on_web) {
-		switch (get_activation_status(true)) {
-		case DEMO_STATUS:
-			show_activation_status(false);
-			break;
-		case EXPIRED_STATUS:
-			show_activation_status(true);
-		}
-	} 
-
-	// Silently update the activation status.
-
-	activation_status.set(get_activation_status(false));
-
-#endif
 
 	// Start up the spot.  If this fails, shut down the spot and return a
 	// failure status.
@@ -4715,15 +4692,6 @@ player_thread(void *arg_list)
 					set_title("No spot loaded");
 				}
 			}
-
-			// If the user has requested to register Rover, do it now.
-
-#ifdef REGISTRATION
-			if (registration_requested.event_sent()) {
-				show_registration_window();
-				activation_status.set(get_activation_status(false));
-			}
-#endif
 
 			// If the user has requested to save the 3DML source for this spot,
 			// do so now.

@@ -114,9 +114,6 @@ extern event polygon_info_requested;
 // Global variables that require synchronised access, and the semaphores that
 // protect them.
 
-#ifdef REGISTRATION
-extern semaphore<int> activation_status;
-#endif
 extern semaphore<int> user_debug_level;
 extern semaphore<bool> spot_loaded;
 extern semaphore<bool> selection_active;
