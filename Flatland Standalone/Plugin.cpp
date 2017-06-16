@@ -925,21 +925,6 @@ snapshot_window_callback(int width, int height, int position)
 }
 
 //------------------------------------------------------------------------------
-// Chat message window callback function.
-//------------------------------------------------------------------------------
-
-static void
-chatmessage_window_callback(char *message)
-{
-
-	// Now send this text message
-	/*
-	if (isnetworked)
-		multiplayer.SendChat(multiplayer.client_id,message);
-	*/
-}
-
-//------------------------------------------------------------------------------
 // Callback function to handle key events.
 //------------------------------------------------------------------------------
 
@@ -969,11 +954,6 @@ key_event_callback(byte key_code, bool key_down)
 	if (key_code == 'C' && !key_down)
 		open_snapshot_window(window_width, window_height,
 			snapshot_window_callback);
-
-	if (key_code == ESC_KEY && !key_down)
-		open_chatmessage_window(window_width, window_height,
-			chatmessage_window_callback);
-
 
 	// Check whether the key is a recognised function key, and if so execute
 	// it's function.

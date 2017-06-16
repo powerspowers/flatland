@@ -14,7 +14,6 @@
 #include "Light.h"
 #include "Main.h"
 #include "Memory.h"
-//#include "Multi.h"
 #include "Parser.h"
 #include "Platform.h"
 #include "Plugin.h"
@@ -2013,17 +2012,6 @@ render_player_block(void)
 	//front_face_visible = true;
 	//curr_block_movable = true;
 	//render_polygon(polygon_ptr, player_viewpoint.turn_angle);
-
-	/*
-	if (isnetworked) {
-		for (j=0; j < MAX_PLAYERS; j++) {
-			if (multiplayer.players[j].active && multiplayer.players[j].player_block_ptr != NULL)
-				render_block(NULL, multiplayer.players[j].player_block_ptr, true);
-		}
-		if (!multiplayer.isserver && multiplayer.server_player.player_block_ptr != NULL)
-			render_block(NULL, multiplayer.server_player.player_block_ptr, true);
-	}
-	*/
 	//render_block(NULL, client_block_ptr, true);
 }
 

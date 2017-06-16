@@ -192,27 +192,6 @@ static attr_def category_attr_list[CATEGORY_ATTRIBUTES] = {
 	{TOKEN_NAME, VALUE_STRING, &category_name, true}
 };
 
-// CLIENT tag (spot file only).
-
-#define CLIENT_ATTRIBUTES	2
-#define CLIENT_SERVERIP		0
-#define CLIENT_SERVERPORT	1
-static string client_serverip;
-static int client_serverport;
-static attr_def client_attr_list[CLIENT_ATTRIBUTES] = {
-	{TOKEN_SERVERIP, VALUE_STRING, &client_serverip, true},
-	{TOKEN_PORT, VALUE_INTEGER, &client_serverport, false}
-};
-
-// SERVER tag (spot file only).
-
-#define SERVER_ATTRIBUTES	1
-#define SERVER_PORT	0
-static int server_port;
-static attr_def server_attr_list[SERVER_ATTRIBUTES] = {
-	{TOKEN_PORT, VALUE_INTEGER, &server_port, false}
-};
-
 // DEBUG tag (spot file only).
 
 #define DEBUG_ATTRIBUTES	1
@@ -1259,7 +1238,6 @@ static tag_def head_tag_list[] = {
 		false},
 	{TOKEN_AMBIENT_SOUND, ambient_sound_attr_list, AMBIENT_SOUND_ATTRIBUTES,
 		false},
-	{TOKEN_CLIENT, client_attr_list, CLIENT_ATTRIBUTES, false},
 	{TOKEN_BASE, base_attr_list, BASE_ATTRIBUTES, false},
 	{TOKEN_BLOCKSET, blockset_attr_list, BLOCKSET_ATTRIBUTES, false},
 	{TOKEN_DEBUG, debug_attr_list, DEBUG_ATTRIBUTES, false},
@@ -1270,7 +1248,6 @@ static tag_def head_tag_list[] = {
 	{TOKEN_ORB, orb_attr_list, ORB_ATTRIBUTES, false},
 	{TOKEN_PLACEHOLDER, placeholder_attr_list, PLACEHOLDER_ATTRIBUTES, false},
 	{TOKEN_SKY, sky_attr_list, SKY_ATTRIBUTES, false},
-	{TOKEN_SERVER, server_attr_list, SERVER_ATTRIBUTES, false},
 	{TOKEN_PHYSICS, physics_attr_list, PHYSICS_ATTRIBUTES, false},
 
 #ifdef STREAMING_MEDIA

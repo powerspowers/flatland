@@ -14,7 +14,6 @@
 #include "Classes.h"
 #include "Image.h"
 #include "Light.h"
-//#include "Multi.h"
 #include "Main.h"
 #include "Memory.h"
 #include "Parser.h"
@@ -2199,60 +2198,6 @@ parse_blockset_tag(void)
 
 	blockset_ptr = parse_blockset(blockset_href);
 	blockset_list_ptr->add_blockset(blockset_ptr);
-}
-
-//------------------------------------------------------------------------------
-// Parse the client tag.
-//------------------------------------------------------------------------------
-
-static void
-parse_client_tag(void)
-{
-	// If we've seen a debug tag already, this is an error.
-
-	if (got_client_tag) {
-		warning("Duplicate <I>client</I> tag");
-		return;
-	}
-	got_client_tag = true;
-	/*
-	isnetworked = true;
-
-	if (parsed_attribute[CLIENT_SERVERIP])
-		strcpy(multiplayer.server_ip,client_serverip);
-	else
-		strcpy(multiplayer.server_ip,"0.0.0.0"); 
-
-	if (parsed_attribute[CLIENT_SERVERPORT])
-		multiplayer.server_port = client_serverport;
-	else
-		multiplayer.server_port = LISTEN_PORT;
-	*/
-}
-
-//------------------------------------------------------------------------------
-// Parse the server tag.
-//------------------------------------------------------------------------------
-
-static void
-parse_server_tag(void)
-{
-	// If we've seen a server tag already, this is an error.
-
-	if (got_server_tag) {
-		warning("Duplicate <I>server</I> tag");
-		return;
-	}
-	got_server_tag = true;
-	/*
-	isnetworked = true;
-	multiplayer.isserver = true;
-
-	if (parsed_attribute[SERVER_PORT])
-		multiplayer.server_port = server_port;
-	else
-		multiplayer.server_port = LISTEN_PORT;
-	*/
 }
 
 //------------------------------------------------------------------------------
@@ -4606,9 +4551,6 @@ parse_head_tags(void)
 		case TOKEN_BLOCKSET:
 			parse_blockset_tag();
 			break;
-		case TOKEN_CLIENT:
-			parse_client_tag();
-			break;
 		case TOKEN_DEBUG:
 			parse_debug_tag();
 			break;
@@ -4632,9 +4574,6 @@ parse_head_tags(void)
 			break;
 		case TOKEN_PLACEHOLDER:
 			parse_placeholder_tag(custom_blockset_ptr);
-			break;
-		case TOKEN_SERVER:
-			parse_server_tag();
 			break;
 		case TOKEN_SKY:
 			parse_sky_tag(custom_blockset_ptr);

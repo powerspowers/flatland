@@ -48,9 +48,6 @@
 // Global variable definitions.
 //------------------------------------------------------------------------------
 
-int sendmovecounter = 0;
-float sendangle = 0.0f;
-
 // Minimum blockset update period, and time of last Rover and spot directory
 // update.
 
@@ -1551,20 +1548,10 @@ handle_exit(const char *exit_URL, const char *exit_target, bool is_spot_URL)
 				return(false);
 
 			// Create the image caches and start up the new spot.
-			//if (spot_on_web && isnetworked)
-			/*
-			if (isnetworked && multiplayer.isserver) 
-				multiplayer.SendGotoSpot(curr_URL);
-			*/
 
 			if (!start_up_spot())
 				return(false);
 			spot_loaded.set(true);
-
-			/*
-			if (isnetworked && multiplayer.isserver) 
-				multiplayer.ProcessGotoSpot(curr_URL);
-			*/
 		}
 
 		// Else if the URL is javascript, request that it be executed but any
@@ -3046,64 +3033,55 @@ execute_active_trigger_list(void)
 		trigger_ptr = active_trigger_list[j];
 		action_ptr = trigger_ptr->action_list;
 		if (trigger_ptr != NULL && (trigger_ptr->block_ptr != NULL || trigger_ptr->square_ptr != NULL)) {
-			/*
-			if ((trigger_ptr->trigger_flag != TIMER ) && isnetworked) {
-				multiplayer.SendTrigger(-1,trigger_ptr->objectid, trigger_ptr->playerid, curr_triggerid);
-			}
-			*/
-		while (action_ptr != NULL) {
-			switch (action_ptr->type) {
-			case REPLACE_ACTION:
-				execute_replace_action(trigger_ptr, action_ptr);
-				break;
-			case RIPPLE_ACTION:
-				add_clock_action(action_ptr);
-				break;
-			case SPIN_ACTION:
-				add_clock_action(action_ptr);
-				break;
-			case ORBIT_ACTION:
-				add_clock_action(action_ptr);
-				break;
-			case MOVE_ACTION:
-				add_clock_action(action_ptr);
-				break;
-			case SETFRAME_ACTION:
-				execute_setframe_action(trigger_ptr, action_ptr);
-				break;
-			case SETLOOP_ACTION:
-				execute_setloop_action(trigger_ptr, action_ptr);
-				break;
-			case ANIMATE_ACTION:
-				execute_animate_action(trigger_ptr, action_ptr);
-				break;
-			case STOPSPIN_ACTION:
-				remove_clock_action_by_type(action_ptr,SPIN_ACTION);
-				break;
-			case STOPORBIT_ACTION:
-				remove_clock_action_by_type(action_ptr,ORBIT_ACTION);
-				break;
-			case STOPRIPPLE_ACTION:
-				remove_clock_action_by_type(action_ptr,RIPPLE_ACTION);
-				break;
-			case STOPMOVE_ACTION:
-				remove_clock_action_by_type(action_ptr,MOVE_ACTION);
-				break;
-			case EXIT_ACTION:
-				/*
-				if (isnetworked && multiplayer.isserver == false) 
-					return (true);
-				*/
-				spot_continues = handle_exit(action_ptr->exit_URL, 
-					action_ptr->exit_target, action_ptr->is_spot_URL);
+			while (action_ptr != NULL) {
+				switch (action_ptr->type) {
+				case REPLACE_ACTION:
+					execute_replace_action(trigger_ptr, action_ptr);
+					break;
+				case RIPPLE_ACTION:
+					add_clock_action(action_ptr);
+					break;
+				case SPIN_ACTION:
+					add_clock_action(action_ptr);
+					break;
+				case ORBIT_ACTION:
+					add_clock_action(action_ptr);
+					break;
+				case MOVE_ACTION:
+					add_clock_action(action_ptr);
+					break;
+				case SETFRAME_ACTION:
+					execute_setframe_action(trigger_ptr, action_ptr);
+					break;
+				case SETLOOP_ACTION:
+					execute_setloop_action(trigger_ptr, action_ptr);
+					break;
+				case ANIMATE_ACTION:
+					execute_animate_action(trigger_ptr, action_ptr);
+					break;
+				case STOPSPIN_ACTION:
+					remove_clock_action_by_type(action_ptr,SPIN_ACTION);
+					break;
+				case STOPORBIT_ACTION:
+					remove_clock_action_by_type(action_ptr,ORBIT_ACTION);
+					break;
+				case STOPRIPPLE_ACTION:
+					remove_clock_action_by_type(action_ptr,RIPPLE_ACTION);
+					break;
+				case STOPMOVE_ACTION:
+					remove_clock_action_by_type(action_ptr,MOVE_ACTION);
+					break;
+				case EXIT_ACTION:
+					spot_continues = handle_exit(action_ptr->exit_URL, 
+						action_ptr->exit_target, action_ptr->is_spot_URL);
 
-				active_trigger_list[0] = NULL;
-				active_trigger_count = 0;
+					active_trigger_list[0] = NULL;
+					active_trigger_count = 0;
 
-				return(spot_continues);
+					return(spot_continues);
+				}
+				action_ptr = action_ptr->next_action_ptr;
 			}
-			action_ptr = action_ptr->next_action_ptr;
-		}
 		}
 		//mp2 trigger_ptr = del_trigger(trigger_ptr);
 	}
@@ -3209,10 +3187,6 @@ execute_trigger(trigger* trigger_ptr, int triggercounter, int playerid)
 				remove_clock_action_by_type(action_ptr,MOVE_ACTION);
 				break;
 			case EXIT_ACTION:
-				/*
-				if (isnetworked && multiplayer.isserver == false) 
-					return (true);
-				*/
 				spot_continues = handle_exit(action_ptr->exit_URL, 
 					action_ptr->exit_target, action_ptr->is_spot_URL);
 
@@ -3222,7 +3196,7 @@ execute_trigger(trigger* trigger_ptr, int triggercounter, int playerid)
 				return(spot_continues);
 		}
 	
-			action_ptr = action_ptr->next_action_ptr;
+		action_ptr = action_ptr->next_action_ptr;
 	}
 
 	curr_triggerid = tmp_triggerid;
@@ -3437,10 +3411,6 @@ render_next_frame(void)
 				last_delta = 0.0f;
 				turn_delta = FROUND(turn_delta);
 				player_block_ptr->rotate_y(turn_delta);
-
-
-				sendangle += turn_delta;
-
 				player_viewpoint.last_position = player_viewpoint.position;
 				player_viewpoint.turn_angle = pos_adjust_angle(player_viewpoint.turn_angle + turn_delta);
 
@@ -3452,23 +3422,6 @@ render_next_frame(void)
 
 
 	}
-
-	// if this is a client session then send the new player position to the server
-	if (player_viewpoint.position != player_viewpoint.last_position) {
-		sendmovecounter++;
-		/*
-		if (isnetworked && sendmovecounter > 25) {
-			multiplayer.SendMove(multiplayer.client_id, player_viewpoint.position.x  - UNITS_PER_HALF_BLOCK,
-								player_viewpoint.position.y,
-								player_viewpoint.position.z  - UNITS_PER_HALF_BLOCK,
-								player_block_ptr->current_frame,
-								sendangle);
-			sendmovecounter = 0;
-			sendangle = 0.0f;
-		}
-		*/
-	}
-
 
 	// Set the trajectory based upon the move delta, side delta, and the turn
 	// angle.
@@ -3702,10 +3655,6 @@ render_next_frame(void)
 	// If the mouse was clicked, and an exit was selected, handle it.
 
 	if (mouse_was_clicked && curr_selected_exit_ptr != NULL) {
-		/*
-		if (isnetworked && multiplayer.isserver == false) 
-			return (true);
-		*/
 		return(handle_exit(curr_selected_exit_ptr->URL, 
 			curr_selected_exit_ptr->target, 
 			curr_selected_exit_ptr->is_spot_URL));
@@ -3761,10 +3710,6 @@ render_next_frame(void)
 		}
 	}
 	if (exit_ptr != NULL) {
-		/*
-		if (isnetworked && multiplayer.isserver == false) 
-			return (true);
-		*/
 		return(handle_exit(exit_ptr->URL, exit_ptr->target, 
 			exit_ptr->is_spot_URL));		
 	}
@@ -4538,13 +4483,6 @@ handle_spot_events(void)
 	if (!render_next_frame())
 		return(false);
 
-	// process next packets waiting if this is a networked session
-	/*
-	if (isnetworked) {
-		multiplayer.ProcessPackets();
-	}
-	*/
-
 	// If a window mode change is requested, handle it.  If the mode
 	// change fails, break out of the event loop.
 
@@ -4623,15 +4561,6 @@ player_thread(void *arg_list)
 			set_title("No spot loaded");
 		}
 
-		// Attempt to start up the network thread
-		/*
-		if (isnetworked) {
-			if (!multiplayer.StartConnection()) {
-				isnetworked = false;
-			}
-		}
-		*/
-
 		// Run the event loop until plugin thread signals the player window to
 		// shut down.
 
@@ -4665,10 +4594,6 @@ player_thread(void *arg_list)
 			// If an entry from the spot directory was selected, teleport to it.
 
 			if (spot_dir_entry_selected.event_sent()) {
-				/*
-				if (isnetworked && multiplayer.isserver == false) 
-					break;
-				*/
 				if (!handle_exit(selected_spot_dir_entry_ptr->URL, NULL, false)) {
 					shut_down_spot();
 					spot_loaded.set(false);
@@ -4682,10 +4607,6 @@ player_thread(void *arg_list)
 				raise_semaphore(recent_spot_list_semaphore);
 				string recent_spot_URL = selected_recent_spot_URL;
 				lower_semaphore(recent_spot_list_semaphore);
-				/*
-				if (isnetworked && multiplayer.isserver == false) 
-					break;
-				*/
 				if (!handle_exit(recent_spot_URL, NULL, true)) {
 					shut_down_spot();
 					spot_loaded.set(false);

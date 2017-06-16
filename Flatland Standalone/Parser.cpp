@@ -165,7 +165,6 @@ static symbol_def symbol_table[] = {
 	{"camera",			TOKEN_CAMERA},
 	{"category",		TOKEN_CATEGORY},
 	{"class",			TOKEN_CLASS},
-	{"client",			TOKEN_CLIENT},
 	{"coords",			TOKEN_COORDS},
 	{"cone",			TOKEN_CONE},
 	{"color",			TOKEN_COLOUR},
@@ -266,8 +265,6 @@ static symbol_def symbol_table[] = {
 #endif
 	{"scale",			TOKEN_SCALE},
 	{"script",			TOKEN_SCRIPT},
-	{"server",			TOKEN_SERVER},
-	{"serverip",		TOKEN_SERVERIP},
 	{"setframe",		TOKEN_SETFRAME},
 	{"setloop",			TOKEN_SETLOOP},
 	{"sky",				TOKEN_SKY},
