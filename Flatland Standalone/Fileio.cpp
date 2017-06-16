@@ -3132,7 +3132,7 @@ update_textures_in_part(block_def *block_def_ptr, part *part_ptr,
 static void
 parse_create_part_tag(block_def *block_def_ptr)
 {
-	texture *texture_ptr;
+	texture *texture_ptr = NULL;
 	int part_no;
 	part *part_ptr;
 

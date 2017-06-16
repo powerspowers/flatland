@@ -120,8 +120,8 @@ BOOL InitInstance(HINSTANCE hInstance, int nCmdShow)
    if (!create_player_window()) {
 	   return FALSE;
    }
-   //open_local_file("c:\\Program Files (x86)\\Flatland\\splash.3dml");
-   open_local_file("c:\\Users\\Philip Stephens\\Downloads\\Flatland\\testspots\\splash.3dml");
+   open_local_file("c:\\Program Files (x86)\\Flatland\\splash.3dml");
+   //open_local_file("c:\\Users\\Philip Stephens\\Downloads\\Flatland\\demo\\abbott\\abbott.3dml");
 
    ShowWindow(hWnd, nCmdShow);
    UpdateWindow(hWnd);
