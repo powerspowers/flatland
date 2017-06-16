@@ -4655,7 +4655,6 @@ player_thread(void *arg_list)
 		}
 		*/
 
-
 		// Run the event loop until plugin thread signals the player window to
 		// shut down.
 
