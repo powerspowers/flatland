@@ -55,6 +55,10 @@ string curr_spot_file_path;
 string cache_file_path;
 string new_rover_file_path;
 
+// Parent window handle.
+
+static HWND parent_window_handle;
+
 // Player thread handle.
 
 static unsigned long player_thread_handle;
@@ -301,7 +305,7 @@ display_event_callback(void);
 //------------------------------------------------------------------------------
 
 bool
-create_player_window(HWND window_handle)
+create_player_window()
 {
 	RECT window_rect;
 
@@ -309,14 +313,14 @@ create_player_window(HWND window_handle)
 
 	player_window_init_requested.send_event(true);
 
-	// Determine the size of the window.
+	// Determine the size of the parent window.
 
-	GetClientRect(window_handle, &window_rect);
+	GetClientRect(parent_window_handle, &window_rect);
 
 	// Create the main window.  If this fails, signal the player thread of
 	// failure.
 
-	if (!create_main_window(window_handle, window_rect.right,
+	if (!create_main_window(parent_window_handle, window_rect.right,
 		window_rect.bottom, key_event_callback, mouse_event_callback,
 		timer_event_callback, resize_event_callback, display_event_callback)) {
 		destroy_main_window();
@@ -1507,8 +1511,12 @@ NPP_Initialize(void)
 }
 
 bool
-init_flatland()
+init_flatland(HWND window_handle)
 {
+	// Remember the parent window.
+
+	parent_window_handle = window_handle;
+
 	// Start the memory trace.
 
 #if MEM_TRACE

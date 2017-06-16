@@ -5,10 +5,10 @@
 #include "Flatland Standalone.h"
 
 extern bool
-create_player_window(HWND window_handle);
+init_flatland(HWND window_handle);
 
 extern bool
-init_flatland();
+create_player_window();
 
 extern void
 open_local_file(char *file_path);
@@ -114,10 +114,12 @@ BOOL InitInstance(HINSTANCE hInstance, int nCmdShow)
       return FALSE;
    }
 
-   if (!init_flatland()) {
+   if (!init_flatland(hWnd)) {
 	   return FALSE;
    }
-   create_player_window(hWnd);
+   if (!create_player_window()) {
+	   return FALSE;
+   }
    open_local_file("c:\\Program Files (x86)\\Flatland\\splash.3dml");
 
    ShowWindow(hWnd, nCmdShow);
