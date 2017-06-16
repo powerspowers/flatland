@@ -415,12 +415,10 @@ toggle_window_mode(void)
 	// Create the player window.  If this fails, make the active instance
 	// inactive.
 
-	/*
-	if (!create_player_window(active_inst_data_ptr)) {
+	if (!create_player_window()) {
 		active_inst_data_ptr->active_instance = false;
 		active_inst_data_ptr = NULL;
 	}
-	*/
 
 	// Reset the title, and the label if there is one.
 
@@ -1475,12 +1473,10 @@ display_event_callback(void)
 	// inactive.
 
 	hardware_acceleration = (acceleration_mode == TRY_HARDWARE);
-	/*
-	if (!create_player_window(active_inst_data_ptr)) {
+	if (!create_player_window()) {
 		active_inst_data_ptr->active_instance = false;
 		active_inst_data_ptr = NULL;
 	}
-	*/
 
 	// Reset the title, and label if there is one.
 
@@ -1506,7 +1502,6 @@ display_event_callback(void)
 NPError
 NPP_Initialize(void)
 {
-
 	return(NPERR_NO_ERROR);
 }
 
@@ -2010,9 +2005,8 @@ inactive_window_callback(void *window_data_ptr)
 
 	// Create the player window, and if this succeeds request that the 
 	// instance's spot URL be downloaded. 
-	
-	/*
-	if (create_player_window(inst_data_ptr)) {
+
+	if (create_player_window()) {
 		URL_was_opened.reset_event();
 		if (web_browser_ID == INTERNET_EXPLORER)
 			NPN_GetURL(active_inst_data_ptr->instance_ptr, 
@@ -2031,7 +2025,6 @@ inactive_window_callback(void *window_data_ptr)
 			inactive_window_callback);
 		active_inst_data_ptr = NULL;
 	}
-	*/
 }
 
 //------------------------------------------------------------------------------
@@ -2123,12 +2116,10 @@ NPP_SetWindow(NPP instance_ptr, NPWindow *new_window_ptr)
 			// Create the player window.  If this fails, make the active
 			// instance inactive.
 
-			/*
-			if (!create_player_window(inst_data_ptr)) {
+			if (!create_player_window()) {
 				active_inst_data_ptr->active_instance = false;
 				active_inst_data_ptr = NULL;
 			}
-			*/
 		}
 	} 
 	
