@@ -1061,8 +1061,8 @@ vector::rotate_x(float look_angle)
 
 	//temp_dy = dy * cosine[look_angle] - dz * sine[look_angle];
 	//dz = dz * cosine[look_angle] + dy * sine[look_angle];
-	temp_dy = dy * cos(look_angle) - dz * sin(look_angle);
-	dz = dz * cos(look_angle) + dy * sin(look_angle);
+	temp_dy = (float)(dy * cos(look_angle) - dz * sin(look_angle));
+	dz = (float)(dz * cos(look_angle) + dy * sin(look_angle));
 	dy = temp_dy;
 }
 
@@ -1075,8 +1075,8 @@ vector::rotate_y(float turn_angle)
 
 	//temp_dx = dx * cosine[turn_angle] + dz * sine[turn_angle];
 	//dz = dz * cosine[turn_angle] - dx * sine[turn_angle];
-	temp_dx = dx * cos(turn_angle) + dz * sin(turn_angle);
-	dz = dz * cos(turn_angle) - dx * sin(turn_angle);
+	temp_dx = (float)(dx * cos(turn_angle) + dz * sin(turn_angle));
+	dz = (float)(dz * cos(turn_angle) - dx * sin(turn_angle));
 	dx = temp_dx;
 }
 
@@ -3430,7 +3430,7 @@ blockset::get_block_def(const char *name)
 {
 	block_def *block_def_ptr = block_def_list;
 	while (block_def_ptr != NULL) {
-		if (!stricmp(block_def_ptr->name, name))
+		if (!_stricmp(block_def_ptr->name, name))
 			break;
 		block_def_ptr = block_def_ptr->next_block_def_ptr;
 	}
@@ -3446,7 +3446,7 @@ blockset::get_block_def(char single_symbol, const char *name)
 	block_def *block_def_ptr = block_def_list;
 	while (block_def_ptr != NULL) {
 		if (block_def_ptr->single_symbol == single_symbol ||
-			!stricmp(block_def_ptr->name, name))
+			!_stricmp(block_def_ptr->name, name))
 			break;
 		block_def_ptr = block_def_ptr->next_block_def_ptr;
 	}
@@ -3577,7 +3577,7 @@ blockset_list::find_blockset(char *URL)
 {
 	blockset *blockset_ptr = first_blockset_ptr;
 	while (blockset_ptr != NULL) {
-		if (!stricmp(blockset_ptr->URL, URL))
+		if (!_stricmp(blockset_ptr->URL, URL))
 			return(true);
 		blockset_ptr = blockset_ptr->next_blockset_ptr;
 	}
@@ -3593,7 +3593,7 @@ blockset_list::remove_blockset(char *URL)
 	blockset *prev_blockset_ptr = NULL;
 	blockset *blockset_ptr = first_blockset_ptr;
 	while (blockset_ptr != NULL) {
-		if (!stricmp(blockset_ptr->URL, URL)) {
+		if (!_stricmp(blockset_ptr->URL, URL)) {
 			if (prev_blockset_ptr != NULL)
 				prev_blockset_ptr->next_blockset_ptr = 
 					blockset_ptr->next_blockset_ptr;

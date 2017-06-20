@@ -52,8 +52,8 @@
 // update.
 
 int min_blockset_update_period;
-int last_rover_update;
-int last_spot_dir_update;
+time_t last_rover_update;
+time_t last_spot_dir_update;
 
 // Display dimensions and other related information.
 
@@ -490,79 +490,6 @@ check_for_rover_update(int update_type)
 	// Remove the version file now that we're done with it.
 
 	remove(version_file_path);
-}
-
-//------------------------------------------------------------------------------
-// Check whether a new version of Rover has been installed.
-//------------------------------------------------------------------------------
-
-static void
-check_for_new_installation(void)
-{
-	FILE *fp;
-	int new_installation;
-	char location_str[40];
-	string ping_URL;
-
-	// Attempt to open a file called "new_rover.txt" in the Flatland folder; if
-	// it doesn't exist, there is no new version of Rover.
-
-	if ((fp = fopen(new_rover_file_path, "r")) == NULL)
-		return;
-
-	// Parse the integer value and string contained within, which indicates
-	// whether or not this is a new installation and where it came from.  If
-	// this fails, don't bother to continue.
-
-	new_installation = 1;
-	fscanf(fp, "%d ", &new_installation);
-	read_string(fp, location_str, 40);
-	fclose(fp);
-
-	// Set the URL to the CGI script.
-
-	ping_URL = "http://www.flatland.com/rovercounter.cgi?";
-
-	// Add the version number of Rover.
-
-	ping_URL += "version=";
-	ping_URL += version_number_to_string(ROVER_VERSION_NUMBER);
-	ping_URL += ",";
-
-	// Add the new installation flag.
-
-	ping_URL += "newinstall=";
-	if (new_installation)
-		ping_URL += "yes";
-	else
-		ping_URL += "no";
-	ping_URL += ",";
-
-	// Add the browser type.
-
-	ping_URL += "browser=";
-	ping_URL += web_browser_version;
-	ping_URL += ",";
-
-	// Add the operating system version.
-
-	ping_URL += "os=";
-	ping_URL += os_version;
-
-	// If there is a location string, add it.
-
-	if (*location_str) {
-		ping_URL += ",location=";
-		ping_URL += location_str;
-	}
-
-	// Send the URL to the CGI script, but discard any data sent back.
-
-	download_URL(ping_URL, NULL);
-
-	// Delete the "new_rover.txt" file.
-
-	remove(new_rover_file_path);
 }
 
 //==============================================================================
@@ -1028,7 +955,7 @@ start_up_spot(void)
 {
 	string spot_file_name;
 	trigger *trigger_ptr;
-	int curr_time;
+	time_t curr_time;
 
 	// Hide any label that might be shown.
 
@@ -1167,10 +1094,6 @@ start_up_spot(void)
 	if (spot_on_web) {
 		curr_time = time(NULL);
 
-		// Check whether a new version of Rover has been installed, and if so
-		// send off some stats to a CGI script on our web site.
-
-		check_for_new_installation();
 
 		// If the minimum version required for this spot is greater than 
 		// Rover's version number, check for a Rover update.
@@ -2758,13 +2681,13 @@ execute_orbit_action(action *action_ptr,int time_diff)
 	
 		//set_title("sine %d %f %d",(action_ptr->temp / 1000) % 180,sin(RAD(action_ptr->style)), action_ptr->style);
 		block_ptr->translation.z = center_ptr->translation.z +
-								(sin(RAD((float)(action_ptr->temp) / 1000.0f)) * 
+								(float)(sin(RAD((float)(action_ptr->temp) / 1000.0f)) * 
 								action_ptr->spin_angles.z / TEXELS_PER_UNIT);
 		block_ptr->translation.x = center_ptr->translation.x +
-								(sin(RAD((float)(action_ptr->temp) / 1000.0f) + 90.0f) *
+								(float)(sin(RAD((float)(action_ptr->temp) / 1000.0f) + 90.0f) *
 								action_ptr->spin_angles.x / TEXELS_PER_UNIT);
 		block_ptr->translation.y = center_ptr->translation.y +
-								(sin(RAD((float)(action_ptr->temp) / 1000.0f) + 180.0f) * 
+								(float)(sin(RAD((float)(action_ptr->temp) / 1000.0f) + 180.0f) * 
 								action_ptr->spin_angles.y / TEXELS_PER_UNIT);
 
 }
@@ -3949,7 +3872,7 @@ init_player(void)
 
 	// Initialise the random number generator.
 
-	srand(time(NULL));
+	srand((unsigned int)time(NULL));
 	rand();
 
 	// Initialise global variables.
@@ -4021,8 +3944,8 @@ shut_down_player(void)
 	if ((fp = fopen(recent_spots_file_path, "w")) != NULL) {
 		fprintf(fp, "%d\n", recent_spots);
 		for (index = 0; index < recent_spots; index++) {
-			fprintf(fp, "%s\n", recent_spot_list[index].label);
-			fprintf(fp, "%s\n", recent_spot_list[index].URL);
+			fprintf(fp, "%s\n", (char *)recent_spot_list[index].label);
+			fprintf(fp, "%s\n", (char *)recent_spot_list[index].URL);
 		}
 		fclose(fp);
 	}

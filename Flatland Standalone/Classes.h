@@ -1401,7 +1401,7 @@ struct blockset {
 struct cached_blockset {
 	string href;
 	int size;
-	int updated;
+	time_t updated;
 	string name;
 	string synopsis;
 	unsigned int version;

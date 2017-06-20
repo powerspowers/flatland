@@ -18,7 +18,6 @@
 #include <math.h>
 #include <process.h>
 
-#include <imagehlp.h>
 #include <commdlg.h>
 #include <commctrl.h>
 #include <objbase.h>
@@ -2558,13 +2557,8 @@ start_up_platform_API(void)
 	char dll_path[_MAX_PATH];
 	HANDLE find_handle;
 	WIN32_FIND_DATA find_data;
-	OSVERSIONINFO os_version_info;
 	char buffer[_MAX_PATH];
-	DWORD buffer_size;
-	char key[_MAX_PATH];
-	HKEY key_handle;
 	char *app_name;
-	char version_number[16];
 	WNDCLASS window_class;
 	int icon_x, index;
 	FILE *fp;
@@ -2598,36 +2592,9 @@ start_up_platform_API(void)
 		FindClose(find_handle);
 	}
 
-	// Get the instance handle.
-	
-	if ((instance_handle = GetModuleHandle("Flatland Standalone.exe")) == NULL)
-		return(false);
-
-/*
-	// Get the class ID for the Rover ActiveX control.
-
-	if (RegOpenKeyEx(HKEY_CLASSES_ROOT, "FlatlandRover.Rover\\CLSID", 0,
-		KEY_QUERY_VALUE, &key_handle) != ERROR_SUCCESS)
-		return(false);
-	buffer_size = _MAX_PATH;
-	RegQueryValueEx(key_handle, NULL, 0, NULL, (BYTE *)buffer, &buffer_size);
-	RegCloseKey(key_handle);
-
-	// Now get the path to the ActiveX control.
-
-	bprintf(key, _MAX_PATH, "CLSID\\%s\\InprocServer32", buffer);
-	if (RegOpenKeyEx(HKEY_CLASSES_ROOT, key, 0, KEY_QUERY_VALUE, &key_handle)
-		!= ERROR_SUCCESS)
-		return(false);
-	buffer_size = _MAX_PATH;
-	RegQueryValueEx(key_handle, NULL, 0, NULL, (BYTE *)buffer, &buffer_size);
-	RegCloseKey(key_handle);
-*/
-
-	GetCurrentDirectory(_MAX_PATH, buffer);
-
 	// Strip out the application directory.
 
+	GetCurrentDirectory(_MAX_PATH, buffer);
 	app_name = strrchr(buffer, '\\') + 1;
 	*app_name = '\0';
 	app_dir = buffer;
@@ -2662,34 +2629,6 @@ start_up_platform_API(void)
 	if ((fp = fopen(log_file_path, "w")) != NULL)
 		fclose(fp);
 
-	// Determine which OS we are running under.
-
-	os_version_info.dwOSVersionInfoSize = sizeof(OSVERSIONINFO);
-	GetVersionEx(&os_version_info);
-	switch (os_version_info.dwPlatformId) {
-	case VER_PLATFORM_WIN32s:
-		os_version = "Windows 3.1 (Win32s)";
-		break;
-	case VER_PLATFORM_WIN32_WINDOWS:
-		if (os_version_info.dwMinorVersion == 0)
-			os_version = "Windows 95";
-		else if (os_version_info.dwMinorVersion == 10)
-			os_version = "Windows 98";
-		else
-			os_version = "Windows XX";
-		bprintf(version_number, 16, " (%d.%d.%d)", 
-			os_version_info.dwMajorVersion, os_version_info.dwMinorVersion, 
-			os_version_info.dwBuildNumber & 0xffff);
-		os_version += version_number;
-		break;
-	case VER_PLATFORM_WIN32_NT:
-		os_version = "Windows NT";
-		bprintf(version_number, 16, " (%d.%d.%d)", 
-			os_version_info.dwMajorVersion, os_version_info.dwMinorVersion,
-			os_version_info.dwBuildNumber);
-		os_version += version_number;
-	}
-
 	// Create the semaphore for the active button index.
 
 	active_button_index.create_semaphore();
@@ -2700,7 +2639,7 @@ start_up_platform_API(void)
 		movement_cursor_handle_list[index] = LoadCursor(instance_handle, 
 			MAKEINTRESOURCE(movement_cursor_ID_list[index]));
 	arrow_cursor_handle = LoadCursor(NULL, IDC_ARROW);
-	hand_cursor_handle = LoadCursor(instance_handle, MAKEINTRESOURCE(IDC_HAND));
+	hand_cursor_handle = LoadCursor(instance_handle, MAKEINTRESOURCE(IDC_HAND_CURSOR));
 	crosshair_cursor_handle = LoadCursor(NULL, IDC_CROSS);	
 
 	// Register the main window class.
@@ -5478,7 +5417,7 @@ save_frame_buffer(byte *image_buffer, int width, int height)
 
 	// Lock the frame buffer.
 
-	if (! (fb_ptr, row_pitch))
+	if (!lock_frame_buffer(fb_ptr, row_pitch))
 		return(false);
 
 	// Depending on the colour depth of the display, convert a 16-bit frame
@@ -8707,8 +8646,6 @@ draw_pixmap(pixmap *pixmap_ptr, int brightness_index, int x, int y, int width,
 	int image_width, span_width;
 	fixed u, v;
 
-	char buffer[256];
-
 	// If the pixmap is completely off screen then return without having drawn
 	// anything.
 
@@ -8754,8 +8691,6 @@ draw_pixmap(pixmap *pixmap_ptr, int brightness_index, int x, int y, int width,
 			return;
 		surface_ptr = (byte *)locked_rect.pBits;
 		fb_bytes_per_row = locked_rect.Pitch;
-		sprintf(buffer, "surface_ptr = %04x, fb_bytes_per_row = %d\n", surface_ptr, fb_bytes_per_row);
-		OutputDebugString(buffer);
 	} else {
 		DDSURFACEDESC ddraw_surface_desc;
 

@@ -4904,6 +4904,12 @@ read_config_int(const char *value_string, int *value)
 }
 
 bool
+read_config_time_t(const char *value_string, time_t *value)
+{
+	return(sscanf(value_string, "%lld", value) == 1);
+}
+
+bool
 read_config_float(const char *value_string, float *value)
 {
 	return(sscanf(value_string, "%f", value) == 1);
@@ -4979,9 +4985,9 @@ load_config_file(void)
 					if (read_config_int(value, &min_blockset_update_period))
 						min_blockset_update_period *= SECONDS_PER_DAY;
 				} else if (!_stricmp(name, "last Rover update"))
-					read_config_int(value, &last_rover_update);
+					read_config_time_t(value, &last_rover_update);
 				else if (!_stricmp(name, "last spot directory update"))
-					read_config_int(value, &last_spot_dir_update);
+					read_config_time_t(value, &last_spot_dir_update);
 				else if (!_stricmp(name, "debug option"))
 					read_config_enum(value, &user_debug_level_value,
 						debug_option_value_list, DEBUG_OPTION_VALUES);
@@ -4989,7 +4995,7 @@ load_config_file(void)
 					read_config_float(value, &brightness_value);
 			}
 		else
-			sscanf(line, "%d %d %d %d %d %f %f %d %d %d %d %d", 
+			sscanf(line, "%d %d %d %d %d %f %f %d %d %d %d", 
 				&acceleration_mode, &download_sounds_value, 
 				&visible_block_radius_value, &prev_process_ID, 
 				&use_reflections, &curr_move_rate_value, 
@@ -5024,6 +5030,12 @@ void
 write_config_int(FILE *fp, const char *name, int value, const char *units)
 {
 	fprintf(fp, "%s = %d %s\n", name, value, units);
+}
+
+void
+write_config_time_t(FILE *fp, const char *name, time_t value, const char *units)
+{
+	fprintf(fp, "%s = %lld %s\n", name, value, units);
 }
 
 void
@@ -5070,9 +5082,9 @@ save_config_file(void)
 			"degrees/second");
 		write_config_int(fp, "minimum blockset update period", 
 			min_blockset_update_period / SECONDS_PER_DAY, "days");
-		write_config_int(fp, "last Rover update", last_rover_update,
+		write_config_time_t(fp, "last Rover update", last_rover_update,
 			"seconds since epoch");
-		write_config_int(fp, "last spot directory update",
+		write_config_time_t(fp, "last spot directory update",
 			last_spot_dir_update, "seconds since epoch");
 		write_config_enum(fp, "debug option", user_debug_level.get(),
 			debug_option_value_list, DEBUG_OPTION_VALUES);
@@ -5134,7 +5146,7 @@ add_cached_blockset(void)
 //------------------------------------------------------------------------------
 
 cached_blockset *
-new_cached_blockset(const char *path, const char *href, int size, int updated)
+new_cached_blockset(const char *path, const char *href, int size, time_t updated)
 {
 	const char *name_ptr, *ext_ptr;
 	string name;
@@ -5288,12 +5300,12 @@ save_cached_blockset_list(void)
 		cached_blockset_ptr = cached_blockset_list;
 		while (cached_blockset_ptr != NULL) {
 			fprintf(fp, "\t<BLOCKSET HREF=\"%s\" SIZE=\"%d\""
-				" UPDATED=\"%d\"", cached_blockset_ptr->href,
+				" UPDATED=\"%lld\"", (char *)cached_blockset_ptr->href,
 				cached_blockset_ptr->size, cached_blockset_ptr->updated);
 			if (strlen(cached_blockset_ptr->name) > 0)
-				fprintf(fp, " NAME=\"%s\"", cached_blockset_ptr->name);
+				fprintf(fp, " NAME=\"%s\"", (char *)cached_blockset_ptr->name);
 			if (strlen(cached_blockset_ptr->synopsis) > 0)
-				fprintf(fp, " SYNOPSIS=\"%s\"", cached_blockset_ptr->synopsis);
+				fprintf(fp, " SYNOPSIS=\"%s\"", (char *)cached_blockset_ptr->synopsis);
 			if (cached_blockset_ptr->version > 0)
 				fprintf(fp, " VERSION=\"%s\"", 
 					version_number_to_string(cached_blockset_ptr->version));
@@ -5356,7 +5368,7 @@ find_cached_blocksets(const char *dir_path)
 
 		else {
 			ext_ptr = strrchr(file_info.name, '.');
-			if (!stricmp(ext_ptr, ".bset")) {
+			if (!_stricmp(ext_ptr, ".bset")) {
 
 				// Construct the path to the blockset.
 
@@ -5413,7 +5425,7 @@ find_cached_blockset(const char *href)
 {
 	cached_blockset *cached_blockset_ptr = cached_blockset_list;
 	while (cached_blockset_ptr != NULL) {
-		if (!stricmp(href, cached_blockset_ptr->href))
+		if (!_stricmp(href, cached_blockset_ptr->href))
 			return(cached_blockset_ptr);
 		cached_blockset_ptr = cached_blockset_ptr->next_cached_blockset_ptr;
 	}
@@ -5436,7 +5448,7 @@ delete_cached_blockset(const char *href)
 
 		// If this entry matches, delete it and return success.
 
-		if (!stricmp(href, cached_blockset_ptr->href)) {
+		if (!_stricmp(href, cached_blockset_ptr->href)) {
 			if (prev_cached_blockset_ptr != NULL) {
 				prev_cached_blockset_ptr->next_cached_blockset_ptr = 
 					cached_blockset_ptr->next_cached_blockset_ptr;

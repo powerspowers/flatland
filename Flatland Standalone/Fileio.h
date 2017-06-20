@@ -33,7 +33,7 @@ void
 delete_cached_blockset_list(void);
 
 cached_blockset *
-new_cached_blockset(const char *path, const char *href, int size, int updated);
+new_cached_blockset(const char *path, const char *href, int size, time_t updated);
 
 bool
 load_cached_blockset_list(void);

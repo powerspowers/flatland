@@ -13,8 +13,8 @@
 // update.
 
 extern int min_blockset_update_period;
-extern int last_rover_update;
-extern int last_spot_dir_update;
+extern time_t last_rover_update;
+extern time_t last_spot_dir_update;
 
 // Display dimensions and other related information.
 

@@ -129,10 +129,6 @@ struct event {
 // Global variables.
 //------------------------------------------------------------------------------
 
-// Operating system name and version.
-
-extern string os_version;
-
 // Application path.
 
 extern string app_dir;

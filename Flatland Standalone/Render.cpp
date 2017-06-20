@@ -1966,8 +1966,6 @@ render_blocks_on_map(int min_column, int min_row, int min_level,
 static void
 render_player_block(void)
 {
-	int j;
-
 	vertex centre(UNITS_PER_HALF_BLOCK, UNITS_PER_HALF_BLOCK,
 		UNITS_PER_HALF_BLOCK);
 	//int vertex_no;
