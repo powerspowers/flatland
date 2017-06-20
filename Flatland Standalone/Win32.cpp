@@ -321,10 +321,6 @@ struct MYBITMAPINFO {
 
 #define PURCHASE_URL "https://www.softwarekey.com/products/product.asp?P=9160"
 
-// Instance handle for application.
-
-static HINSTANCE instance_handle;
-
 // Pixel mask table for component sizes of 1 to 8 bits.
 
 static int pixel_mask_table[8] = {
@@ -2565,7 +2561,6 @@ start_up_platform_API(void)
 
 	// Initialise global variables.
 
-	instance_handle = NULL;
 	right_edge_icon_ptr = NULL;
 	title_bg_icon_ptr = NULL;
 	title_end_icon_ptr = NULL;
@@ -3481,6 +3476,16 @@ create_main_window(void (*key_callback)(byte key_code, bool key_down),
 
 	main_window_ready = true;
 	return(true);
+}
+
+//------------------------------------------------------------------------------
+// Return a transparent pointer to the main window.
+//------------------------------------------------------------------------------
+
+void *
+get_main_window()
+{
+	return (void *)main_window_handle;
 }
 
 //------------------------------------------------------------------------------

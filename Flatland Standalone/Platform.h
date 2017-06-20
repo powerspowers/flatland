@@ -258,6 +258,8 @@ create_main_window(void (*key_callback)(byte key_code, bool key_down),
 										   int height),
 				   void (*display_callback)(void));
 
+void *get_main_window();
+
 void
 destroy_main_window(void);
 
