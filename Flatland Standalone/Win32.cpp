@@ -11,6 +11,10 @@
 #include <windows.h>
 #include <windowsx.h>
 
+#if SYMBOLIC_DEBUG
+#include "Dbghelp.h"
+#endif
+
 #include <stdio.h>
 #include <stdarg.h>
 #include <string.h>
@@ -316,10 +320,6 @@ struct MYBITMAPINFO {
 //------------------------------------------------------------------------------
 // Local variables.
 //------------------------------------------------------------------------------
-
-// Purchase URL.
-
-#define PURCHASE_URL "https://www.softwarekey.com/products/product.asp?P=9160"
 
 // Pixel mask table for component sizes of 1 to 8 bits.
 
@@ -2338,7 +2338,7 @@ exception_filter(EXCEPTION_POINTERS *exception_ptr)
 		((DWORD)descriptor.HighWord.Bytes.BaseHi << 24)) + 
 		(DWORD)instance_handle;
 	
-	// Attempt to obtain the symbol table for NPRover.dll.  If this fails, we
+	// Attempt to obtain the symbol table for the application.  If this fails, we
 	// will generate numerical addresses only in our exception report.
 
 	sym_initialised = false;
@@ -2347,7 +2347,7 @@ exception_filter(EXCEPTION_POINTERS *exception_ptr)
 	thread_handle = GetCurrentThread();
 	if (SymInitialize(process_handle, app_dir, FALSE)) {
 		sym_initialised = true;
-		if (SymLoadModule(process_handle, NULL, "NPRover.dll", NULL,
+		if (SymLoadModule(process_handle, NULL, "Flatland Standalone.exe", NULL,
 			(DWORD)instance_handle, 0))
 			got_symbol_table = true;
 	}
@@ -3615,7 +3615,7 @@ open_file_dialog(char *file_path_buffer, int buffer_size)
 	
 	// Show the open file dialog.
 
-	return GetOpenFileName(&ofn);
+	return GetOpenFileName(&ofn) == TRUE;
 }
 
 //==============================================================================
