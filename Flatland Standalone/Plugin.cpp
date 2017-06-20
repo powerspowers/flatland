@@ -398,7 +398,9 @@ display_file_as_web_page(const char *file_path)
 			URL[9] = '|';
 	}
 
-	// TODO: Ask the browser to load this URL into a new window.
+	// Open the URL in the default external app.
+
+	open_URL_in_default_app(URL);
 }
 
 //------------------------------------------------------------------------------
@@ -408,7 +410,7 @@ display_file_as_web_page(const char *file_path)
 void
 display_web_page(const char *URL)
 {
-	// TODO
+	open_URL_in_default_app(URL);
 }
 
 //------------------------------------------------------------------------------

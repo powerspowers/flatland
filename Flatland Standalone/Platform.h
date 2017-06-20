@@ -282,6 +282,11 @@ information(char *title, char *format, ...);
 bool
 query(char *title, bool yes_no_format, char *format, ...);
 
+// Open URL in the default external app.
+
+void
+open_URL_in_default_app(const char *URL);
+
 // Open file dialog.
 
 bool
