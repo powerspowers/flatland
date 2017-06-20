@@ -163,6 +163,9 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
             case IDM_ABOUT:
                 DialogBox(instance_handle, MAKEINTRESOURCE(IDD_ABOUTBOX), hWnd, About);
                 break;
+			case ID_HELP_VIEWHELP:
+				open_help_window();
+				break;
 			case ID_FILE_OPENSPOT:
 				{	
 					char file_path[256];
