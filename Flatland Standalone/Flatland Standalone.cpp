@@ -117,7 +117,7 @@ BOOL InitInstance(HINSTANCE hInstance, int nCmdShow)
 
 	// Add a status bar at the bottom of the main application window.
 
-	status_bar_handle = CreateWindow(STATUSCLASSNAME, "This is a test", SBARS_SIZEGRIP | WS_CHILD | WS_VISIBLE,
+	status_bar_handle = CreateWindow(STATUSCLASSNAME, NULL, SBARS_SIZEGRIP | WS_CHILD | WS_VISIBLE,
 		0, 0, 0, 0, app_window_handle, (HMENU)5000, hInstance, nullptr);
 	if (!status_bar_handle) {
 		return FALSE;
@@ -132,8 +132,12 @@ BOOL InitInstance(HINSTANCE hInstance, int nCmdShow)
 		return FALSE;
 	}
 
-	//open_local_file("c:\\Program Files (x86)\\Flatland\\splash.3dml");
-	open_local_file("c:\\Users\\Philip Stephens\\Downloads\\Flatland\\demo\\abbott\\abbott.3dml");
+	// Open the splash spot.
+
+	string splash_URL = flatland_dir + "splash.3dml";
+	open_local_file(splash_URL);
+
+	// Show and update the app window.
 
 	ShowWindow(app_window_handle, nCmdShow);
 	UpdateWindow(app_window_handle);
@@ -207,7 +211,16 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 	case WM_SIZE:
 		SendMessage(status_bar_handle, WM_SIZE, wParam, lParam);
 		if (get_main_window()) {
-			SendMessage((HWND)get_main_window(), WM_SIZE, wParam, lParam);
+			RECT app_window_rect;
+			RECT status_bar_rect;
+			int width;
+			int height;
+
+			GetClientRect(app_window_handle, &app_window_rect);
+			GetWindowRect(status_bar_handle, &status_bar_rect);
+			width = app_window_rect.right;
+			height = app_window_rect.bottom - (status_bar_rect.bottom - status_bar_rect.top);
+			MoveWindow((HWND)get_main_window(), 0, 0, width, height, TRUE);
 		}
 		break;
     case WM_DESTROY:

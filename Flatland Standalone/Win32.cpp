@@ -8874,7 +8874,7 @@ set_title(char *format, ...)
 
 	// Draw the title on the status bar.
 
-	SendMessage(status_bar_handle, SB_SETTEXT, 0, (LPARAM)title);
+	SendMessage(status_bar_handle, SB_SETTEXT, 0, (LPARAM)(char *)title_text);
 }
 
 //------------------------------------------------------------------------------
