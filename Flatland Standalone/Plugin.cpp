@@ -379,7 +379,7 @@ toggle_window_mode(void)
 // Display a file as a web page in a new browser window.
 //------------------------------------------------------------------------------
 
-static void
+void
 display_file_as_web_page(const char *file_path)
 {
 	FILE *fp;
@@ -939,6 +939,12 @@ show_options_window()
 	old_user_debug_level = user_debug_level.get();
 	open_options_window(download_sounds_flag, old_visible_block_radius,
 		old_user_debug_level, options_window_callback);
+}
+
+void
+show_light_window()
+{
+	open_light_window(master_brightness.get(), light_window_callback);
 }
 
 //------------------------------------------------------------------------------

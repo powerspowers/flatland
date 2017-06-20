@@ -165,6 +165,15 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 			case ID_FILE_OPTIONS:
 				show_options_window();
 				break;
+			case ID_FILE_BRIGHTNESS:
+				show_light_window();
+				break;
+			case ID_FILE_MANAGEBLOCKSETS:
+				open_blockset_manager_window();
+				break;
+			case ID_FILE_VIEW3DMLSOURCE:
+				display_file_as_web_page(curr_spot_file_path);
+				break;
             case IDM_EXIT:
                 DestroyWindow(hWnd);
                 break;

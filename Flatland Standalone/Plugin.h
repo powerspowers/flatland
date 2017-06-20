@@ -170,7 +170,13 @@ open_local_file(char *file_path);
 void
 show_options_window();
 
-// Function to display web page.
+void
+show_light_window();
+
+// Functions to display web page.
+
+void
+display_file_as_web_page(const char *file_path);
 
 void
 display_web_page(const char *URL);
