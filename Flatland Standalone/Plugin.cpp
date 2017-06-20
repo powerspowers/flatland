@@ -4,7 +4,6 @@
 // All Rights Reserved. 
 //******************************************************************************
 
-#include <Windows.h>
 #include <stdio.h>
 #include <stdarg.h>
 #include <string.h>
@@ -22,7 +21,6 @@
 #include "resource.h"
 //POWERS #include "SimKin.h"
 #include "Spans.h"
-#include "Flatland Standalone.h"
 
 // Important directories and file paths.
 
@@ -251,24 +249,14 @@ display_event_callback(void);
 bool
 create_player_window()
 {
-	RECT app_window_rect;
-	RECT status_bar_rect;
-
 	// Tell the player thread we're about to create the player window.
 
 	player_window_init_requested.send_event(true);
 
-	// Determine the size of the parent window and status bar.
-
-	GetClientRect(app_window_handle, &app_window_rect);
-	GetWindowRect(status_bar_handle, &status_bar_rect);
-
 	// Create the main window.  If this fails, signal the player thread of
 	// failure.
 
-	if (!create_main_window(app_window_handle, app_window_rect.right,
-		app_window_rect.bottom - (status_bar_rect.bottom - status_bar_rect.top), 
-		key_event_callback, mouse_event_callback,
+	if (!create_main_window(key_event_callback, mouse_event_callback,
 		timer_event_callback, resize_event_callback, display_event_callback)) {
 		destroy_main_window();
 		main_window_created.send_event(false);

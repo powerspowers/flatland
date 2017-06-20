@@ -3184,8 +3184,7 @@ set_main_window_size(int width, int height)
 //------------------------------------------------------------------------------
 
 bool
-create_main_window(void *window_handle, int width, int height,
-				   void (*key_callback)(byte key_code, bool key_down),
+create_main_window(void (*key_callback)(byte key_code, bool key_down),
 				   void (*mouse_callback)(int x, int y, int button_code,
 									      int task_bar_button_code),
 				   void (*timer_callback)(void),
@@ -3193,12 +3192,24 @@ create_main_window(void *window_handle, int width, int height,
 										   int height),
 				   void (*display_callback)(void))
 {
+	RECT app_window_rect;
+	RECT status_bar_rect;
+	int width;
+	int height;
 	int index;
 
 	// Do nothing if the main window already exists.
 
 	if (main_window_handle != NULL)
 		return(false);
+
+	// Determine the size of the parent window and status bar, and use them to
+	// calculate the desired size of the main window.
+
+	GetClientRect(app_window_handle, &app_window_rect);
+	GetWindowRect(status_bar_handle, &status_bar_rect);
+	width = app_window_rect.right;
+	height = app_window_rect.bottom - (status_bar_rect.bottom - status_bar_rect.top);
 
 	// Initialise the global variables.
 
@@ -3260,7 +3271,7 @@ create_main_window(void *window_handle, int width, int height,
 	// Create the main window as a child of the app window.
 
 	main_window_handle = CreateWindow("MainWindow", nullptr, WS_CHILD | WS_VISIBLE,
-		0, 0, width, height, (HWND)window_handle, nullptr, instance_handle, nullptr);
+		0, 0, width, height, app_window_handle, nullptr, instance_handle, nullptr);
 
 	// Set the main window size.
 

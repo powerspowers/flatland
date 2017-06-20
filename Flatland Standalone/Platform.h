@@ -250,8 +250,7 @@ void
 set_main_window_size(int width, int height);
 
 bool
-create_main_window(void *window_handle, int width, int height,
-				   void (*key_callback)(byte key_code, bool key_down),
+create_main_window(void (*key_callback)(byte key_code, bool key_down),
 				   void (*mouse_callback)(int x, int y, int button_code,
 										  int task_bar_button_code),
 				   void (*timer_callback)(void),
