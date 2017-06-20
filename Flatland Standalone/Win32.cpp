@@ -7939,7 +7939,7 @@ render_popup_span32(span *span_ptr)
 	byte *image_ptr, *fb_ptr;
 	pixel *palette_ptr;
 	int transparent_index;
-	pixel transparency_mask32;
+	pixel transparency_mask32 = 0;
 	int image_width, span_width;
 	fixed u, v;
 
