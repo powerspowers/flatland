@@ -927,6 +927,21 @@ key_event_callback(byte key_code, bool key_down)
 }
 
 //------------------------------------------------------------------------------
+// Show the options window.
+//------------------------------------------------------------------------------
+
+void
+show_options_window()
+{
+	download_sounds_flag = download_sounds.get();
+	hardware_acceleration_flag = hardware_acceleration;
+	old_visible_block_radius = visible_block_radius.get();
+	old_user_debug_level = user_debug_level.get();
+	open_options_window(download_sounds_flag, old_visible_block_radius,
+		old_user_debug_level, options_window_callback);
+}
+
+//------------------------------------------------------------------------------
 // Callback function to handle mouse events.
 //------------------------------------------------------------------------------
 
@@ -1020,12 +1035,7 @@ mouse_event_callback(int x, int y, int button_code, int task_bar_button_code)
 			disable_cursor_changes = false;
 			break;
 		case OPTIONS_BUTTON:
-			download_sounds_flag = download_sounds.get();
-			hardware_acceleration_flag = hardware_acceleration;
-			old_visible_block_radius = visible_block_radius.get();
-			old_user_debug_level = user_debug_level.get();
-			open_options_window(download_sounds_flag, old_visible_block_radius, 
-				old_user_debug_level, options_window_callback);
+			show_options_window();
 			break;
 		case LIGHT_BUTTON:
 			open_light_window(master_brightness.get(), light_window_callback);

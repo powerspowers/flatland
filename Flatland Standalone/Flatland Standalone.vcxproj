@@ -292,10 +292,36 @@
     <ResourceCompile Include="Flatland Standalone.rc" />
   </ItemGroup>
   <ItemGroup>
+    <Image Include="Bitmaps\Builder0.gif" />
+    <Image Include="Bitmaps\Builder1.gif" />
+    <Image Include="Bitmaps\command0.gif" />
+    <Image Include="Bitmaps\command1.gif" />
+    <Image Include="Bitmaps\Directory0.gif" />
+    <Image Include="Bitmaps\Directory1.gif" />
+    <Image Include="Bitmaps\History0.gif" />
+    <Image Include="Bitmaps\History1.gif" />
+    <Image Include="Bitmaps\Light0.gif" />
+    <Image Include="Bitmaps\Light1.gif" />
+    <Image Include="Bitmaps\Logo.gif" />
+    <Image Include="Bitmaps\Options0.gif" />
+    <Image Include="Bitmaps\Options1.gif" />
+    <Image Include="Bitmaps\Right.gif" />
+    <Image Include="Bitmaps\Splash.gif" />
+    <Image Include="Bitmaps\Title_bg.gif" />
+    <Image Include="Bitmaps\Title_end.gif" />
     <Image Include="Flatland Standalone.ico" />
     <Image Include="small.ico" />
   </ItemGroup>
   <ItemGroup>
+    <None Include="bitmaps\arrow_e.cur" />
+    <None Include="bitmaps\arrow_n.cur" />
+    <None Include="bitmaps\arrow_ne.cur" />
+    <None Include="bitmaps\arrow_nw.cur" />
+    <None Include="bitmaps\arrow_s.cur" />
+    <None Include="bitmaps\arrow_se.cur" />
+    <None Include="bitmaps\arrow_sw.cur" />
+    <None Include="bitmaps\arrow_w.cur" />
+    <None Include="bitmaps\hand.cur" />
     <None Include="DirectX\d3dx8math.inl" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />

@@ -162,6 +162,9 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
             case IDM_ABOUT:
                 DialogBox(instance_handle, MAKEINTRESOURCE(IDD_ABOUTBOX), hWnd, About);
                 break;
+			case ID_FILE_OPTIONS:
+				show_options_window();
+				break;
             case IDM_EXIT:
                 DestroyWindow(hWnd);
                 break;

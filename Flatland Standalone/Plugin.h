@@ -167,6 +167,9 @@ create_player_window();
 void
 open_local_file(char *file_path);
 
+void
+show_options_window();
+
 // Function to display web page.
 
 void
