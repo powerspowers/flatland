@@ -22,6 +22,7 @@
 #include "resource.h"
 //POWERS #include "SimKin.h"
 #include "Spans.h"
+#include "Flatland Standalone.h"
 
 // Important directories and file paths.
 
@@ -36,10 +37,6 @@ string recent_spots_file_path;
 string curr_spot_file_path;
 string cache_file_path;
 string new_rover_file_path;
-
-// Parent window handle.
-
-static HWND parent_window_handle;
 
 // Player thread handle.
 
@@ -161,7 +158,7 @@ static bool disable_cursor_changes;
 
 static bool player_active;
 static bool player_window_created;
-static bool browser_window_minimised;
+static bool app_window_minimised;
 static float prev_move_rate, prev_rotate_rate;
 static bool sidle_mode_enabled;
 static bool fast_mode_enabled;
@@ -173,10 +170,6 @@ static int old_visible_block_radius;
 static int old_user_debug_level;
 static float window_half_width;
 static float window_top_half_height, window_bottom_half_height;
-
-// Various URLs.
-
-#define FLATLAND_URL		"http://www.flatland.com"
 
 // Key code to function structure.
 
@@ -258,21 +251,24 @@ display_event_callback(void);
 bool
 create_player_window()
 {
-	RECT window_rect;
+	RECT app_window_rect;
+	RECT status_bar_rect;
 
 	// Tell the player thread we're about to create the player window.
 
 	player_window_init_requested.send_event(true);
 
-	// Determine the size of the parent window.
+	// Determine the size of the parent window and status bar.
 
-	GetClientRect(parent_window_handle, &window_rect);
+	GetClientRect(app_window_handle, &app_window_rect);
+	GetWindowRect(status_bar_handle, &status_bar_rect);
 
 	// Create the main window.  If this fails, signal the player thread of
 	// failure.
 
-	if (!create_main_window(parent_window_handle, window_rect.right,
-		window_rect.bottom, key_event_callback, mouse_event_callback,
+	if (!create_main_window(app_window_handle, app_window_rect.right,
+		app_window_rect.bottom - (status_bar_rect.bottom - status_bar_rect.top), 
+		key_event_callback, mouse_event_callback,
 		timer_event_callback, resize_event_callback, display_event_callback)) {
 		destroy_main_window();
 		main_window_created.send_event(false);
@@ -1180,26 +1176,26 @@ mouse_event_callback(int x, int y, int button_code, int task_bar_button_code)
 static void
 timer_event_callback(void)
 {
-	// If the browser window has been minimised, send a pause event to the
+	// If the application window has been minimised, send a pause event to the
 	// player thread.
 
-	if (!browser_window_minimised && browser_window_is_minimised()) {
-		browser_window_minimised = true;
+	if (!app_window_minimised && app_window_is_minimised()) {
+		app_window_minimised = true;
 		pause_player_thread.send_event(true);
 	}
 
-	// If the browser window has been restored, send a resume event to the
+	// If the app window has been restored, send a resume event to the
 	// player thread.
 
-	if (browser_window_minimised && !browser_window_is_minimised()) {
-		browser_window_minimised = false;
+	if (app_window_minimised && !app_window_is_minimised()) {
+		app_window_minimised = false;
 		resume_player_thread.send_event(true);
 	}
 
-	// If the browser window is not minimised and a spot is loaded, update the
+	// If the app window is not minimised and a spot is loaded, update the
 	// cursor position.
 
-	if (!browser_window_minimised && spot_loaded.get()) {
+	if (!app_window_minimised && spot_loaded.get()) {
 		int x, y;
 
 		get_mouse_position(&x, &y, true);
@@ -1301,6 +1297,7 @@ timer_event_callback(void)
 static void
 resize_event_callback(void *window_handle, int width, int height)
 {
+	/*
 	// Signal the player thread that a window resize is requested, and
 	// wait for the player thread to signal that the player window has shut 
 	// down.
@@ -1349,6 +1346,7 @@ resize_event_callback(void *window_handle, int width, int height)
 
 	set_title(NULL);
 	show_label(NULL);
+	*/
 }
 
 //------------------------------------------------------------------------------
@@ -1383,12 +1381,8 @@ display_event_callback(void)
 }
 
 bool
-init_flatland(HWND window_handle)
+init_flatland()
 {
-	// Remember the parent window.
-
-	parent_window_handle = window_handle;
-
 	// Start the memory trace.
 
 #if MEM_TRACE
@@ -1477,11 +1471,11 @@ init_flatland(HWND window_handle)
 	load_config_file();
 
 	// Indicate the player is not active yet, there is no player window,
-	// and the browser window is not minimised.
+	// and the app window is not minimised.
 
 	player_active = false;
 	player_window_created = false;
-	browser_window_minimised = false;
+	app_window_minimised = false;
 
 	// Initialise all variables that require synchronised access.
 

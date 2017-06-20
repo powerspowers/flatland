@@ -156,6 +156,17 @@ extern const char *snapshot_file_path;
 #define GO_SLOWER			9
 #define JUMP				10
 
+// Entry points called by the application.
+
+bool
+init_flatland();
+
+bool
+create_player_window();
+
+void
+open_local_file(char *file_path);
+
 // Function to display web page.
 
 void

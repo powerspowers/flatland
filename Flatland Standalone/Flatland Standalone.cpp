@@ -2,23 +2,19 @@
 //
 
 #include "stdafx.h"
+#include "Classes.h"
+#include "Platform.h"
 #include "Flatland Standalone.h"
-
-extern bool
-init_flatland(HWND window_handle);
-
-extern bool
-create_player_window();
-
-extern void
-open_local_file(char *file_path);
+#include "Plugin.h"
 
 #define MAX_LOADSTRING 100
 
 // Global Variables:
-HINSTANCE hInst;                                // current instance
-CHAR szTitle[MAX_LOADSTRING];                  // The title bar text
-CHAR szWindowClass[MAX_LOADSTRING];            // the main window class name
+HINSTANCE instance_handle;						// current instance
+static CHAR szTitle[MAX_LOADSTRING];			// The title bar text
+static CHAR szWindowClass[MAX_LOADSTRING];		// the main window class name
+HWND app_window_handle;
+HWND status_bar_handle;
 
 // Forward declarations of functions included in this code module:
 ATOM                MyRegisterClass(HINSTANCE hInstance);
@@ -64,8 +60,6 @@ int APIENTRY WinMain(_In_ HINSTANCE hInstance,
     return (int) msg.wParam;
 }
 
-
-
 //
 //  FUNCTION: MyRegisterClass()
 //
@@ -104,29 +98,45 @@ ATOM MyRegisterClass(HINSTANCE hInstance)
 //
 BOOL InitInstance(HINSTANCE hInstance, int nCmdShow)
 {
-   hInst = hInstance; // Store instance handle in our global variable
+	// Store instance handle in our global variable
 
-   HWND hWnd = CreateWindow(szWindowClass, szTitle, WS_OVERLAPPEDWINDOW,
-      CW_USEDEFAULT, 0, CW_USEDEFAULT, 0, nullptr, nullptr, hInstance, nullptr);
+	instance_handle = hInstance;
 
-   if (!hWnd)
-   {
+	// Initialise the common control DLL.
+
+	InitCommonControls();
+
+	// Create theapplication window.
+
+	app_window_handle = CreateWindow(szWindowClass, szTitle, WS_OVERLAPPEDWINDOW,
+		CW_USEDEFAULT, 0, CW_USEDEFAULT, 0, nullptr, nullptr, hInstance, nullptr);
+	if (!app_window_handle) {
       return FALSE;
-   }
+	}
 
-   if (!init_flatland(hWnd)) {
-	   return FALSE;
-   }
-   if (!create_player_window()) {
-	   return FALSE;
-   }
-   //open_local_file("c:\\Program Files (x86)\\Flatland\\splash.3dml");
-   open_local_file("c:\\Users\\Philip Stephens\\Downloads\\Flatland\\demo\\abbott\\abbott.3dml");
+	// Add a status bar at the bottom of the main application window.
 
-   ShowWindow(hWnd, nCmdShow);
-   UpdateWindow(hWnd);
+	status_bar_handle = CreateWindow(STATUSCLASSNAME, "This is a test", SBARS_SIZEGRIP | WS_CHILD | WS_VISIBLE,
+		0, 0, 0, 0, app_window_handle, (HMENU)5000, hInstance, nullptr);
+	if (!status_bar_handle) {
+		return FALSE;
+	}
 
-   return TRUE;
+	// Initialise Flatland and create the player window.
+
+	if (!init_flatland()) {
+		return FALSE;
+	}
+	if (!create_player_window()) {
+		return FALSE;
+	}
+
+	//open_local_file("c:\\Program Files (x86)\\Flatland\\splash.3dml");
+	open_local_file("c:\\Users\\Philip Stephens\\Downloads\\Flatland\\demo\\abbott\\abbott.3dml");
+
+	ShowWindow(app_window_handle, nCmdShow);
+	UpdateWindow(app_window_handle);
+	return TRUE;
 }
 
 //
@@ -150,7 +160,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
             switch (wmId)
             {
             case IDM_ABOUT:
-                DialogBox(hInst, MAKEINTRESOURCE(IDD_ABOUTBOX), hWnd, About);
+                DialogBox(instance_handle, MAKEINTRESOURCE(IDD_ABOUTBOX), hWnd, About);
                 break;
             case IDM_EXIT:
                 DestroyWindow(hWnd);
@@ -168,6 +178,9 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
             EndPaint(hWnd, &ps);
         }
         break;
+	case WM_SIZE:
+		SendMessage(status_bar_handle, WM_SIZE, wParam, lParam);
+		break;
     case WM_DESTROY:
         PostQuitMessage(0);
         break;

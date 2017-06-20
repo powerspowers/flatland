@@ -36,6 +36,7 @@
 #include "resource.h"
 #include "Classes.h"
 #include "Fileio.h"
+#include "Flatland Standalone.h"
 #include "Image.h"
 #include "Light.h"
 #include "Main.h"
@@ -46,6 +47,9 @@
 #include "Render.h"
 #include "Spans.h"
 #include "Utils.h"
+
+static LRESULT CALLBACK
+handle_main_window_event(HWND window_handle, UINT message, WPARAM wParam, LPARAM lParam);
 
 //==============================================================================
 // Global definitions.
@@ -479,7 +483,6 @@ static bitmap *splash_bitmap_ptr;
 // Main window data.
 
 static HWND main_window_handle;
-static HWND browser_window_handle;
 static void (*key_callback_ptr)(byte key_code, bool key_down);
 static void (*mouse_callback_ptr)(int x, int y, int button_code,
 								  int task_bar_button_code);
@@ -1424,9 +1427,10 @@ create_title_and_label_textures(void)
 	NEW(title_texture_ptr, texture);
 	if (title_texture_ptr == NULL)
 		return(false);
+	bg_colour.set_RGB(0x00, 0x00, 0x00);
 	text_colour.set_RGB(0xff, 0xcc, 0x66);
 	if (!create_pixmap_for_text(title_texture_ptr, title_end_x - title_start_x,
-		TASK_BAR_HEIGHT, text_colour, NULL)) 
+		TASK_BAR_HEIGHT, text_colour, &bg_colour)) 
 		return(false);
 
 	// Create the label texture.
@@ -1469,8 +1473,8 @@ draw_title(void)
 
 	// Draw the background for the title.
 
-	for (int x = title_start_x; x < title_end_x; x += title_bg_icon_ptr->width)
-		draw_icon(title_bg_icon_ptr, false, x);
+	//for (int x = title_start_x; x < title_end_x; x += title_bg_icon_ptr->width)
+	//	draw_icon(title_bg_icon_ptr, false, x);
 	draw_icon(title_end_icon_ptr, false, title_end_x);
 
 	// Draw the title pixmap.
@@ -2705,7 +2709,7 @@ start_up_platform_API(void)
 	window_class.cbClsExtra = 0;
 	window_class.cbWndExtra = 0;
 	window_class.hInstance = instance_handle;
-	window_class.lpfnWndProc = DefWindowProc;
+	window_class.lpfnWndProc = handle_main_window_event;
 	window_class.hIcon = LoadIcon(NULL, IDI_APPLICATION);
 	window_class.hCursor = arrow_cursor_handle;
 	window_class.hbrBackground = GetStockBrush(BLACK_BRUSH);
@@ -2723,16 +2727,11 @@ start_up_platform_API(void)
 	// Initialise the various window handles.
 
 	main_window_handle = NULL;
-	browser_window_handle = NULL;
 	options_window_handle = NULL;
 	about_window_handle = NULL;
 	help_window_handle = NULL;
 	snapshot_window_handle = NULL;
 	blockset_manager_window_handle = NULL;
-
-	// Initialise the common control DLL.
-
-	InitCommonControls();
 
 	// Initialise the COM library.
 
@@ -3160,14 +3159,6 @@ static LRESULT CALLBACK
 handle_main_window_event(HWND window_handle, UINT message, WPARAM wParam,
 						 LPARAM lParam)
 {
-	WNDPROC prev_wndproc_ptr;
-
-	// Get the pointer to the previous window procedure.
-
-	prev_wndproc_ptr = (WNDPROC)GetProp(window_handle, "prev_wndproc_ptr");
-
-	// Handle the message.
- 
 	switch(message) {
 	HANDLE_MSG(window_handle, WM_MOUSEACTIVATE, handle_activate_message);
 	case WM_KEYDOWN:
@@ -3201,9 +3192,10 @@ handle_main_window_event(HWND window_handle, UINT message, WPARAM wParam,
 			HANDLE_KEYUP_MSG(window_handle, message, handle_key_event);
 		else
 			HANDLE_KEYDOWN_MSG(window_handle, message, handle_key_event);
+	default:
+		return DefWindowProc(window_handle, message, wParam, lParam);
 	}
-	return(CallWindowProc(prev_wndproc_ptr, window_handle, message, wParam,
-		lParam));
+	return 0;
 }
 
 //------------------------------------------------------------------------------
@@ -3262,8 +3254,6 @@ create_main_window(void *window_handle, int width, int height,
 										   int height),
 				   void (*display_callback)(void))
 {
-	HWND desktop_window_handle;
-	HWND parent_window_handle;
 	int index;
 
 	// Do nothing if the main window already exists.
@@ -3328,26 +3318,10 @@ create_main_window(void *window_handle, int width, int height,
 
 	max_active_lights = ACTIVE_LIGHTS_LIMIT;
 
-	// Use the plugin window as the main window.
+	// Create the main window as a child of the app window.
 
-	main_window_handle = (HWND)window_handle;
-
-	// Search for the browser window, which is a parent of the main window
-	// without a parent itself, or with the desktop window as a parent.
-
-	desktop_window_handle = GetDesktopWindow();
-	browser_window_handle = main_window_handle;
-	while ((parent_window_handle = GetParent(browser_window_handle)) != NULL &&
-		parent_window_handle != desktop_window_handle)
-		browser_window_handle = parent_window_handle;
-
-	// Save the current window procedure as a window property, then subclass
-	// the window to use the main window event handler.
-
-	SetProp(main_window_handle, "prev_wndproc_ptr",
-		(HANDLE)GetWindowLong(main_window_handle, GWL_WNDPROC));
-	SetWindowLong(main_window_handle, GWL_WNDPROC,
-		(LONG)handle_main_window_event);
+	main_window_handle = CreateWindow("MainWindow", nullptr, WS_CHILD | WS_VISIBLE,
+		0, 0, width, height, (HWND)window_handle, nullptr, instance_handle, nullptr);
 
 	// Set the main window size.
 
@@ -3623,12 +3597,9 @@ destroy_main_window(void)
 
 	KillTimer(main_window_handle, 1);
 
-	// Recover the previous window procedure, and remove the window property
-	// that contained it.
+	// Destroy the main window.
 
-	SetWindowLong(main_window_handle, GWL_WNDPROC,
-		(LONG)GetProp(main_window_handle, "prev_wndproc_ptr"));
-	RemoveProp(main_window_handle, "prev_wndproc_ptr");
+	DestroyWindow(main_window_handle);
 	
 	// Reset the main window handle and the main window ready flag.
 
@@ -3637,13 +3608,13 @@ destroy_main_window(void)
 }
 
 //------------------------------------------------------------------------------
-// Determine if the browser window is currently minimised.
+// Determine if the app window is currently minimised.
 //------------------------------------------------------------------------------
 
 bool
-browser_window_is_minimised(void)
+app_window_is_minimised(void)
 {
-	return(browser_window_handle != NULL && IsIconic(browser_window_handle));
+	return(app_window_handle != NULL && IsIconic(app_window_handle));
 }
 
 //==============================================================================
@@ -5259,7 +5230,7 @@ end_3D_scene(void)
 bool
 lock_frame_buffer(byte *&fb_ptr, int &row_pitch)
 {
-	// If hardware acceleration is enabled, 
+	// If hardware acceleration is enabled, lock the entire rectangle.
 
 	if (hardware_acceleration) {
 		D3DLOCKED_RECT locked_rect;
@@ -5417,8 +5388,10 @@ display_frame_buffer(bool show_splash_graphic)
 
 	// Draw the label if it's visible.
 
+	/*
 	if (label_visible)
 		draw_label();
+	*/
 
 	// If hardware acceleration is enabled, present the frame buffer.  Otherwise
 	// blit the frame buffer onto the primary surface.
@@ -5505,7 +5478,7 @@ save_frame_buffer(byte *image_buffer, int width, int height)
 
 	// Lock the frame buffer.
 
-	if (!lock_frame_buffer(fb_ptr, row_pitch))
+	if (! (fb_ptr, row_pitch))
 		return(false);
 
 	// Depending on the colour depth of the display, convert a 16-bit frame
@@ -8734,6 +8707,8 @@ draw_pixmap(pixmap *pixmap_ptr, int brightness_index, int x, int y, int width,
 	int image_width, span_width;
 	fixed u, v;
 
+	char buffer[256];
+
 	// If the pixmap is completely off screen then return without having drawn
 	// anything.
 
@@ -8779,6 +8754,8 @@ draw_pixmap(pixmap *pixmap_ptr, int brightness_index, int x, int y, int width,
 			return;
 		surface_ptr = (byte *)locked_rect.pBits;
 		fb_bytes_per_row = locked_rect.Pitch;
+		sprintf(buffer, "surface_ptr = %04x, fb_bytes_per_row = %d\n", surface_ptr, fb_bytes_per_row);
+		OutputDebugString(buffer);
 	} else {
 		DDSURFACEDESC ddraw_surface_desc;
 
@@ -8875,10 +8852,11 @@ draw_pixmap(pixmap *pixmap_ptr, int brightness_index, int x, int y, int width,
 
 	// Unlock the frame buffer surface.
 
-	if (hardware_acceleration)
+	if (hardware_acceleration) {
 		d3d_framebuffer_surface_ptr->UnlockRect();
-	else
+	} else {
 		ddraw_framebuffer_surface_ptr->Unlock(surface_ptr);
+	}
 }
 
 //------------------------------------------------------------------------------
@@ -8998,14 +8976,9 @@ set_title(char *format, ...)
 		title_text = title;
 	}
 
-	// Draw the title text into the title texture.
+	// Draw the title on the status bar.
 
-	draw_text_on_pixmap(title_texture_ptr, title_text, TOP, false);
-
-	// Draw the title if the task bar is enabled.
-
-	if (task_bar_enabled)
-		draw_title();
+	SendMessage(status_bar_handle, SB_SETTEXT, 0, (LPARAM)title);
 }
 
 //------------------------------------------------------------------------------

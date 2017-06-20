@@ -266,10 +266,10 @@ create_main_window(void *window_handle, int width, int height,
 void
 destroy_main_window(void);
 
-// Browser window function (called by the plugin thread only).
+// Application window function (called by the plugin thread only).
 
 bool
-browser_window_is_minimised(void);
+app_window_is_minimised(void);
 
 // Message functions.
 
