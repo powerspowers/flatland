@@ -258,6 +258,9 @@ create_main_window(void (*key_callback)(byte key_code, bool key_down),
 										   int height),
 				   void (*display_callback)(void));
 
+bool
+recreate_main_window(int width, int height);
+
 void *get_main_window();
 
 void
@@ -278,6 +281,11 @@ information(char *title, char *format, ...);
 
 bool
 query(char *title, bool yes_no_format, char *format, ...);
+
+// Open file dialog.
+
+bool
+open_file_dialog(char *file_path_buffer, int buffer_size);
 
 // Progress window functions (called by the plugin thread only).
 

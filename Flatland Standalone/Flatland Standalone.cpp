@@ -6,6 +6,7 @@
 #include "Platform.h"
 #include "Flatland Standalone.h"
 #include "Plugin.h"
+#include "Main.h"
 
 #define MAX_LOADSTRING 100
 
@@ -162,6 +163,16 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
             case IDM_ABOUT:
                 DialogBox(instance_handle, MAKEINTRESOURCE(IDD_ABOUTBOX), hWnd, About);
                 break;
+			case ID_FILE_OPENSPOT:
+				{	
+					char file_path[256];
+					open_file_dialog(file_path, 256);
+					raise_semaphore(recent_spot_list_semaphore);
+					selected_recent_spot_URL = file_path;
+					recent_spot_selected.send_event(true);
+					lower_semaphore(recent_spot_list_semaphore);
+				}
+				break;
 			case ID_FILE_OPTIONS:
 				show_options_window();
 				break;
@@ -192,6 +203,9 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
         break;
 	case WM_SIZE:
 		SendMessage(status_bar_handle, WM_SIZE, wParam, lParam);
+		if (get_main_window()) {
+			SendMessage((HWND)get_main_window(), WM_SIZE, wParam, lParam);
+		}
 		break;
     case WM_DESTROY:
         PostQuitMessage(0);

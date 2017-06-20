@@ -1988,8 +1988,8 @@ create_d3d_device(bool recreate)
 	// Initialise the presentation parameters.
 
 	memset(&d3d_pp, 0, sizeof(D3DPRESENT_PARAMETERS));
-	d3d_pp.BackBufferWidth = 0;
-	d3d_pp.BackBufferHeight = 0;
+	d3d_pp.BackBufferWidth = display_width;
+	d3d_pp.BackBufferHeight = display_height;
 	d3d_pp.BackBufferFormat = display_format;
 	d3d_pp.BackBufferCount = 1;
 	d3d_pp.MultiSampleType = D3DMULTISAMPLE_NONE;
@@ -2026,7 +2026,8 @@ create_d3d_device(bool recreate)
 	d3d_viewport.Height = display_height;
 	d3d_viewport.MinZ = 0.0f;
 	d3d_viewport.MaxZ = 1.0f;
-	if (FAILED(d3d_device_ptr->SetViewport(&d3d_viewport))) {
+	HRESULT result = d3d_device_ptr->SetViewport(&d3d_viewport);
+	if (FAILED(result)) {
 		failed_to_set("viewport");
 		return(false);
 	}
@@ -3267,6 +3268,9 @@ create_main_window(void (*key_callback)(byte key_code, bool key_down),
 
 	main_window_handle = CreateWindow("MainWindow", nullptr, WS_CHILD | WS_VISIBLE,
 		0, 0, width, height, app_window_handle, nullptr, instance_handle, nullptr);
+	if (main_window_handle == NULL) {
+		return false;
+	}
 
 	// Set the main window size.
 
@@ -3652,6 +3656,40 @@ query(char *title, bool yes_no_format, char *format, ...)
 	result = MessageBoxEx(NULL, message, title, options | MB_TOPMOST | 
 		MB_TASKMODAL, MAKELANGID(LANG_ENGLISH, SUBLANG_ENGLISH_US));
 	return(result == IDYES || result == IDOK);
+}
+
+//==============================================================================
+// Open file dialog.
+//==============================================================================
+
+bool
+open_file_dialog(char *file_path_buffer, int buffer_size)
+{
+	OPENFILENAME ofn;
+
+	// Clear the file path buffer.
+
+	*file_path_buffer = '\0';
+
+	// Set up the open file name structure.
+
+	ofn.lStructSize = sizeof(OPENFILENAME);
+	ofn.hwndOwner = app_window_handle;
+	ofn.lpstrFilter = "Spot file (*.3dml)\0*.3dml\0";
+	ofn.lpstrCustomFilter = NULL;
+	ofn.nFilterIndex = 1;
+	ofn.lpstrFile = file_path_buffer;
+	ofn.nMaxFile = buffer_size;
+	ofn.lpstrFileTitle = NULL;
+	ofn.lpstrInitialDir = NULL;
+	ofn.lpstrTitle = "Open Spot";
+	ofn.Flags = OFN_FILEMUSTEXIST | OFN_LONGNAMES | OFN_PATHMUSTEXIST;
+	ofn.lpstrDefExt = NULL;
+	ofn.FlagsEx = 0;
+	
+	// Show the open file dialog.
+
+	return GetOpenFileName(&ofn);
 }
 
 //==============================================================================

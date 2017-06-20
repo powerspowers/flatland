@@ -1301,7 +1301,10 @@ timer_event_callback(void)
 static void
 resize_event_callback(void *window_handle, int width, int height)
 {
-	/*
+	if (!spot_loaded.get()) {
+		return;
+	}
+
 	// Signal the player thread that a window resize is requested, and
 	// wait for the player thread to signal that the player window has shut 
 	// down.
@@ -1350,7 +1353,6 @@ resize_event_callback(void *window_handle, int width, int height)
 
 	set_title(NULL);
 	show_label(NULL);
-	*/
 }
 
 //------------------------------------------------------------------------------
