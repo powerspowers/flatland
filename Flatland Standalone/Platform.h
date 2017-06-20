@@ -215,16 +215,6 @@ public:
 	}
 };
 
-// Plugin window functions (called by the plugin thread only).
-
-void
-set_plugin_window(void *window_handle, void *window_data_ptr, 
-				  const char *window_text,
-				  void (*window_callback)(void *window_data_ptr));
-
-void
-restore_plugin_window(void *window_handle);
-
 // Start up/shut down functions (called by the plugin thread only).
 
 bool
@@ -391,17 +381,6 @@ open_snapshot_window(int width, int height, void (*snapshot_callback)(int width,
 
 void
 close_snapshot_window(void);
-
-// Chatmessage window functions (called by the plugin thread only).
-
-void
-open_chatmessage_window(int width, int height, void (*chatwindow_callback)(char *message));
-
-void
-close_chatmessage_window(void);
-
-void
-add_chatmessage_text(char *text);
 
 // Filename function (called by the plugin thread only).
 
