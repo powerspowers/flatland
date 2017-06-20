@@ -224,6 +224,8 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 		}
 		break;
     case WM_DESTROY:
+		destroy_player_window();
+		shutdown_flatland();
         PostQuitMessage(0);
         break;
     default:

@@ -264,6 +264,9 @@ app_window_is_minimised(void);
 // Message functions.
 
 void
+debug_message(char *format, ...);
+
+void
 fatal_error(char *title, char *format, ...);
 
 void

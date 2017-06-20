@@ -303,8 +303,8 @@ open_local_file(char *file_path)
 // Destroy the player window.
 //------------------------------------------------------------------------------
 
-static void
-destroy_player_window(void)
+void
+destroy_player_window()
 {
 	// Send the sequence of signals required to ensure that the player thread
 	// has shut down the player window, and wait for the player thread to 
@@ -1526,7 +1526,7 @@ init_flatland()
 }
 
 void
-shutdown_flatland(void)
+shutdown_flatland()
 {
 	// If the player thread is active, signal it to terminate, and wait for it
 	// to do so.

@@ -3478,6 +3478,25 @@ app_window_is_minimised(void)
 //==============================================================================
 
 //------------------------------------------------------------------------------
+// Function to display a message on the debugger output window.
+//------------------------------------------------------------------------------
+
+void
+debug_message(char *format, ...)
+{
+	va_list arg_ptr;
+	char message[BUFSIZ];
+
+	// Create a message string by parsing the variable argument list according
+	// to the contents of the format string.
+
+	va_start(arg_ptr, format);
+	vbprintf(message, BUFSIZ, format, arg_ptr);
+	va_end(arg_ptr);
+	OutputDebugString(message);
+}
+
+//------------------------------------------------------------------------------
 // Function to display a fatal error message in a message box.
 //------------------------------------------------------------------------------
 
@@ -5288,10 +5307,8 @@ display_frame_buffer(bool show_splash_graphic)
 
 	// Draw the label if it's visible.
 
-	/*
 	if (label_visible)
 		draw_label();
-	*/
 
 	// If hardware acceleration is enabled, present the frame buffer.  Otherwise
 	// blit the frame buffer onto the primary surface.

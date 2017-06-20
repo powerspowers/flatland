@@ -161,8 +161,14 @@ extern const char *snapshot_file_path;
 bool
 init_flatland();
 
+void
+shutdown_flatland();
+
 bool
 create_player_window();
+
+void
+destroy_player_window();
 
 void
 open_local_file(char *file_path);
