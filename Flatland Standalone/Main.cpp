@@ -2433,6 +2433,8 @@ execute_replace_action(trigger *trigger_ptr, action *action_ptr)
 				world_ptr->columns;
 			if (target_column < 0)
 				target_column += world_ptr->columns;
+		} else {
+			target_column--;
 		}
 
 		// Set the target row.
@@ -2442,6 +2444,8 @@ execute_replace_action(trigger *trigger_ptr, action *action_ptr)
 			target_row = (trigger_row + target_row) % world_ptr->rows;
 			if (target_row < 0)
 				target_row += world_ptr->rows;
+		} else {
+			target_row--;
 		}
 
 		// Set the target level.  If the target uses a relative coordinate for
@@ -2464,6 +2468,8 @@ execute_replace_action(trigger *trigger_ptr, action *action_ptr)
 				if (target_level < 0)
 					target_level += (world_ptr->levels - 1);
 			}
+		} else {
+			target_level--;
 		}
 
 		// Get a pointer to the target square.
