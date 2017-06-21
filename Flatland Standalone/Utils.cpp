@@ -17,7 +17,9 @@
 #include "Parser.h"
 #include "Platform.h"
 #include "Plugin.h"
-//POWERS #include "SimKin.h"
+#ifdef SIMKIN
+#include "SimKin.h"
+#endif
 #include "Utils.h"
 
 // Current load index.
@@ -29,10 +31,6 @@ int curr_load_index;
 static int adj_block_column[6] = { 1, 0, 0, -1, 0, 0 };
 static int adj_block_row[6] = { 0, 1, 0, 0, -1, 0 };
 static int adj_block_level[6] = { 0, 0, 1, 0, 0, -1 };
-
-
-//POWERS
-//extern "C" { FILE _iob[3] = {*stdin, *stdout, *stderr}; }
 
 // Flag indicating whether current URL has been opened.
 
@@ -1581,14 +1579,13 @@ square_has_entrance(square *square_ptr)
 
 
 //------------------------------------------------------------------------------
-// Add an action to the global list of clock actions
+// Add an action to the global list of clock actions.
 //------------------------------------------------------------------------------
+
 void
 add_clock_action(action *action_ptr)
 {
-	int j;
-
-	for (j=0;j < active_clock_action_count;j++) {
+	for (int j = 0; j < active_clock_action_count; j++) {
 		if (active_clock_action_list[j] == action_ptr)
 			return;
 	}
@@ -1597,17 +1594,15 @@ add_clock_action(action *action_ptr)
 }
 
 //------------------------------------------------------------------------------
-// Delete an action from the global list of clock actions
+// Delete an action from the global list of clock actions.
 //------------------------------------------------------------------------------
 void
 remove_clock_action(action *action_ptr)
 {
-	int j, k;
-
-	for (j=0;j < active_clock_action_count;j++) {
+	for (int j = 0; j < active_clock_action_count; j++) {
 		if (active_clock_action_list[j] == action_ptr) {
-			for (k=j;k < active_clock_action_count;k++)
-				active_clock_action_list[k] = active_clock_action_list[k+1];
+			for (int k = j; k < active_clock_action_count; k++)
+				active_clock_action_list[k] = active_clock_action_list[k + 1];
 			active_clock_action_count--;
 			return;
 		}
@@ -1615,17 +1610,16 @@ remove_clock_action(action *action_ptr)
 }
 
 //------------------------------------------------------------------------------
-// Delete an action from the global list of clock actions
+// Delete an action from the global list of clock actions.
 //------------------------------------------------------------------------------
+
 void
 remove_clock_action_by_block(block *block_ptr)
 {
-	int j, k;
-
-	for (j=0;j < active_clock_action_count;j++) {
+	for (int j = 0; j < active_clock_action_count; j++) {
 		if (active_clock_action_list[j]->trigger_ptr->block_ptr == block_ptr) {
-			for (k=j;k < active_clock_action_count;k++)
-				active_clock_action_list[k] = active_clock_action_list[k+1];
+			for (int k = j; k < active_clock_action_count; k++)
+				active_clock_action_list[k] = active_clock_action_list[k + 1];
 			active_clock_action_count--;
 			return;
 		}
@@ -1633,20 +1627,17 @@ remove_clock_action_by_block(block *block_ptr)
 }
 
 //------------------------------------------------------------------------------
-// Delete an action type and block from the global list of clock actions
+// Delete an action type and block from the global list of clock actions.
 //------------------------------------------------------------------------------
+
 void
 remove_clock_action_by_type(action *action_ptr, int type)
 {
-	int j, k;
-	block *block_ptr;
-
-	block_ptr = action_ptr->trigger_ptr->block_ptr;
-
-	for (j=0;j < active_clock_action_count;j++) {
+	block *block_ptr = action_ptr->trigger_ptr->block_ptr;
+	for (int j = 0; j < active_clock_action_count; j++) {
 		if (active_clock_action_list[j]->type == type && active_clock_action_list[j]->trigger_ptr->block_ptr == block_ptr) {
-			for (k=j;k < active_clock_action_count;k++)
-				active_clock_action_list[k] = active_clock_action_list[k+1];
+			for (int k = j; k < active_clock_action_count; k++)
+				active_clock_action_list[k] = active_clock_action_list[k + 1];
 			active_clock_action_count--;
 		}
 	}
@@ -1695,13 +1686,13 @@ add_fixed_block(block_def *block_def_ptr, square *square_ptr,
 	if (player_column == column && player_row == row && player_level == level)
 		player_block_replaced = true;
 
-	// If this block has a start action on it fire it up
+	// If this block has a start action on it fire it up.
+
 	if (block_ptr->trigger_flags & START_UP) {
 		trigger_ptr = block_ptr->trigger_list;
 		while (trigger_ptr) {
 			if (trigger_ptr->trigger_flag & START_UP) {
-				//set_title("start %d %d", trigger_ptr,curr_triggerid);
-				execute_trigger(trigger_ptr, curr_triggerid, -1);
+				execute_trigger(trigger_ptr);
 				break;
 			}
 			trigger_ptr = trigger_ptr->next_trigger_ptr;
@@ -1734,12 +1725,13 @@ add_movable_block(block_def *block_def_ptr, vertex translation)
 	block_ptr->next_block_ptr = movable_block_list;
 	movable_block_list = block_ptr;
 
-	// If this block has a start action on it fire it up
+	// If this block has a start action on it fire it up.
+
 	if (block_ptr->trigger_flags & START_UP) {
 		trigger_ptr = block_ptr->trigger_list;
 		while (trigger_ptr) {
 			if (trigger_ptr->trigger_flag & START_UP) {
-				execute_trigger(trigger_ptr, curr_triggerid, -1);
+				execute_trigger(trigger_ptr);
 				break;
 			}
 			trigger_ptr = trigger_ptr->next_trigger_ptr;
@@ -1839,7 +1831,6 @@ remove_movable_block(block *block_ptr)
 	block_def *block_def_ptr;
 	int min_column, min_row, min_level;
 	int max_column, max_row, max_level;
-	int j;
 
 	// If this block has a light list, calculate the bounding box emcompassing
 	// all these lights, and reset the active light lists for all blocks inside
@@ -1861,30 +1852,11 @@ remove_movable_block(block *block_ptr)
 	// prevents replacements and scripts from being executed that require
 	// that block to exist.
 
-	for (j=0; j < active_trigger_count; j++) {
+	for (int j = 0; j < active_trigger_count; j++) {
 		trigger_ptr = active_trigger_list[j];
 		if (trigger_ptr != NULL && trigger_ptr->block_ptr == block_ptr)
 			active_trigger_list[j] = NULL;
 	}
-
-	/*
-	trigger_ptr = active_trigger_list;
-	last_trigger = active_trigger_list; //mp2
-	while (trigger_ptr != NULL) {
-		if (trigger_ptr->block_ptr == block_ptr) {
-			//mp2 trigger_ptr->block_ptr = NULL;
-			if (last_trigger == trigger_ptr) {
-				trigger_ptr = trigger_ptr->next_trigger_ptr;
-				last_trigger->next_trigger_ptr = NULL;
-				active_trigger_list = last_trigger = trigger_ptr;
-			}
-			else {
-				last_trigger->next_trigger_ptr = trigger_ptr->next_trigger_ptr;
-				trigger_ptr->next_trigger_ptr = NULL;
-			}
-		}
-		trigger_ptr = trigger_ptr->next_trigger_ptr;
-	} */
 
 	// Remove the block from the movable block list.
 

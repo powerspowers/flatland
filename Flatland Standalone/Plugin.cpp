@@ -19,7 +19,9 @@
 #include "Platform.h"
 #include "Plugin.h"
 #include "resource.h"
-//POWERS #include "SimKin.h"
+#ifdef SIMKIN
+#include "SimKin.h"
+#endif
 #include "Spans.h"
 
 // Important directories and file paths.
@@ -234,7 +236,7 @@ static void
 timer_event_callback(void);
 
 static void
-mouse_event_callback(int x, int y, int button_code, int task_bar_button_code);
+mouse_event_callback(int x, int y, int button_code);
 
 static void
 resize_event_callback(void *window_handle, int width, int height);
@@ -288,15 +290,6 @@ create_player_window()
 		player_window_created = true;
 		return(true);
 	}
-}
-
-void
-open_local_file(char *file_path)
-{
-	URL_was_opened.send_event(true);
-	downloaded_URL.set(file_path);
-	downloaded_file_path.set(file_path);
-	URL_was_downloaded.send_event(true);
 }
 
 //------------------------------------------------------------------------------
@@ -522,18 +515,6 @@ set_mouse_cursor(void)
 }
 
 //------------------------------------------------------------------------------
-// Launch a builder web page.
-//------------------------------------------------------------------------------
-
-static void
-launch_builder_web_page(const char *URL)
-{
-	if (URL != NULL) {
-		// TODO
-	}
-}
-
-//------------------------------------------------------------------------------
 // Update the move, look and turn rates.
 //------------------------------------------------------------------------------
 
@@ -554,22 +535,6 @@ update_motion_rates(int rate_dir)
 	else if (new_rotate_rate > MAX_ROTATE_RATE)
 		new_rotate_rate = MAX_ROTATE_RATE;
 	curr_rotate_rate.set(new_rotate_rate);
-}
-
-//------------------------------------------------------------------------------
-// Display the spot directory.
-//------------------------------------------------------------------------------
-
-static void
-display_spot_directory(void)
-{
-	disable_cursor_changes = true;
-	set_arrow_cursor();
-	open_directory_menu(spot_dir_list);
-	if ((selected_spot_dir_entry_ptr = track_directory_menu()) != NULL)
-		spot_dir_entry_selected.send_event(true);
-	close_directory_menu();
-	disable_cursor_changes = false;
 }
 
 //==============================================================================
@@ -942,10 +907,8 @@ show_light_window()
 //------------------------------------------------------------------------------
 
 static void
-mouse_event_callback(int x, int y, int button_code, int task_bar_button_code)
+mouse_event_callback(int x, int y, int button_code)
 {
-	int selected_recent_spot_index;
-
 	// Remove the light window if it is currently displayed.
 
 	close_light_window();
@@ -1008,78 +971,6 @@ mouse_event_callback(int x, int y, int button_code, int task_bar_button_code)
 		
 		if (inside_3D_window && selection_active_flag && !movement_enabled)
 			mouse_clicked.send_event(true);
-
-		// If one of the task bar buttons is active, perform the button action.
-
-		switch (task_bar_button_code) {
-		case LOGO_BUTTON:
-			// TODO
-			break;
-		case RECENT_SPOTS_BUTTON:
-			disable_cursor_changes = true;
-			set_arrow_cursor();
-			raise_semaphore(recent_spot_list_semaphore);
-			open_recent_spots_menu(recent_spot_list, recent_spots);
-			if ((selected_recent_spot_index = track_recent_spots_menu() - 1) 
-				>= 0) {
-				selected_recent_spot_URL = 
-					recent_spot_list[selected_recent_spot_index].URL;
-				recent_spot_selected.send_event(true);
-			}
-			close_recent_spots_menu();
-			lower_semaphore(recent_spot_list_semaphore);
-			disable_cursor_changes = false;
-			break;
-		case OPTIONS_BUTTON:
-			show_options_window();
-			break;
-		case LIGHT_BUTTON:
-			open_light_window(master_brightness.get(), light_window_callback);
-			break;
-		case BUILDER_BUTTON:
-			disable_cursor_changes = true;
-			set_arrow_cursor();
-			open_builder_menu();
-			launch_builder_web_page(track_builder_menu());
-			close_builder_menu();
-			disable_cursor_changes = false;
-			break;
-		case DIRECTORY_BUTTON:
-			display_spot_directory();
-			break;
-		case COMMAND_BUTTON:
-			disable_cursor_changes = true;
-			set_arrow_cursor();
-			open_command_menu();
-			switch (track_command_menu()) {
-			case ABOUT_ROVER_COMMAND:
-				open_about_window();
-				break;
-			case ROVER_HELP_COMMAND:
-				open_help_window();
-				break;
-			case DOWNLOAD_ROVER_COMMAND:
-				// TODO
-				break;
-			case VIEW_3DML_SOURCE_COMMAND:
-				display_file_as_web_page(curr_spot_file_path);
-				break;
-			case SAVE_3DML_SOURCE_COMMAND:
-				if ((saved_spot_file_path = get_save_file_name(
-					"Save spot to 3DML file", "3DML file\0*.3dml\0", NULL)) 
-					!= NULL)
-					save_3DML_source_requested.send_event(true);
-				break;
-			case TAKE_SNAPSHOT_COMMAND:
-				open_snapshot_window(window_width, window_height,
-					snapshot_window_callback);
-				break;
-			case MANAGE_BLOCKSETS_COMMAND:
-				open_blockset_manager_window();
-			}
-			close_command_menu();
-			disable_cursor_changes = false;
-		}
 
 		// Set the current button status, reset the motion deltas, and release
 		// the mouse if it was captured.
@@ -1288,12 +1179,6 @@ timer_event_callback(void)
 		alt_key_code = key_func_table[key_function].alt_key_code;
 		key_function_request_completed.send_event(true);
 	}
-
-	// Check to see whether a show spot directory request has been signalled
-	// by the player thread, and if so perform that request.
-
-	if (show_spot_directory.event_sent())
-		display_spot_directory();
 }
 
 //------------------------------------------------------------------------------
@@ -1314,9 +1199,9 @@ resize_event_callback(void *window_handle, int width, int height)
 	window_resize_requested.send_event(true);
 	player_window_shut_down.wait_for_event();
 
-	// Destroy the title and label textures.
+	// Destroy the label texture.
 
-	destroy_title_and_label_textures();
+	destroy_label_texture();
 
 	// Destroy the frame buffer if hardware acceleration is not enabled.
 
@@ -1327,9 +1212,9 @@ resize_event_callback(void *window_handle, int width, int height)
 
 	set_main_window_size(width, height);
 
-	// Recreate the title and label textures.
+	// Recreate the label texture.
 
-	create_title_and_label_textures();
+	create_label_texture();
 
 	// Compute the window "centre" coordinates.
 
@@ -1387,6 +1272,23 @@ display_event_callback(void)
 	set_title(NULL);
 	show_label(NULL);
 }
+
+//------------------------------------------------------------------------------
+// Open a local file.
+//------------------------------------------------------------------------------
+
+void
+open_local_file(char *file_path)
+{
+	URL_was_opened.send_event(true);
+	downloaded_URL.set(file_path);
+	downloaded_file_path.set(file_path);
+	URL_was_downloaded.send_event(true);
+}
+
+//------------------------------------------------------------------------------
+// Initialize the app.
+//------------------------------------------------------------------------------
 
 bool
 init_flatland()
@@ -1524,6 +1426,10 @@ init_flatland()
 	rover_started_up = true;
 	return(true);
 }
+
+//------------------------------------------------------------------------------
+// Shut down the app.
+//------------------------------------------------------------------------------
 
 void
 shutdown_flatland()

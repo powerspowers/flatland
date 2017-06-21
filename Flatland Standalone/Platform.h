@@ -90,17 +90,6 @@
 #define RIGHT_BUTTON_DOWN	3
 #define RIGHT_BUTTON_UP		4
 
-// Task bar button codes.
-
-#define NO_TASK_BAR_BUTTON	0
-#define LOGO_BUTTON			1
-#define RECENT_SPOTS_BUTTON	2
-#define DIRECTORY_BUTTON	3
-#define BUILDER_BUTTON		4
-#define LIGHT_BUTTON		5
-#define OPTIONS_BUTTON		6
-#define COMMAND_BUTTON		7
-
 // Media players supported.
 
 #define ANY_PLAYER				0
@@ -241,8 +230,7 @@ set_main_window_size(int width, int height);
 
 bool
 create_main_window(void (*key_callback)(byte key_code, bool key_down),
-				   void (*mouse_callback)(int x, int y, int button_code,
-										  int task_bar_button_code),
+				   void (*mouse_callback)(int x, int y, int button_code),
 				   void (*timer_callback)(void),
    				   void (*resize_callback)(void *window_handle, int width,
 										   int height),
@@ -332,50 +320,6 @@ open_help_window(void);
 void
 close_help_window(void);
 
-// Recent spots menu functions (called by the plugin thread only).
-
-void
-open_recent_spots_menu(recent_spot *recent_spot_list, int recent_spots);
-
-int
-track_recent_spots_menu(void);
-
-void
-close_recent_spots_menu(void);
-
-// Spot directory menu functions (called by the plugin thread only).
-
-void
-open_directory_menu(spot_dir_entry *spot_dir_list);
-
-spot_dir_entry *
-track_directory_menu(void);
-
-void
-close_directory_menu(void);
-
-// Builder menu functions (called by the plugin thread only).
-
-void
-open_builder_menu(void);
-
-const char *
-track_builder_menu(void);
-
-void
-close_builder_menu(void);
-
-// Command menu functions (called by the plugin thread only).
-
-void
-open_command_menu(void);
-
-int
-track_command_menu(void);
-
-void
-close_command_menu(void);
-
 // Snapshot window functions (called by the plugin thread only).
 
 void
@@ -407,13 +351,13 @@ get_password(string *username_ptr, string *password_ptr);
 
 #endif
 
-// Title and label texture functions.
+// Label texture function.
 
 bool
-create_title_and_label_textures(void);
+create_label_texture(void);
 
 void
-destroy_title_and_label_textures(void);
+destroy_label_texture(void);
 
 // Frame buffer functions.
 

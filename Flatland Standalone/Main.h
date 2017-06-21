@@ -8,7 +8,6 @@
 // Global variables.
 //------------------------------------------------------------------------------
 
-
 // Minimum blockset update period, and time of last Rover and spot directory
 // update.
 
@@ -122,13 +121,6 @@ extern imagemap *imagemap_list;
 // Global list of lights.
 
 extern light *global_light_list;
-
-// Global index of triggers
-extern int curr_triggerid;
-extern int curr_playerid;
-
-// Global hash table of triggers
-extern hash_table trigger_hash;
 
 // Orb direction, light, texture, brightness, size and exit.
 
@@ -304,10 +296,10 @@ extern trigger *active_script_list[256];
 extern int active_script_count;
 extern bool script_executing;
 
-// List of action tied to the global clock
+// List of action tied to the global clock.
+
 extern action *active_clock_action_list[256];
 extern int active_clock_action_count;
-
 
 // Frustum normal vector list, frustum plane offset list, 
 
@@ -358,5 +350,7 @@ refresh_player_window(void);
 void
 player_thread(void *arg_list);
 
+// Execute a trigger.
+
 bool
-execute_trigger(trigger* trigger_ptr, int triggercounter, int playerid);
+execute_trigger(trigger* trigger_ptr);

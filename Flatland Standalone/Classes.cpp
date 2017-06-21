@@ -16,7 +16,9 @@
 #include "Platform.h"
 #include "Plugin.h"
 #include "Spans.h"
-//POWERS #include "SimKin.h"
+#ifdef SIMKIN
+#include "SimKin.h"
+#endif
 #include "Utils.h"
 
 //==============================================================================
@@ -585,7 +587,8 @@ pcrange::~pcrange()
 // Integer range class.
 //------------------------------------------------------------------------------
 
-// Default constructor sets the minimum and maximum integers
+// Default constructor sets the minimum and maximum integers.
+
 intrange::intrange()
 {
 	min = 1;
@@ -876,8 +879,6 @@ vertex::rotate_x(float angle)
 
 	temp_y = y * cosine[angle] - z * sine[angle];
 	z = z * cosine[angle] + y * sine[angle];
-	//temp_y = y * cos(angle) - z * sin(angle);
-	//z = z * cos(angle) + y * sin(angle);
 	y = temp_y;
 }
 
@@ -890,8 +891,6 @@ vertex::rotate_y(float angle)
 
 	temp_x = x * cosine[angle] + z * sine[angle];
 	z = z * cosine[angle] - x * sine[angle];
-	//temp_x = x * cos(angle) + z * sin(angle);
-	//z = z * cos(angle) - x * sin(angle);
 	x = temp_x;
 }
 
@@ -904,8 +903,6 @@ vertex::rotate_z(float angle)
 
 	temp_x = x * cosine[angle] - y * sine[angle];
 	y = y * cosine[angle] + x * sine[angle];
-	//temp_x = x * cos(angle) - y * sin(angle);
-	//y = y * cos(angle) + x * sin(angle);
 	x = temp_x;
 }
 
@@ -1059,10 +1056,8 @@ vector::rotate_x(float look_angle)
 {
 	float temp_dy;
 
-	//temp_dy = dy * cosine[look_angle] - dz * sine[look_angle];
-	//dz = dz * cosine[look_angle] + dy * sine[look_angle];
-	temp_dy = (float)(dy * cos(look_angle) - dz * sin(look_angle));
-	dz = (float)(dz * cos(look_angle) + dy * sin(look_angle));
+	temp_dy = dy * cosine[look_angle] - dz * sine[look_angle];
+	dz = dz * cosine[look_angle] + dy * sine[look_angle];
 	dy = temp_dy;
 }
 
@@ -1073,10 +1068,8 @@ vector::rotate_y(float turn_angle)
 {
 	float temp_dx;
 
-	//temp_dx = dx * cosine[turn_angle] + dz * sine[turn_angle];
-	//dz = dz * cosine[turn_angle] - dx * sine[turn_angle];
-	temp_dx = (float)(dx * cos(turn_angle) + dz * sin(turn_angle));
-	dz = (float)(dz * cos(turn_angle) - dx * sin(turn_angle));
+	temp_dx = dx * cosine[turn_angle] + dz * sine[turn_angle];
+	dz = dz * cosine[turn_angle] - dx * sine[turn_angle];
 	dx = temp_dx;
 }
 
@@ -1929,7 +1922,9 @@ trigger::trigger()
 	square_ptr = NULL;
 	block_ptr = NULL;
 	action_list = NULL;
-//POWERS	script_def_ptr = NULL;
+#ifdef SIMKIN
+	script_def_ptr = NULL;
+#endif
 	next_trigger_ptr = NULL;
 }
 
@@ -2624,8 +2619,6 @@ block_def::block_def()
 	custom = false;
 	type = STRUCTURAL_BLOCK;
 	allow_entrance = false;
-	physics = false;
-	mass = 0.0;
 	animated = false;
 	animation = NULL;
 	parts = 0;
@@ -2681,11 +2674,8 @@ block_def::~block_def()
 	if (animated && animation->original_frames) {
 		vertex_list = NULL;
 		for (index = 0; index < animation->frames; index++) {
-			//if (animation->frames_list[index].vertices > 0)
-			//	DELARRAY(animation->frames_list[index].vertex_list, vertex, animation->frames_list[index].vertices);
 			if (animation->vertices[index] > 0)
 				DELARRAY(animation->frame_list[index].vertex_list, vertex, animation->vertices[index]);
-
 		}
 		DELARRAY(animation->vertices, int, animation->frames);
 		DELARRAY(animation->angles, float, animation->frames);
@@ -2768,9 +2758,6 @@ block_def::create_frames_list(int set_frames)
 	NEWARRAY(animation->frame_list, frame_def, set_frames);
 	if (animation->frame_list == NULL)
 		memory_error("frame list");
-	//NEWARRAY(animation->frames_list, frame_def, set_frames);
-	//if (animation->frames_list == NULL)
-	//	memory_error("frames list");
 }
 
 void
@@ -2837,8 +2824,6 @@ block_def::dup_block_def(block_def *block_def_ptr)
 	allow_entrance = block_def_ptr->allow_entrance;
 	BSP_tree = block_def_ptr->BSP_tree;
 	solid = block_def_ptr->solid;
-    physics = block_def_ptr->physics;
-	mass = block_def_ptr->mass;
 	position = block_def_ptr->position;
 
 	// Copy the sprite angle, rotational speed, and alignment.
@@ -2911,7 +2896,7 @@ block_def::dup_block_def(block_def *block_def_ptr)
 		*exit_ptr = *block_def_ptr->exit_ptr;
 	}
 
-	// Copy the frame data even though it might be large
+	// If an animated block, copy the frame data.
 
 	if (block_def_ptr->animated) {
 		NEW(animation,animation_def);
@@ -2919,7 +2904,9 @@ block_def::dup_block_def(block_def *block_def_ptr)
 			memory_error("animation_def");
 		animated = true;
 		*animation = *block_def_ptr->animation;
-		// copy the frame list with the sets of vertices
+
+		// Copy the frame list with the sets of vertices.
+
 		create_frames_list(block_def_ptr->animation->frames);
 		for (index=0; index < animation->frames; index++) {
 			animation->angles[index]   = block_def_ptr->animation->angles[index];
@@ -2930,30 +2917,26 @@ block_def::dup_block_def(block_def *block_def_ptr)
 			animation->frame_list[index].vertex_list = vertex_list;
 			vertex_list = NULL;
 		}
-		// copy the loop information
+
+		// Copy the loop information.
+
 		create_loops_list(animation->loops);
 		for (j=0; j < animation->loops; j++) {
 			animation->loops_list[j] = block_def_ptr->animation->loops_list[j];
 		}
 		animation->original_frames = true;
 
-		//set_title("frames %d",block_def_ptr->animation->frames);
 		vertices = animation->vertices[0];
 		vertex_list = animation->frame_list[0].vertex_list;
-
-	} else {
-
-	// if this is an animation block then don't copy the vertex list
-	//if (frames_list != NULL) 
-	//	vertex_list = block_def_ptr->vertex_list;
-	//else {
-			// Make a copy of the vertex list.
+	} 
 	
-			create_vertex_list(block_def_ptr->vertices);
-			for (index = 0; index < vertices; index++)
-				vertex_list[index] = block_def_ptr->vertex_list[index];
+	// If not an animated block, make a copy of the vertex list.
+
+	else {	
+		create_vertex_list(block_def_ptr->vertices);
+		for (index = 0; index < vertices; index++)
+			vertex_list[index] = block_def_ptr->vertex_list[index];
 	}
-	//}
 }
 
 // Method to return a pointer to the next free block, or NULL if we are out of
@@ -2967,8 +2950,7 @@ block_def::new_block(square *square_ptr)
 	light *old_light_ptr, *new_light_ptr, *next_light_ptr, *last_light_ptr;
 	sound *old_sound_ptr, *new_sound_ptr, *next_sound_ptr, *last_sound_ptr;
 	popup *old_popup_ptr, *new_popup_ptr, *next_popup_ptr, *last_popup_ptr;
-	trigger *old_trigger_ptr, *new_trigger_ptr, 
-		*last_trigger_ptr;
+	trigger *old_trigger_ptr, *new_trigger_ptr, *last_trigger_ptr;
 	entrance *new_entrance_ptr;
 	wave *wave_ptr;
 	action *action_ptr;
@@ -2979,35 +2961,28 @@ block_def::new_block(square *square_ptr)
 	if (block_ptr != NULL) {
 		free_block_list = block_ptr->next_block_ptr;
 
-	// Initialise the trigger list for this block.  Note that we must not
-	// disturb the linkages in the block's trigger list.
+		// Initialise the trigger list for this block.  Note that we must not
+		// disturb the linkages in the block's trigger list.
 
-	old_trigger_ptr = trigger_list;
-	new_trigger_ptr = block_ptr->trigger_list;
-	while (new_trigger_ptr != NULL) {
-		//objectid = new_trigger_ptr->objectid;
-		//playerid = new_trigger_ptr->playerid;
-		//next_trigger_ptr = new_trigger_ptr->next_trigger_ptr;
-		//*new_trigger_ptr = *old_trigger_ptr;
-		//new_trigger_ptr->objectid = objectid;
-		//new_trigger_ptr->playerid = playerid;
-		//new_trigger_ptr->next_trigger_ptr = next_trigger_ptr;
-		new_trigger_ptr->square_ptr = square_ptr;
-		new_trigger_ptr->block_ptr = block_ptr;
-		init_global_trigger(new_trigger_ptr);
+		old_trigger_ptr = trigger_list;
+		new_trigger_ptr = block_ptr->trigger_list;
+		while (new_trigger_ptr != NULL) {
+			new_trigger_ptr->square_ptr = square_ptr;
+			new_trigger_ptr->block_ptr = block_ptr;
+			init_global_trigger(new_trigger_ptr);
 
-		// now init the actions inside the old block
-		action_ptr = new_trigger_ptr->action_list;
-		while(action_ptr) {
-			action_ptr->trigger_ptr = new_trigger_ptr;
-			action_ptr = action_ptr->next_action_ptr;
+			// Now init the actions inside the old block.
+
+			action_ptr = new_trigger_ptr->action_list;
+			while(action_ptr) {
+				action_ptr->trigger_ptr = new_trigger_ptr;
+				action_ptr = action_ptr->next_action_ptr;
+			}
+
+			new_trigger_ptr = new_trigger_ptr->next_trigger_ptr;
 		}
-
-		//old_trigger_ptr = old_trigger_ptr->next_trigger_ptr;
-		new_trigger_ptr = new_trigger_ptr->next_trigger_ptr;
 	}
 
-	}
 	// Otherwise create a new block.
 
 	else {
@@ -3099,11 +3074,8 @@ block_def::new_block(square *square_ptr)
 		old_trigger_ptr = trigger_list;
 		last_trigger_ptr = NULL;
 		while (old_trigger_ptr != NULL) {
-			//NEW(new_trigger_ptr, trigger); *mp*
 			new_trigger_ptr = dup_trigger(old_trigger_ptr);
-
 			new_trigger_ptr->block_ptr = block_ptr;
-			//set_title("trig %d %d",new_trigger_ptr->action_list->trigger_ptr,new_trigger_ptr->block_ptr);
 			if (new_trigger_ptr == NULL)
 				memory_error("trigger");
 			if (last_trigger_ptr != NULL)
@@ -3199,8 +3171,6 @@ block_def::new_block(square *square_ptr)
 		new_popup_ptr = next_popup_ptr;
 	}
 
-
-
 	// Initialise the entrance, if there is one.
 
 	if (entrance_ptr != NULL) {
@@ -3234,13 +3204,16 @@ block_def::new_block(square *square_ptr)
 block *
 block_def::del_block(block *block_ptr)
 {
+#ifdef SIMKIN
+
 	// Delete the block and vertex SimKin objects, if they exist.
 
-//POWERS
-//	if (block_ptr->block_simkin_object_ptr != NULL)
-//		destroy_block_simkin_object(block_ptr);
-//	if (block_ptr->vertex_simkin_object_ptr != NULL)
-//		destroy_vertex_simkin_object(block_ptr);
+	if (block_ptr->block_simkin_object_ptr != NULL)
+		destroy_block_simkin_object(block_ptr);
+	if (block_ptr->vertex_simkin_object_ptr != NULL)
+		destroy_vertex_simkin_object(block_ptr);
+
+#endif
 
 	// Remove the block from the used block list.
 
@@ -3468,7 +3441,6 @@ block_def::rotate_x(float angle)
 		vertex_ptr->rotate_x(angle);
 		*vertex_ptr += block_origin;
 	}
-
 }
 
 // Method to rotate a blockdef around the Y axis.
@@ -3486,7 +3458,6 @@ block_def::rotate_y(float angle)
 		vertex_ptr->rotate_y(angle);
 		*vertex_ptr += block_origin;
 	}
-
 }
 
 // Method to rotate a block around the Z axis.
@@ -3504,11 +3475,7 @@ block_def::rotate_z(float angle)
 		vertex_ptr->rotate_z(angle);
 		*vertex_ptr += block_origin;
 	}
-
 }
-
-
-
 
 // Add a texture to the end of the texture list.
 
@@ -3631,8 +3598,10 @@ block::block()
 	pixmap_index = 0;
 	col_mesh_ptr = NULL;
 	solid = true;
-//POWERS	block_simkin_object_ptr = NULL;
-//	vertex_simkin_object_ptr = NULL;
+#ifdef SIMKIN
+	block_simkin_object_ptr = NULL;
+	vertex_simkin_object_ptr = NULL;
+#endif
 	light_list = NULL;
 	active_light_list = NULL;
 	set_active_lights = false;
@@ -3673,12 +3642,16 @@ block::~block()
 	if (col_mesh_ptr != NULL)
 		DELBASEARRAY((colmeshbyte *)col_mesh_ptr, colmeshbyte, col_mesh_size);
 
+#ifdef SIMKIN
+
 	// Destroy the block and vertex SimKin objects, if they exist.
-//POWERS
-//	if (block_simkin_object_ptr != NULL)
-//		destroy_block_simkin_object(this);
-//	if (vertex_simkin_object_ptr != NULL)
-//		destroy_vertex_simkin_object(this);
+
+	if (block_simkin_object_ptr != NULL)
+		destroy_block_simkin_object(this);
+	if (vertex_simkin_object_ptr != NULL)
+		destroy_vertex_simkin_object(this);
+
+#endif
 
 	// Delete the list of lights.
 
@@ -3910,8 +3883,8 @@ block::rotate_y(float angle)
 
 		block_orientation.angle_y = pos_adjust_angle(angle + block_orientation.angle_y);
 		block_def_ptr->animation->angles[current_frame] = block_orientation.angle_y; //pos_adjust_angle(angle + block_def_ptr->animation->angles[current_frame]);
-
 	} else {
+
 		// Perform the rotation around the Y axis.
 
 		for (int index = 0; index < vertices; index++) {
@@ -3956,31 +3929,30 @@ block::set_frame(int number)
 	vertex *vertex_ptr;
 	float delta;
 
-	// change the frame number
+	// Change the frame number.
+
 	if (block_def_ptr->animated) {
-			if (number > -1 && number < (block_def_ptr->animation->frames)) {
-				current_frame = number;
-				vertices = block_def_ptr->animation->vertices[number];
-				vertex_list = block_def_ptr->animation->frame_list[number].vertex_list;
+		if (number > -1 && number < block_def_ptr->animation->frames) {
+			current_frame = number;
+			vertices = block_def_ptr->animation->vertices[number];
+			vertex_list = block_def_ptr->animation->frame_list[number].vertex_list;
+			if (block_orientation.angle_y != block_def_ptr->animation->angles[number]) {
+				delta = block_orientation.angle_y - block_def_ptr->animation->angles[number];
+				block_def_ptr->animation->angles[number] += delta;
 
-				if (block_orientation.angle_y != block_def_ptr->animation->angles[number]) {
-					delta = block_orientation.angle_y - block_def_ptr->animation->angles[number];
-					block_def_ptr->animation->angles[number] += delta;
+				// Perform the rotation around the Y axis.
 
-					// Perform the rotation around the Y axis.
-
-					for (int index = 0; index < vertices; index++) {
-						vertex_ptr = &vertex_list[index];
-						*vertex_ptr -= block_origin;
-						vertex_ptr->rotate_y(delta);
-						*vertex_ptr += block_origin;
-					}
+				for (int index = 0; index < vertices; index++) {
+					vertex_ptr = &vertex_list[index];
+					*vertex_ptr -= block_origin;
+					vertex_ptr->rotate_y(delta);
+					*vertex_ptr += block_origin;
 				}
 			}
+		}
 	}
 
-
-	// Update the block in it's new frame.
+	// Update the block in its new frame.
 
 	update();
 }
@@ -3990,14 +3962,13 @@ block::set_frame(int number)
 void
 block::set_nextloop(int number)
 {
-	
-	// set the next loop number
-	if (block_def_ptr->animation->loops != 0) {
-			if (number > 0 && number < (block_def_ptr->animation->loops)) {
-				next_loop = number;
-			}
-	}
+	// Set the next loop number.
 
+	if (block_def_ptr->animation->loops != 0) {
+		if (number > 0 && number < block_def_ptr->animation->loops) {
+			next_loop = number;
+		}
+	}
 }
 
 //------------------------------------------------------------------------------
@@ -4060,9 +4031,6 @@ world::world()
 	ground_level_exists = false;
 	square_map = NULL;
 	audio_scale = 2.0f / UNITS_PER_BLOCK;
-	gravity.x = 0.0;
-	gravity.y = (float)-9.81;
-	gravity.z = 0.0;
 }
 
 // Default destructor deletes the square, if it exists.
@@ -4198,74 +4166,4 @@ cosine_table::operator[](float angle)
 	if (index < 0)
 		index += 360;
 	return(table[index]);
-}
-
-//------------------------------------------------------------------------------
-// Hash table class.
-//------------------------------------------------------------------------------
-
-
-
-// returns the pointer the given hash value
-
-hash *
-hash_table::get(int objectid, int playerid)
-{
-	hash *place;
-
-	place = table[objectid % 256];
-
-	while (place != NULL) {
-		if (place->objectid == objectid && place->playerid == playerid)
-			return (place);
-		place = place->next_hash;
-	}
-	
-	return(NULL);
-}
-
-// method to add this object to the hash table
-
-hash *
-hash_table::add(hash* obj)
-{
-	int index;
-
-	index = obj->objectid % 256;
-
-	obj->next_hash = table[index];
-	table[index] = obj;
-
-	return(obj);
-}
-
-void
-hash_table::remove(hash* obj)
-{
-	hash *place;
-
-	place = table[obj->objectid % 256];
-
-	if (place == NULL) return;
-
-	if (place == obj)
-		table[obj->objectid % 256] = place->next_hash;
-
-	while (place->next_hash) {
-		if (place->next_hash == obj) {
-			place->next_hash = obj->next_hash;
-			return;
-		}
-		place = place->next_hash;
-	}
-}
-
-void
-hash_table::clear()
-{
-	int index;
-
-	for (index=0;index<256;index++) {
-		table[index] = NULL;
-	}
 }

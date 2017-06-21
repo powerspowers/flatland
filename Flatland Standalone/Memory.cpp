@@ -518,12 +518,6 @@ new_trigger(void)
 		free_trigger_list = trigger_ptr->next_trigger_ptr;
 	else
 		NEW(trigger_ptr, trigger);
-	
-	// set the id of this trigger and increase the counter
-	trigger_ptr->objectid = curr_triggerid;
-	trigger_ptr->playerid = curr_playerid;
-	curr_triggerid++;
-	trigger_hash.add((hash *) trigger_ptr);  // add this trigger to the hash table
 
 	return(trigger_ptr);
 }
@@ -535,30 +529,21 @@ trigger *
 dup_trigger(trigger *old_trigger_ptr)
 {
 	trigger *trigger_ptr;
-	action* old_action_ptr,*last_action_ptr,*action_ptr;
-	int objectid, playerid;
+	action *old_action_ptr, *last_action_ptr, *action_ptr;
 
 	trigger_ptr = new_trigger();
-
-	//	if (old_trigger_ptr->delay_ms > 20000) set_title("delay %d", old_trigger_ptr->delay_ms);
-
 	if (trigger_ptr != NULL) {
-		objectid = trigger_ptr->objectid;
-		playerid = trigger_ptr->playerid;
 		*trigger_ptr = *old_trigger_ptr;
-		trigger_ptr->objectid = objectid;
-		trigger_ptr->playerid = playerid;
 	} else
 		return(NULL);
 
 	trigger_ptr->start_time_ms = curr_time_ms;
 
-	// duplicate the action list if there is one
+	// Duplicate the action list if there is one.
+
 	old_action_ptr = old_trigger_ptr->action_list;
 	last_action_ptr = NULL;
 	trigger_ptr->action_list = NULL;
-
-
 	while (old_action_ptr != NULL) {
 		NEW(action_ptr, action);
 		if (action_ptr == NULL) {
@@ -591,7 +576,5 @@ del_trigger(trigger *trigger_ptr)
 	trigger *next_trigger_ptr = trigger_ptr->next_trigger_ptr;
 	trigger_ptr->next_trigger_ptr = free_trigger_list;
 	free_trigger_list = trigger_ptr;
-
-	trigger_hash.remove((hash *)trigger_ptr);
 	return(next_trigger_ptr);
 }

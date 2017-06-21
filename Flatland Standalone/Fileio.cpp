@@ -23,7 +23,9 @@
 #include "Spans.h"
 #include "Tags.h"
 #include "Utils.h"
-//POWERS #include "SimKin.h"
+#ifdef SIMKIN
+#include "SimKin.h"
+#endif
 
 // Flag indicating if strict XML compliance is being used to parse spot.
 
@@ -77,9 +79,13 @@ static part *part_list;
 static trigger *create_tag_last_trigger_ptr, *create_tag_trigger_list;
 static int create_tag_trigger_flags;
 
+#ifdef SIMKIN
+
 // Global SimKin script.
 
-//POWERS static string global_script;
+static string global_script;
+
+#endif
 
 //==============================================================================
 // Functions to parse BLOCK tags.
@@ -160,20 +166,17 @@ parse_vertex_list(block_def *block_def_ptr)
 		error("Duplicate vertex list");
 	got_vertex_list = true;
 
+	// The new block format has the number of vertices up front so its faster.
 
-	// the new block format has the number of vertices up front so its faster
 	if (parsed_attribute[VERTICES_SIZE]) {
 		
 		// Do the parsing in a try block, so that we can trap errors...
 
 		if (vertices_size < 0)
 			error("Vertices SIZE attribute cannot be negative");
-
 		vertices = vertices_size;
-
 		block_def_ptr->create_vertex_list(vertices);
 		index = 0;
-
 		try { 
 
 			// Read each vertex definition and store it in the vertex entry list,
@@ -207,10 +210,8 @@ parse_vertex_list(block_def *block_def_ptr)
 			DELARRAY(block_def_ptr->vertex_list, vertex, vertices);
 			throw (char *)message;
 		}
+	} else {
 
-
-	}
-	else {
 		// Do the parsing in a try block, so that we can trap errors...
 
 		vertices = 0;
@@ -336,99 +337,83 @@ parse_vertex_ref_list(int block_vertices)
 static void
 parse_frame_list(block_def *block_def_ptr)
 {
-
 	int tag_token;
 	int index;
 
-		// Do the parsing in a try block, so that we can trap errors...
+	// Do the parsing in a try block, so that we can trap errors...
 
-		if (frames_size < 0)
-			error("Frames SIZE attribute cannot be negative");
+	if (frames_size < 0)
+		error("Frames SIZE attribute cannot be negative");
 
-		NEW(block_def_ptr->animation,animation_def);
-		if (block_def_ptr->animation == NULL)
-			error ("animation_def");
-		block_def_ptr->animated = true;
+	NEW(block_def_ptr->animation,animation_def);
+	if (block_def_ptr->animation == NULL)
+		error ("animation_def");
+	block_def_ptr->animated = true;
 
-		block_def_ptr->animation->loops = 0;
-		block_def_ptr->animation->loops_list = NULL;
+	block_def_ptr->animation->loops = 0;
+	block_def_ptr->animation->loops_list = NULL;
 
-		block_def_ptr->create_frames_list(frames_size);
-		block_def_ptr->animation->original_frames = true;
+	block_def_ptr->create_frames_list(frames_size);
+	block_def_ptr->animation->original_frames = true;
 
-		index = 0;
+	index = 0;
 
-		try { 
+	try { 
 
-			// Read each frame definition and store it in the frame entry list,
-			// until all frame definitions have been read.
+		// Read each frame definition and store it in the frame entry list,
+		// until all frame definitions have been read.
+
+		start_parsing_nested_tags();
+		while (parse_next_nested_tag(TOKEN_FRAMES, frames_tag_list, false,
+			&tag_token)) {
+
+			// Verify that the frame reference is in sequence.
+
+			index++;
+			if (frame_ref != index)
+				error("Frame reference number %d is out of sequence",
+					frame_ref);
+
+			// Set the frame angle
+			block_def_ptr->animation->angles[index-1] = 0.0f;
+
+			// Read each frame section (vertices only right now)
 
 			start_parsing_nested_tags();
-			while (parse_next_nested_tag(TOKEN_FRAMES, frames_tag_list, false,
-				&tag_token)) {
-
-				// Verify that the frame reference is in sequence.
-
-				index++;
-				if (frame_ref != index)
-					error("Frame reference number %d is out of sequence",
-						frame_ref);
-
-				// Set the frame angle
-				block_def_ptr->animation->angles[index-1] = 0.0f;
-
-				// Read each frame section (vertices only right now)
-
-				start_parsing_nested_tags();
-				while (parse_next_nested_tag(TOKEN_FRAME, frame_tag_list, false, &tag_token)) {
-					switch (tag_token) {
-						case TOKEN_VERTICES:
-							got_vertex_list = false;
-							parse_vertex_list(block_def_ptr);
-							block_def_ptr->animation->frame_list[index-1].vertex_list = block_def_ptr->vertex_list;
-							block_def_ptr->vertex_list = NULL;
-							block_def_ptr->animation->vertices[index-1] = block_def_ptr->vertices;
-							block_def_ptr->vertices = 0;
-							break;
-						//case TOKEN_PARTS:
-						//	parse_part_list(blockset_ptr, block_def_ptr);
-						//	block_def_ptr->frames_list[index-1].part_list = block_def_ptr->part_list;
-						//	block_def_ptr->part_list = NULL;
-						//	block_def_ptr->frames_list[index-1].parts = block_def_ptr->parts;
-						//	block_def_ptr->parts = 0;
-						//	break;
-					}
-
+			while (parse_next_nested_tag(TOKEN_FRAME, frame_tag_list, false, &tag_token)) {
+				switch (tag_token) {
+					case TOKEN_VERTICES:
+						got_vertex_list = false;
+						parse_vertex_list(block_def_ptr);
+						block_def_ptr->animation->frame_list[index-1].vertex_list = block_def_ptr->vertex_list;
+						block_def_ptr->vertex_list = NULL;
+						block_def_ptr->animation->vertices[index-1] = block_def_ptr->vertices;
+						block_def_ptr->vertices = 0;
+						break;
 				}
-				stop_parsing_nested_tags();
-
-				// Set the block def to the first vertex list and vertices counter
-
-				block_def_ptr->vertices = block_def_ptr->animation->vertices[0];
-				block_def_ptr->vertex_list = block_def_ptr->animation->frame_list[0].vertex_list;
-
 
 			}
 			stop_parsing_nested_tags();
 
+			// Set the block def to the first vertex list and vertices counter
 
+			block_def_ptr->vertices = block_def_ptr->animation->vertices[0];
+			block_def_ptr->vertex_list = block_def_ptr->animation->frame_list[0].vertex_list;
 		}
+		stop_parsing_nested_tags();
+	}
 
+	// Upon an error, delete the frame entry list, before throwing the error.
 
-
-		// Upon an error, delete the frame entry list, before throwing the error.
-
-		catch (char *message) {
-			DELARRAY(block_def_ptr->animation->vertices, int, frames_size);
-			for (index=0; index < frames_size; index++)
-				DELARRAY(block_def_ptr->animation->frame_list[index].vertex_list, vertex, block_def_ptr->animation->vertices[index]);
-			DELARRAY(block_def_ptr->animation->frame_list, frame_def, frames_size);
-			DELARRAY(block_def_ptr->animation->angles, float, frames_size);
-			DEL(block_def_ptr->animation,animation_def);
-			throw (char *)message;
-		}
-
-
+	catch (char *message) {
+		DELARRAY(block_def_ptr->animation->vertices, int, frames_size);
+		for (index=0; index < frames_size; index++)
+			DELARRAY(block_def_ptr->animation->frame_list[index].vertex_list, vertex, block_def_ptr->animation->vertices[index]);
+		DELARRAY(block_def_ptr->animation->frame_list, frame_def, frames_size);
+		DELARRAY(block_def_ptr->animation->angles, float, frames_size);
+		DEL(block_def_ptr->animation,animation_def);
+		throw (char *)message;
+	}
 }
 
 
@@ -439,62 +424,55 @@ parse_frame_list(block_def *block_def_ptr)
 static void
 parse_loop_list(block_def *block_def_ptr)
 {
-
 	int tag_token;
 	int index;
 
-		// Do the parsing in a try block, so that we can trap errors...
+	// Do the parsing in a try block, so that we can trap errors...
 
-		if (loops_size < 0)
-			error("Frames SIZE attribute cannot be negative");
+	if (loops_size < 0)
+		error("Frames SIZE attribute cannot be negative");
 
-		block_def_ptr->create_loops_list(loops_size);
+	block_def_ptr->create_loops_list(loops_size);
 
-		index = 0;
+	index = 0;
 
-		try { 
+	try { 
 
-			// Read each loop definition and store it in the loop entry list,
-			// until all loop definitions have been read.
+		// Read each loop definition and store it in the loop entry list,
+		// until all loop definitions have been read.
 
-			start_parsing_nested_tags();
-			while (parse_next_nested_tag(TOKEN_LOOPS, loops_tag_list, false,
-				&tag_token)) {
+		start_parsing_nested_tags();
+		while (parse_next_nested_tag(TOKEN_LOOPS, loops_tag_list, false,
+			&tag_token)) {
 
-				// Verify that the loop reference is in sequence.
+			// Verify that the loop reference is in sequence.
 
-				index++;
-				if (loop_ref != index)
-					error("Loop reference number %d is out of sequence",
-						loop_ref);
+			index++;
+			if (loop_ref != index)
+				error("Loop reference number %d is out of sequence",
+					loop_ref);
 
-				// Check the range of the frames is correct
-				if (loop_range.min < 1)
-					error("Loop min frames number %d cannot be less than zero",
-						loop_range.min);
-				if (loop_range.max > block_def_ptr->animation->frames)
-					error("Loop max frames number %d cannot be more than %d",
-						loop_range.max, block_def_ptr->animation->frames);
+			// Check the range of the frames is correct
+			if (loop_range.min < 1)
+				error("Loop min frames number %d cannot be less than zero",
+					loop_range.min);
+			if (loop_range.max > block_def_ptr->animation->frames)
+				error("Loop max frames number %d cannot be more than %d",
+					loop_range.max, block_def_ptr->animation->frames);
 
-				block_def_ptr->animation->loops_list[index-1].min = loop_range.min - 1;
-				block_def_ptr->animation->loops_list[index-1].max = loop_range.max - 1;
-			}
-			stop_parsing_nested_tags();
-
-
+			block_def_ptr->animation->loops_list[index-1].min = loop_range.min - 1;
+			block_def_ptr->animation->loops_list[index-1].max = loop_range.max - 1;
 		}
+		stop_parsing_nested_tags();
+	}
 
+	// Upon an error, delete the loop entry list, before throwing the error.
 
-		// Upon an error, delete the loop entry list, before throwing the error.
-
-		catch (char *message) {
-			DELARRAY(block_def_ptr->animation->loops_list, intrange, loops_size);
-			throw (char *)message;
-		}
-
-
+	catch (char *message) {
+		DELARRAY(block_def_ptr->animation->loops_list, intrange, loops_size);
+		throw (char *)message;
+	}
 }
-
 
 //------------------------------------------------------------------------------
 // Parse the texture coordinates list.
@@ -706,7 +684,8 @@ parse_part_tag(blockset *blockset_ptr, block_def *block_def_ptr)
 
 	part_ptr->name = part_name;
 
-	// initialize the trigger flags
+	// initialize the trigger flags.
+
 	part_ptr->trigger_flags = NULL;
 
 	// If the texture parameter was present, load or retrieve the texture,
@@ -729,7 +708,8 @@ parse_part_tag(blockset *blockset_ptr, block_def *block_def_ptr)
 	if (parsed_attribute[PART_ANGLE])
 		part_ptr->texture_angle = part_angle;
 
-    // See if there is a SOLID tag
+    // See if there is a SOLID tag.
+
 	if (parsed_attribute[PART_SOLID])
 		part_ptr->solid = part_solid;
 	
@@ -739,7 +719,6 @@ parse_part_tag(blockset *blockset_ptr, block_def *block_def_ptr)
 	while (parse_next_nested_tag(TOKEN_PART, part_tag_list, false, &tag_token))
 		parse_polygon_tag(block_def_ptr, part_ptr);
 	stop_parsing_nested_tags();
-
 }
 
 //------------------------------------------------------------------------------
@@ -964,7 +943,7 @@ parse_param_tag(block_def *block_def_ptr)
 	if (parsed_attribute[PARAM_ORIGIN])
 		block_def_ptr->block_origin = param_origin;
 
-	// if the solid parameter was given, set the solid flag in the block
+	// If the solid parameter was given, set the solid flag in the block
 	// definition.
 
 	if (parsed_attribute[PARAM_SOLID])
@@ -976,14 +955,16 @@ parse_param_tag(block_def *block_def_ptr)
 	if (parsed_attribute[PARAM_MOVABLE])
 		block_def_ptr->movable = param_movable;
 
-	// if the rotate parameter is given rotate the vertices
+	// If the rotate parameter is given rotate the vertices.
+
 	if (parsed_attribute[PARAM_ROTATE]) {
 		block_def_ptr->rotate_x(param_rotate.x);
 		block_def_ptr->rotate_y(param_rotate.y);
 		block_def_ptr->rotate_z(param_rotate.z);
 	}
 
-	// if the scale parameters are given scale the vertices
+	// If the scale parameters are given scale the vertices.
+
 	if (parsed_attribute[PARAM_SCALE]) {
 		int n;
 		for (n=0;n < block_def_ptr->vertices;n++) {
@@ -1003,13 +984,8 @@ parse_param_tag(block_def *block_def_ptr)
 
 	}
 
-	// if the mass parameter is given set the mass
-	if (parsed_attribute[PARAM_MASS]) {
-		block_def_ptr->mass = param_mass;
-		block_def_ptr->physics = 1;
-	}
+	// If the position parameter is given set the rel position.
 
-	// if the position parameter is given set the rel position
 	if (parsed_attribute[PARAM_POSITION]) {
 		block_def_ptr->position = param_position;
 	}
@@ -1042,10 +1018,9 @@ parse_sprite_param_tag(block_def *block_def_ptr)
 	if (parsed_attribute[SPRITE_SPEED])
 		block_def_ptr->degrees_per_ms = sprite_speed * 360.0f / 1000.0f;
 
-	// If the align parameter was given and this isn't a player sprite, set the
-	// sprite alignment.
+	// If the align parameter was given, set the sprite alignment.
 
-	if (parsed_attribute[SPRITE_ALIGNMENT]) // && block_def_ptr->type != PLAYER_SPRITE)
+	if (parsed_attribute[SPRITE_ALIGNMENT])
 		block_def_ptr->sprite_alignment = sprite_alignment;
 
 	// If the solid parameter was given, set the sprite's solid flag.
@@ -2292,25 +2267,7 @@ parse_map_tag(void)
 
 	if (parsed_attribute[MAP_STYLE])
 		world_ptr->map_style = map_style;
-}	
-
-//------------------------------------------------------------------------------
-// Parse the physics tag to obtain the dimensions and scale of the map.
-//------------------------------------------------------------------------------
-
-static void
-parse_physics_tag(void)
-{
-	mapcoords size;
-
-
-	// Store the map dimensions in the world object. We add one level so that
-	// there is always a level of empty space above the last defined level.
-
-	if (parsed_attribute[PHYSICS_GRAVITY])
-		world_ptr->gravity = physics_gravity;
-
-}	
+}
 
 #ifdef STREAMING_MEDIA
 
@@ -2462,7 +2419,8 @@ parse_action_ripple_tag(block_def *block_def_ptr)
 		action_ptr->damp = (float)0.85;
 	}
 
-	// Make two arrays to handle the timestep of forces for rippling
+	// Make two arrays to handle the timestep of forces for rippling.
+
 	NEWARRAY(action_ptr->prev_step_ptr, float, block_def_ptr->vertices);
 	if (action_ptr->prev_step_ptr == NULL) {
 		memory_warning("ripple");
@@ -2475,19 +2433,16 @@ parse_action_ripple_tag(block_def *block_def_ptr)
 		return(NULL);
 	}
 
-	for (n=0;n < block_def_ptr->vertices;n++){
+	for (n = 0; n < block_def_ptr->vertices; n++) {
 		action_ptr->prev_step_ptr[n] = 0.0;
 		action_ptr->curr_step_ptr[n] = 0.0;
 	}
-	
-
 	action_ptr->vertices = block_def_ptr->vertices;
 
 	// Return a pointer to the action.
 
 	return(action_ptr);
 }
-
 
 //------------------------------------------------------------------------------
 // Parse an action spin tag.
@@ -2522,8 +2477,6 @@ parse_action_spin_tag(void)
 		action_ptr->spin_angles.z = 0.0f;
 	}
 
-
-
 	// Return a pointer to the action.
 
 	return(action_ptr);
@@ -2555,18 +2508,17 @@ parse_action_orbit_tag(void)
 		action_ptr->spin_angles.x = orbit_distance.x;
 		action_ptr->spin_angles.y = orbit_distance.y;
 		action_ptr->spin_angles.z = orbit_distance.z;
-	}
-	else {
+	} else {
 		action_ptr->spin_angles.x = 0.0f;
 		action_ptr->spin_angles.y = 0.0f;
 		action_ptr->spin_angles.z = 0.0f;
 	}
 
 	// Set the source block symbol or location.
+
 	if (parsed_attribute[ORBIT_SOURCE]) {
 		action_ptr->source = orbit_source;
-	}
-	else {
+	} else {
 		action_ptr->source.is_symbol = false;
 	}
 
@@ -2610,14 +2562,6 @@ parse_action_move_tag(void)
 	else 
 		action_ptr->charindex = NULL;
 
-	// Set the speed value.
-/*
-	if (parsed_attribute[MOVE_SPEED]){
-		action_ptr->speed = move_speed;
-	} else {
-		action_ptr->speed = 10;
-	}*/
-
 	action_ptr->totalx = action_ptr->totaly = action_ptr->totalz = 0;
 	action_ptr->speedx = action_ptr->speedy = action_ptr->speedz = 0;
 	action_ptr->temp = 0;
@@ -2626,7 +2570,6 @@ parse_action_move_tag(void)
 
 	return(action_ptr);
 }
-
 
 //------------------------------------------------------------------------------
 // Parse an action replace tag.
@@ -2665,8 +2608,6 @@ parse_action_replace_tag(void)
 
 	return(action_ptr);
 }
-
-
 
 //------------------------------------------------------------------------------
 // Parse a setframe action tag.
@@ -2751,7 +2692,6 @@ parse_action_stop_tag(int type)
 
 	return(action_ptr);
 }
-
 
 //------------------------------------------------------------------------------
 // Parse set loop action tag.
@@ -2844,16 +2784,10 @@ parse_imagemap_action_tag(imagemap *imagemap_ptr)
 
 	// Create a trigger.  If this fails, skip the action tag.
 
-//	NEW(trigger_ptr, trigger);
-//	if (trigger_ptr == NULL) {
-//		memory_warning("trigger");
-//		return;
-//	}
 	if ((trigger_ptr = new_trigger()) == NULL) {
 		memory_warning("trigger");
 		return;
 	}
-
 
 	// If the trigger parameter was given, set the trigger flag.
 
@@ -2982,11 +2916,6 @@ parse_imagemap_script_tag(imagemap *imagemap_ptr)
 
 	// Create a trigger.  If this fails, skip the script tag.
 
-//	NEW(trigger_ptr, trigger);
-//	if (trigger_ptr == NULL) {
-//		memory_warning("trigger");
-//		return;
-//	}
 	if ((trigger_ptr = new_trigger()) == NULL) {
 		memory_warning("trigger");
 		return;
@@ -3011,17 +2940,20 @@ parse_imagemap_script_tag(imagemap *imagemap_ptr)
 	if (parsed_attribute[ACTION_TEXT])
 		trigger_ptr->label = action_text;
 
+#ifdef SIMKIN
+
 	// Parse the nested text inside the script tag as a script.
 
-//POWERS
-//	start_parsing_nested_tags();
-//	script = nested_text_to_string(TOKEN_SCRIPT);
-//	stop_parsing_nested_tags();
-//	if ((trigger_ptr->script_def_ptr = create_script_def(script)) == NULL) {
-//		memory_warning("trigger script");
-//		delete trigger_ptr;
-//		return;
-//	}
+	start_parsing_nested_tags();
+	script = nested_text_to_string(TOKEN_SCRIPT);
+	stop_parsing_nested_tags();
+	if ((trigger_ptr->script_def_ptr = create_script_def(script)) == NULL) {
+		memory_warning("trigger script");
+		delete trigger_ptr;
+		return;
+	}
+
+#endif
 
 	trigger_ptr->partindex = ALL_PARTS;
 
@@ -3215,17 +3147,13 @@ parse_action_tag(block_def *block_def_ptr, bool need_location_param)
 
 	// Create a trigger.  If this fails, skip over the rest of the action tag.
 
-//	NEW(trigger_ptr, trigger);
-//	if (trigger_ptr == NULL) {
-//		memory_warning("trigger");
-//		return(NULL);
-//	}
 	if ((trigger_ptr = new_trigger()) == NULL) {
 		memory_warning("trigger");
 		return(NULL);
 	}
 
-	// Initialize the part ptr to all parts which is the default
+	// Initialize the part ptr to all parts which is the default.
+
 	if (!need_location_param)
 		trigger_ptr->partindex = ALL_PARTS;
 
@@ -3276,7 +3204,8 @@ parse_action_tag(block_def *block_def_ptr, bool need_location_param)
 		else {
 		  
 			// Search for this name in the block definition's part list.
-            for (part_no = 0; part_no < block_def_ptr->parts; part_no++) {
+			
+			for (part_no = 0; part_no < block_def_ptr->parts; part_no++) {
 				if (!_stricmp(curr_part_name, block_def_ptr->part_list[part_no].name)) 
 					break;
 			}
@@ -3288,25 +3217,14 @@ parse_action_tag(block_def *block_def_ptr, bool need_location_param)
 				trigger_ptr->partindex = ALL_PARTS;
 
 			}
+
 			// Otherwise hold the part number in the trigger.
+
 			else {
 				trigger_ptr->partindex = part_no;
-				//trigger_ptr->part_ptr->trigger_flags |= trigger_ptr->trigger_flag;
 			}
-			//curr_part_name = strtok(NULL,",");
-
-		  //}
 		}
 	}
-	
-
-	// for an all part trigger go through parts and add flags to each
-/*	if (!need_location_param && !trigger_ptr->partindex == ALL_PARTS) {
-	   for (part_no = 0; part_no < block_def_ptr->parts; part_no++) {
-			part_ptr = &block_def_ptr->part_list[part_no];
-			part_ptr->trigger_flags |= trigger_ptr->trigger_flag;
-		}
-	}*/
 
 	// Initialise the action list.
 
@@ -3320,7 +3238,7 @@ parse_action_tag(block_def *block_def_ptr, bool need_location_param)
 	// Parse all action tags.  This is done in a try block so we can delete
 	// the trigger on an error.
 
-//	try {
+	try {
 		start_parsing_nested_tags();
 		while (parse_next_nested_tag(TOKEN_ACTION, action_tag_list, false,
 			&tag_token)) {
@@ -3378,7 +3296,8 @@ parse_action_tag(block_def *block_def_ptr, bool need_location_param)
 					action_list = action_ptr;
 				last_action_ptr = action_ptr;
 
-				// also connect the action to this trigger
+				// Also connect the action to this trigger.
+
 				action_ptr->trigger_ptr = trigger_ptr;
 			}
 		}
@@ -3388,12 +3307,11 @@ parse_action_tag(block_def *block_def_ptr, bool need_location_param)
 
 		trigger_ptr->action_list = action_list;
 		return(trigger_ptr);
-//	}
-/*mm	catch (char *message) {
+	}
+	catch (char *message) {
 		DEL(trigger_ptr, trigger);
 		throw message;
-	}*/
-
+	}
 }
 
 //------------------------------------------------------------------------------
@@ -3634,7 +3552,6 @@ parse_load_tag(void)
 static void
 parse_player_tag(void)
 {
-
 	// If we've seen the player tag before, just return without doing anything.
 
 	if (got_player_tag)
@@ -3690,79 +3607,8 @@ parse_player_tag(void)
 		set_key_codes(FAST_MODE, player_fast_mode);
 	if (parsed_attribute[PLAYER_JUMP])
 		set_key_codes(JUMP, player_jump);
-
 }
 
-//------------------------------------------------------------------------------
-// Parse player tag.
-//------------------------------------------------------------------------------
-/*
-static void
-parse_player_tag(void)
-{
-	// Make sure that only of the attributes "block" or "size" were given.
-
-	if (parsed_attribute[PLAYER_BLOCK] && parsed_attribute[PLAYER_SIZE])
-		error("You cannot specify both a player block and size");
-
-	// If we've seen the player tag before, just return without doing anything.
-
-	if (got_player_tag)
-		return;
-	got_player_tag = true;
-
-	// Save the block symbol if it were given, otherwise set the symbol to zero.
-
-	if (parsed_attribute[PLAYER_BLOCK])
-		player_block_symbol = player_block;
-	else
-		player_block_symbol = 0;
-
-	// Save the player size if it were given, otherwise set the size to a
-	// default value.
-
-	if (parsed_attribute[PLAYER_SIZE])
-		player_dimensions = player_size;
-	else
-		player_dimensions.set(1.2f, 1.5f, 1.2f);
-
-	// Save the camera offset if it were given, otherwise select a default
-	// camera offset.
-
-	if (parsed_attribute[PLAYER_CAMERA]) {
-		player_camera_offset.dx = player_camera.x;
-		player_camera_offset.dy = player_camera.y;
-		player_camera_offset.dz = player_camera.z;
-	} else {
-		player_camera_offset.dx = 0.0f;
-		player_camera_offset.dy = 0.0f;
-		player_camera_offset.dz = -1.0f;
-	}
-
-	// If key functions have been given, set them.
-
-	if (parsed_attribute[PLAYER_MOVE_FORWARD])
-		set_key_codes(MOVE_FORWARD, player_move_forward);
-	if (parsed_attribute[PLAYER_MOVE_BACK])
-		set_key_codes(MOVE_BACK, player_move_back);
-	if (parsed_attribute[PLAYER_MOVE_LEFT])
-		set_key_codes(MOVE_LEFT, player_move_left);
-	if (parsed_attribute[PLAYER_MOVE_RIGHT])
-		set_key_codes(MOVE_RIGHT, player_move_right);
-	if (parsed_attribute[PLAYER_LOOK_UP])
-		set_key_codes(LOOK_UP, player_look_up);
-	if (parsed_attribute[PLAYER_LOOK_DOWN])
-		set_key_codes(LOOK_DOWN, player_look_down);
-	if (parsed_attribute[PLAYER_GO_FASTER])
-		set_key_codes(GO_FASTER, player_go_faster);
-	if (parsed_attribute[PLAYER_GO_SLOWER])
-		set_key_codes(GO_SLOWER, player_go_slower);
-	if (parsed_attribute[PLAYER_SIDLE_MODE])
-		set_key_codes(SIDLE_MODE, player_sidle_mode);
-	if (parsed_attribute[PLAYER_FAST_MODE])
-		set_key_codes(FAST_MODE, player_fast_mode);
-}
-*/
 //------------------------------------------------------------------------------
 // Parse a script tag.
 //------------------------------------------------------------------------------
@@ -3801,17 +3647,13 @@ parse_script_tag(block_def *block_def_ptr, bool need_location_param)
 
 	// Create a trigger.  If this fails, skip the script tag.
 
-//	NEW(trigger_ptr, trigger);
-//	if (trigger_ptr == NULL) {
-//		memory_warning("trigger");
-//		return(NULL);
-//	}
 	if ((trigger_ptr = new_trigger()) == NULL) {
 		memory_warning("trigger");
 		return(NULL);
 	}
 
-	// Initialize the part_ptr to be all parts which is the default
+	// Initialize the part_ptr to be all parts which is the default.
+
     if (!need_location_param)
 	    trigger_ptr->partindex = ALL_PARTS;
 
@@ -3852,16 +3694,16 @@ parse_script_tag(block_def *block_def_ptr, bool need_location_param)
 	if (parsed_attribute[ACTION_KEY])
 		trigger_ptr->key_code = action_key;
 
-	// If the part parameter was given, set the part name
-	if (parsed_attribute[ACTION_PART_NAME] && !need_location_param) {
-		curr_part_name = strtok(action_part_name,",");
+	// If the part parameter was given, set the part name.
 
+	if (parsed_attribute[ACTION_PART_NAME] && !need_location_param) {
+		curr_part_name = strtok(action_part_name, ",");
 		if (!_stricmp(curr_part_name,"*") || curr_part_name == NULL) {
 			trigger_ptr->partindex = ALL_PARTS;
-		}
-		else {
-		  //while (curr_part_name) {
+		} else {
+
 			// Search for this name in the block definition's part list.
+
             for (part_no = 0; part_no < block_def_ptr->parts; part_no++) {
 				part_ptr = &block_def_ptr->part_list[part_no];
 				if (!_stricmp(curr_part_name, part_ptr->name))
@@ -3875,34 +3717,30 @@ parse_script_tag(block_def *block_def_ptr, bool need_location_param)
 				trigger_ptr->partindex = ALL_PARTS;
 
 			}
+
 			// Otherwise hold the part name pointer in the trigger.
+
 			else {
 				trigger_ptr->partindex = part_no;
-				//trigger_ptr->part_ptr->trigger_flags |= trigger_ptr->trigger_flag;
 			}
-			//curr_part_name = strtok(NULL,",");
-		  //}
 		}
 	}
 
-
-	/*if (!need_location_param && trigger_ptr->partindex == ALL_PARTS) {
-	   for (part_no = 0; part_no < block_def_ptr->parts; part_no++) {
-			part_ptr = &block_def_ptr->part_list[part_no];
-			part_ptr->trigger_flags |= trigger_ptr->trigger_flag;
-		}
-	}*/
+#ifdef SIMKIN
 
 	// Create a script definition for this script, and store it in the trigger.
-//POWERS
-//	start_parsing_nested_tags();
-//	script = nested_text_to_string(TOKEN_SCRIPT);
-//	stop_parsing_nested_tags();
-//	if ((trigger_ptr->script_def_ptr = create_script_def(script)) == NULL) {
-//		memory_warning("trigger script");
-//		delete trigger_ptr;
-//		return(NULL);
-//	}
+
+	start_parsing_nested_tags();
+	script = nested_text_to_string(TOKEN_SCRIPT);
+	stop_parsing_nested_tags();
+	if ((trigger_ptr->script_def_ptr = create_script_def(script)) == NULL) {
+		memory_warning("trigger script");
+		delete trigger_ptr;
+		return(NULL);
+	}
+
+#endif
+
 	return(trigger_ptr);
 }
 
@@ -4182,10 +4020,13 @@ parse_next_body_tag(int tag_token, bool allow_import_tag)
 	case TOKEN_CREATE:
 		parse_create_tag();
 		break;
-//POWERS	case TOKEN_DEFINE:
-//		parse_define_tag(script);
-//		global_script = script + global_script;
-//		break;
+
+#ifdef SIMKIN
+	case TOKEN_DEFINE:
+		parse_define_tag(script);
+		global_script = script + global_script;
+		break;
+#endif
 
 	case TOKEN_ENTRANCE:
 
@@ -4569,9 +4410,6 @@ parse_head_tags(void)
 		case TOKEN_ORB:
 			parse_orb_tag(custom_blockset_ptr);
 			break;
-		case TOKEN_PHYSICS:
-			parse_physics_tag();
-			break;
 		case TOKEN_PLACEHOLDER:
 			parse_placeholder_tag(custom_blockset_ptr);
 			break;
@@ -4662,9 +4500,13 @@ parse_spot_file(char *spot_URL, char *spot_file_path)
 
 	spot_title = "Untitled Spot";
 
+#ifdef SIMKIN
+
 	// Reset the global script.
 
-//POWERS	global_script = "";
+	global_script = "";
+
+#endif
 
 	// Attempt to open the spot file as a zip archive first.
 
@@ -4751,10 +4593,14 @@ parse_spot_file(char *spot_URL, char *spot_file_path)
 				expected_levels);
 	}
 
+#ifdef SIMKIN
+
 	// If a global script was constructed, assign it to the spot object.
 
-//POWERS	if (strlen(global_script) > 0)
-//		set_global_script(global_script);
+	if (strlen(global_script) > 0)
+		set_global_script(global_script);
+
+#endif
 
 	// If a player tag was seen, create the player block.  Otherwise set a
 	// default camera offset and player collision box.

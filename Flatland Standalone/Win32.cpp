@@ -479,8 +479,7 @@ static bitmap *splash_bitmap_ptr;
 
 static HWND main_window_handle;
 static void (*key_callback_ptr)(byte key_code, bool key_down);
-static void (*mouse_callback_ptr)(int x, int y, int button_code,
-								  int task_bar_button_code);
+static void (*mouse_callback_ptr)(int x, int y, int button_code);
 static void (*timer_callback_ptr)(void);
 static void (*resize_callback_ptr)(void *window_handle, int width, int height);
 static void (*display_callback_ptr)(void);
@@ -518,11 +517,6 @@ static HWND snapshot_height_spin_control_handle;
 static void (*snapshot_callback_ptr)(int width, int height, int position);
 static int curr_snapshot_position;
 
-// Chat message window data.
-
-static HWND chatmessage_window_handle;
-static void (*chatmessage_callback_ptr)(char *message7);
-
 // Blockset manager window data.
 
 static HWND blockset_manager_window_handle;
@@ -530,20 +524,6 @@ static HWND blockset_list_view_handle;
 static HWND blockset_update_button_handle;
 static HWND blockset_delete_button_handle;
 static HWND update_period_spin_control_handle;
-
-// Menu handles.
-
-static HMENU recent_spots_menu_handle;
-static HMENU directory_menu_handle;
-static HMENU builder_menu_handle;
-static HMENU command_menu_handle;
-
-// Password window data.
-
-static HWND password_window_handle;
-static HWND username_edit_handle;
-static HWND password_edit_handle;
-static void (*password_callback_ptr)(const char *username, const char *password);
 
 // Message log window data.
 
@@ -574,76 +554,9 @@ typedef void (*inactive_callback)(void *window_data_ptr);
 #define HANDLE_KEYUP_MSG(window_handle, message, fn) \
     (fn)((window_handle), (UINT)(wParam), FALSE, FALSE, (UINT)HIWORD(lParam))
 
-// Number of task bar buttons.
-
-#define TASK_BAR_BUTTONS	7
-
-// Task bar icons.
-
-static icon *button_icon_list[TASK_BAR_BUTTONS];
-static icon *right_edge_icon_ptr;
-static icon *title_bg_icon_ptr;
-static icon *title_end_icon_ptr;
-
-// X coordinates of all the task bar elements.
-
-static int button_x_list[TASK_BAR_BUTTONS + 1];
-static int right_edge_x;
-static int title_start_x;
-static int title_end_x;
-
-// Task bar button GIF resource IDs and labels.
-
-static int button0_ID_list[TASK_BAR_BUTTONS] = {
-	IDR_LOGO, IDR_HISTORY0, IDR_DIRECTORY0, IDR_BUILDER0, IDR_LIGHT0, 
-	IDR_OPTIONS0, IDR_COMMAND0
-};
-
-static int button1_ID_list[TASK_BAR_BUTTONS] = {
-	IDR_LOGO, IDR_HISTORY1, IDR_DIRECTORY1, IDR_BUILDER1, IDR_LIGHT1, 
-	IDR_OPTIONS1, IDR_COMMAND1
-};
-
-static char *button_label_list[TASK_BAR_BUTTONS] = { 
-	"Visit flatland.com", "Recent Spots", "Top Spots", "Builder Resources",
-	"Brightness", "Options", "Commands"
-};
-
-// Task bar variables.
-
-static bool task_bar_enabled;
-static semaphore<int> active_button_index;
-static int prev_active_button_index;
-
 // Splash graphic flag.
 
 static bool splash_graphic_enabled;
-
-// Builder menu items.
-
-#define BUILDER_MENU_ITEMS	8
-
-static const char *builder_menu_item[BUILDER_MENU_ITEMS] = {
-	"3DML Tutorial",
-	"Blockset Editing Guide", 
-	"Blockset and 3DML Tag Guides", 
-	"Flatland Forums",
-	"Flatland Store",
-	"RoverScript Guide",
-	"Spot Hosting", 
-	"Spotnik"
-};
-
-static const char *builder_URL[BUILDER_MENU_ITEMS] = {
-	"http://www.flatland.com/build/tutorial",
-	"http://spots.flatland.com/editbsets",
-	"http://www.flatland.com/build/reference/blocksets.html",
-	"http://www.flatland.com/cgi-bin/ubb/Ultimate.cgi",
-	"http://www.cafepress.com/buyflatland",
-	"http://spots.flatland.com/scripts",
-	"http://spots.flatland.com",
-	"http://spotnik.flatland.com"
-};
 
 // Virtual key to key code table.
 
@@ -1372,61 +1285,13 @@ draw_icon(icon *icon_ptr, bool active_icon, int x)
 }
 
 //------------------------------------------------------------------------------
-// Draw the buttons on the task bar.
-//------------------------------------------------------------------------------
-
-static void
-draw_buttons(void)
-{
-	int button_index;
-	bool button_active;
-
-	// Draw each button in it's active or inactive state.
-
-	for (button_index = 0; button_index < TASK_BAR_BUTTONS; button_index++) {
-		button_active = button_index == active_button_index.get();
-		draw_icon(button_icon_list[button_index], button_active,
-			button_x_list[button_index]);
-	}
-
-	// Draw the right edge of the button bar.
-
-	draw_icon(right_edge_icon_ptr, false, right_edge_x);
-
-	// If a new task bar button has become active, show it's label.  Otherwise
-	// if all task bar buttons have become inactive, hide the label.
-
-	button_index = active_button_index.get();
-	if (button_index >= 0) {
-		if (button_index != prev_active_button_index)
-			show_label(button_label_list[button_index]);
-		else
-			label_visible = true;
-	}
-	if (button_index < 0 && prev_active_button_index >= 0)
-		hide_label();
-	prev_active_button_index = button_index;
-}
-
-//------------------------------------------------------------------------------
-// Create the title and label textures.
+// Create the label texture.
 //------------------------------------------------------------------------------
 
 bool
-create_title_and_label_textures(void)
+create_label_texture(void)
 {
 	RGBcolour bg_colour, text_colour;
-
-	// Create the title texture.
-
-	NEW(title_texture_ptr, texture);
-	if (title_texture_ptr == NULL)
-		return(false);
-	bg_colour.set_RGB(0x00, 0x00, 0x00);
-	text_colour.set_RGB(0xff, 0xcc, 0x66);
-	if (!create_pixmap_for_text(title_texture_ptr, title_end_x - title_start_x,
-		TASK_BAR_HEIGHT, text_colour, &bg_colour)) 
-		return(false);
 
 	// Create the label texture.
 
@@ -1445,38 +1310,14 @@ create_title_and_label_textures(void)
 }
 
 //------------------------------------------------------------------------------
-// Destroy the title and label textures.
+// Destroy the label texture.
 //------------------------------------------------------------------------------
 
 void
-destroy_title_and_label_textures(void)
+destroy_label_texture(void)
 {
-	if (title_texture_ptr != NULL)
-		DEL(title_texture_ptr, texture);
 	if (label_texture_ptr != NULL)
 		DEL(label_texture_ptr, texture);
-}
-
-//------------------------------------------------------------------------------
-// Draw the title on the task bar.
-//------------------------------------------------------------------------------
-
-static void
-draw_title(void)
-{
-	pixmap *pixmap_ptr;
-
-	// Draw the background for the title.
-
-	//for (int x = title_start_x; x < title_end_x; x += title_bg_icon_ptr->width)
-	//	draw_icon(title_bg_icon_ptr, false, x);
-	draw_icon(title_end_icon_ptr, false, title_end_x);
-
-	// Draw the title pixmap.
-
-	pixmap_ptr = title_texture_ptr->pixmap_list;
-	draw_pixmap(pixmap_ptr, 0, title_start_x, window_height, 
-		pixmap_ptr->width, pixmap_ptr->height);
 }
 
 //------------------------------------------------------------------------------
@@ -1543,24 +1384,6 @@ draw_label(void)
 
 	pixmap_ptr = label_texture_ptr->pixmap_list;
 	draw_pixmap(pixmap_ptr, 0, x, y, label_width, pixmap_ptr->height);
-}
-
-//------------------------------------------------------------------------------
-// Track a menu and return the ID of the menu item that was selected, or 0 if
-// no item was selected.
-//------------------------------------------------------------------------------
-
-static int
-track_menu(HMENU menu_handle, int menu_button_ID)
-{
-	POINT menu_pos;
-
-	menu_pos.x = button_x_list[menu_button_ID - 1];
-	menu_pos.y = window_height;
-	ClientToScreen(main_window_handle, &menu_pos);
-	return(TrackPopupMenu(menu_handle, TPM_LEFTALIGN | TPM_BOTTOMALIGN | 
-		TPM_NONOTIFY | TPM_RETURNCMD | TPM_LEFTBUTTON, menu_pos.x, menu_pos.y, 
-		0, main_window_handle, NULL));
 }
 
 //------------------------------------------------------------------------------
@@ -2454,16 +2277,11 @@ start_up_platform_API(void)
 	char buffer[_MAX_PATH];
 	char *app_name;
 	WNDCLASS window_class;
-	int icon_x, index;
+	int index;
 	FILE *fp;
 
 	// Initialise global variables.
 
-	right_edge_icon_ptr = NULL;
-	title_bg_icon_ptr = NULL;
-	title_end_icon_ptr = NULL;
-	for (index = 0; index < TASK_BAR_BUTTONS; index++)
-		button_icon_list[index] = NULL;
 	splash_texture_ptr = NULL;
 	splash_bitmap_ptr = NULL;
 
@@ -2522,10 +2340,6 @@ start_up_platform_API(void)
 	if ((fp = fopen(log_file_path, "w")) != NULL)
 		fclose(fp);
 
-	// Create the semaphore for the active button index.
-
-	active_button_index.create_semaphore();
-
 	// Get handles to all of the required cursors.
 
 	for (index = 0; index < MOVEMENT_CURSORS; index++)
@@ -2577,33 +2391,6 @@ start_up_platform_API(void)
 		return(false);
 	}
 
-	// Load the task bar icon textures.
-
-	if ((right_edge_icon_ptr = load_icon(IDR_RIGHT, 0)) == NULL || 
-		(title_bg_icon_ptr = load_icon(IDR_TITLE_BG, 0)) == NULL ||
-		(title_end_icon_ptr = load_icon(IDR_TITLE_END, 0)) == NULL) {
-		failed_to_create("taskbar");
-		return(false);
-	}
-	for (index = 0; index < TASK_BAR_BUTTONS; index++)
-		if ((button_icon_list[index] = load_icon(button0_ID_list[index],
-			button1_ID_list[index])) == NULL) {
-			failed_to_create("taskbar buttons");
-			return(false);
-		}
-
-	// Initialise the x coordinates of the task bar elements, except for
-	// title_end_x which cannot be determined until the 3D window is created.
-
-	icon_x = 0;
-	for (index = 0; index < TASK_BAR_BUTTONS; index++) {
-		button_x_list[index] = icon_x;
-		icon_x += button_icon_list[index]->width;
-	}
-	right_edge_x = icon_x;
-	button_x_list[TASK_BAR_BUTTONS] = right_edge_x;
-	title_start_x = right_edge_x + right_edge_icon_ptr->width;
-
 	// Return sucess status.
 
 	return(true);
@@ -2616,22 +2403,6 @@ start_up_platform_API(void)
 void
 shut_down_platform_API(void)
 {
-	// Destroy semaphore for active button index.
-
-	active_button_index.destroy_semaphore();
-
-	// Delete the icons.
-
-	if (right_edge_icon_ptr != NULL)
-		DEL(right_edge_icon_ptr, icon);
-	if (title_bg_icon_ptr != NULL)
-		DEL(title_bg_icon_ptr, icon);
-	if (title_end_icon_ptr != NULL)
-		DEL(title_end_icon_ptr, icon);
-	for (int index = 0; index < TASK_BAR_BUTTONS; index++)
-		if (button_icon_list[index])
-			DEL(button_icon_list[index], icon);
-
 	// Delete the splash graphic texture and bitmap.
 
 	if (splash_texture_ptr != NULL)
@@ -2938,48 +2709,25 @@ static void
 handle_mouse_event(HWND window_handle, UINT message, short x, short y,
 				   UINT flags)
 {
-	int selected_button_index;
-	int task_bar_button_code;
-
-	// If we are inside the task bar, check whether we are pointing at one
-	// of the task bar buttons, and if so make it active.
-
-	selected_button_index = -1;
-	if (task_bar_enabled && y >= window_height && y < display_height &&
-		x >= 0 && x < window_width) {
-		for (int index = 0; index < TASK_BAR_BUTTONS; index++)
-			if (x >= button_x_list[index] && 
-				x < button_x_list[index + 1]) {
-				selected_button_index = index;
-				break;
-			}
-	}
-	task_bar_button_code = selected_button_index + 1;
-
-	// Remember the selected button index.  Access to active_button_index must
-	// be synchronised because both the plugin and player threads use them.
-
-	active_button_index.set(selected_button_index);
-
 	// Send the mouse data to the callback function, if there is one.
 
 	if (mouse_callback_ptr == NULL)
 		return;
 	switch (message) {
 	case WM_MOUSEMOVE:
-		(*mouse_callback_ptr)(x, y, MOUSE_MOVE_ONLY, task_bar_button_code);
+		(*mouse_callback_ptr)(x, y, MOUSE_MOVE_ONLY);
 		break;
 	case WM_LBUTTONDOWN:
-		(*mouse_callback_ptr)(x, y, LEFT_BUTTON_DOWN, task_bar_button_code);
+		(*mouse_callback_ptr)(x, y, LEFT_BUTTON_DOWN);
 		break;
 	case WM_LBUTTONUP:
-		(*mouse_callback_ptr)(x, y, LEFT_BUTTON_UP, task_bar_button_code);
+		(*mouse_callback_ptr)(x, y, LEFT_BUTTON_UP);
 		break;
 	case WM_RBUTTONDOWN:
-		(*mouse_callback_ptr)(x, y, RIGHT_BUTTON_DOWN, task_bar_button_code);
+		(*mouse_callback_ptr)(x, y, RIGHT_BUTTON_DOWN);
 		break;
 	case WM_RBUTTONUP:
-		(*mouse_callback_ptr)(x, y, RIGHT_BUTTON_UP, task_bar_button_code);
+		(*mouse_callback_ptr)(x, y, RIGHT_BUTTON_UP);
 	}
 }
 
@@ -3041,35 +2789,12 @@ set_main_window_size(int width, int height)
 
 	display_width = width;
 	display_height = height;
-
-#ifdef TASK_BAR
-
-	// If the width of the main window is less than 320 or the height is less
-	// than 240, disable the task bar and splash graphic.
-
-	window_width = width;
-	if (width < 320 || height < 240) {
-		window_height = height;
-		task_bar_enabled = false;
-		splash_graphic_enabled = false;
-	} else {
-		window_height = height - TASK_BAR_HEIGHT;
-		task_bar_enabled = true;
-		splash_graphic_enabled = true;
-	}
-#else
 	window_width = width;
 	window_height = height;
-	task_bar_enabled = false;
 	if (width < 320 || height < 240)
 		splash_graphic_enabled = false;
 	else
 		splash_graphic_enabled = true;
-#endif
-
-	// Reset the x coordinate of the end of the task bar title.
-
-	title_end_x = window_width - title_end_icon_ptr->width;
 }
 
 //------------------------------------------------------------------------------
@@ -3078,8 +2803,7 @@ set_main_window_size(int width, int height)
 
 bool
 create_main_window(void (*key_callback)(byte key_code, bool key_down),
-				   void (*mouse_callback)(int x, int y, int button_code,
-									      int task_bar_button_code),
+				   void (*mouse_callback)(int x, int y, int button_code),
 				   void (*timer_callback)(void),
 				   void (*resize_callback)(void *window_handle, int width,
 										   int height),
@@ -3119,13 +2843,7 @@ create_main_window(void (*key_callback)(byte key_code, bool key_down),
 	label_visible = false;
 	progress_window_handle = NULL;	
 	light_window_handle = NULL;
-	recent_spots_menu_handle = NULL;
-	directory_menu_handle = NULL;
-	builder_menu_handle = NULL;
-	command_menu_handle = NULL;
 	message_log_window_handle = NULL;
-	active_button_index.set(-1);
-	prev_active_button_index = -1;
 	key_callback_ptr = NULL;
 	mouse_callback_ptr = NULL;
 	timer_callback_ptr = NULL;
@@ -3332,23 +3050,10 @@ create_main_window(void (*key_callback)(byte key_code, bool key_down),
 			splash_texture_ptr->create_display_palette_list();
 	}
 
-	// Initialise the task bar icons.
+	// Create the label texture.
 
-	if (!init_icon(right_edge_icon_ptr) || !init_icon(title_bg_icon_ptr) || 
-		!init_icon(title_end_icon_ptr)) {
-		failed_to("initialise task bar icons");
-		return(false);
-	}
-	for (index = 0; index < TASK_BAR_BUTTONS; index++)
-		if (!init_icon(button_icon_list[index])) {
-			failed_to("initialise task bar icons");
-			return(false);
-		}
-
-	// Create the title and label textures.
-
-	if (!create_title_and_label_textures()) {
-		failed_to_create("title and label textures");
+	if (!create_label_texture()) {
+		failed_to_create("label texture");
 		return(false);
 	}
 
@@ -3408,9 +3113,9 @@ destroy_main_window(void)
 	if (sound_available)
 		shut_down_DirectSound();
 
-	// Destroy the title and label textures.
+	// Destroy the label texture.
 
-	destroy_title_and_label_textures();
+	destroy_label_texture();
 
 	// Destroy the cursors.
 
@@ -4172,288 +3877,6 @@ close_about_window(void)
 	if (about_window_handle != NULL) {
 		DestroyWindow(about_window_handle);
 		about_window_handle = NULL;
-	}
-}
-
-//==============================================================================
-// Recent spots menu functions.
-//==============================================================================
-
-//------------------------------------------------------------------------------
-// Open the recent spots menu.
-//------------------------------------------------------------------------------
-
-void
-open_recent_spots_menu(recent_spot *recent_spot_list, int recent_spots)
-{
-	int index;
-
-	// If the recent spots menu already exists, do nothing.
-
-	if (recent_spots_menu_handle != NULL)
-		return;
-	
-	// Create the popup menu.
-
-	recent_spots_menu_handle = CreatePopupMenu();
-	if (recent_spots > 0)
-		for (index = 0; index < recent_spots; index++)
-			AppendMenu(recent_spots_menu_handle, MF_STRING | MF_ENABLED, 
-				index + 1, recent_spot_list[index].label);
-	else
-		AppendMenu(recent_spots_menu_handle, MF_STRING | MF_DISABLED,
-			0, "No recent spots");
-}
-
-//------------------------------------------------------------------------------
-// Track the user's movement across the recent spots menu, and return the entry
-// that was selected (if any).
-//------------------------------------------------------------------------------
-
-int
-track_recent_spots_menu(void)
-{
-	return(track_menu(recent_spots_menu_handle, RECENT_SPOTS_BUTTON));
-}
-
-//------------------------------------------------------------------------------
-// Close the recent spots menu.
-//------------------------------------------------------------------------------
-
-void
-close_recent_spots_menu(void)
-{
-	if (recent_spots_menu_handle) {
-		DestroyMenu(recent_spots_menu_handle);
-		recent_spots_menu_handle = NULL;
-	}
-}
-
-//==============================================================================
-// Spot directory menu functions.
-//==============================================================================
-
-//------------------------------------------------------------------------------
-// Create a spot directory menu.
-//------------------------------------------------------------------------------
-
-static HMENU
-create_directory_menu(spot_dir_entry *spot_dir_list, int &menu_item_ID)
-{
-	HMENU menu_handle;
-	MENUITEMINFO menu_item;
-	spot_dir_entry *spot_dir_entry_ptr;
-	UINT menu_pos;
-	
-	menu_handle = CreatePopupMenu();
-	spot_dir_entry_ptr = spot_dir_list;
-	menu_item.cbSize = sizeof(MENUITEMINFO);
-	menu_item.fState = MFS_ENABLED;
-	menu_item.fType = MFT_STRING;
-	menu_pos = 0;
-	while (spot_dir_entry_ptr != NULL) {
-		menu_item.fMask = MIIM_ID | MIIM_DATA | MIIM_STATE | MIIM_TYPE;
-		menu_item.wID = menu_item_ID++;
-		menu_item.dwItemData = (DWORD)spot_dir_entry_ptr;
-		menu_item.dwTypeData = spot_dir_entry_ptr->label;
-		menu_item.cch = strlen(spot_dir_entry_ptr->label);
-		if (spot_dir_entry_ptr->nested_spot_dir_list != NULL) {
-			menu_item.fMask |= MIIM_SUBMENU;
-			menu_item.hSubMenu = 
-				create_directory_menu(spot_dir_entry_ptr->nested_spot_dir_list,
-				menu_item_ID);
-		}
-		InsertMenuItem(menu_handle, menu_pos++, TRUE, &menu_item);
-		spot_dir_entry_ptr = spot_dir_entry_ptr->next_spot_dir_entry_ptr;
-	}
-	return(menu_handle);
-}
-
-//------------------------------------------------------------------------------
-// Open the spot directory menu.
-//------------------------------------------------------------------------------
-
-void
-open_directory_menu(spot_dir_entry *spot_dir_list)
-{
-	// If the directory menu already exists, do nothing.
-
-	if (directory_menu_handle != NULL)
-		return;
-	
-	// Create the popup menu for the spot directory list.
-
-	if (spot_dir_list != NULL) {
-		int menu_item_ID = 1;
-		directory_menu_handle = create_directory_menu(spot_dir_list, 
-			menu_item_ID);
-	} else {
-		directory_menu_handle = CreatePopupMenu();
-		AppendMenu(directory_menu_handle, MF_STRING | MF_DISABLED,
-			0, "No spot directory available");
-	}
-}
-
-//------------------------------------------------------------------------------
-// Track the user's movement across the spot directory menu, and return a 
-// pointer to the entry that was selected (if any).
-//------------------------------------------------------------------------------
-
-spot_dir_entry *
-track_directory_menu(void)
-{
-	int menu_item_ID;
-	MENUITEMINFO menu_item;
-
-	// Display the popup menu above it's button on the task bar, wait
-	// for the user to select an entry or dismiss the menu, then destroy
-	// the popup menu.
-
-	menu_item_ID = track_menu(directory_menu_handle, DIRECTORY_BUTTON);
-	if (menu_item_ID > 0) {
-		menu_item.cbSize = sizeof(MENUITEMINFO);
-		menu_item.fMask = MIIM_DATA;
-		GetMenuItemInfo(directory_menu_handle, menu_item_ID, FALSE, &menu_item);
-		return((spot_dir_entry *)menu_item.dwItemData);
-	}
-	return(NULL);
-}
-
-//------------------------------------------------------------------------------
-// Close the spot directory menu.
-//------------------------------------------------------------------------------
-
-void
-close_directory_menu(void)
-{
-	if (directory_menu_handle) {
-		DestroyMenu(directory_menu_handle);
-		directory_menu_handle = NULL;
-	}
-}
-
-//==============================================================================
-// Builder menu functions.
-//==============================================================================
-
-//------------------------------------------------------------------------------
-// Open the builder menu.
-//------------------------------------------------------------------------------
-
-void
-open_builder_menu(void)
-{
-	int index;
-
-	// If the command menu already exists, do nothing.
-
-	if (builder_menu_handle != NULL)
-		return;
-	
-	// Create the popup menu, and add the menu items to it.
-
-	builder_menu_handle = CreatePopupMenu();
-	for (index = 0; index < BUILDER_MENU_ITEMS; index++)
-		AppendMenu(builder_menu_handle, MF_STRING | MF_ENABLED, index + 1,
-			builder_menu_item[index]);
-}
-
-//------------------------------------------------------------------------------
-// Track the user's movement across the builder menu, and return the URL of
-// the menu item that was selected.
-//------------------------------------------------------------------------------
-
-const char *
-track_builder_menu(void)
-{
-	int index;
-
-	// Display the popup menu.
-
-	index = track_menu(builder_menu_handle, BUILDER_BUTTON);
-
-	// Return the URL of the selected menu item, or NULL if no menu item was
-	// selected.
-
-	if (index > 0)
-		return(builder_URL[index - 1]);
-	return(NULL);
-}
-
-//------------------------------------------------------------------------------
-// Close the builder menu.
-//------------------------------------------------------------------------------
-
-void
-close_builder_menu(void)
-{
-	if (builder_menu_handle) {
-		DestroyMenu(builder_menu_handle);
-		builder_menu_handle = NULL;
-	}
-}
-
-//==============================================================================
-// Command menu functions.
-//==============================================================================
-
-//------------------------------------------------------------------------------
-// Open the command menu.
-//------------------------------------------------------------------------------
-
-void
-open_command_menu(void)
-{
-	// If the command menu already exists, do nothing.
-
-	if (command_menu_handle != NULL)
-		return;
-	
-	// Create the popup menu, and add the menu items to it.
-
-	command_menu_handle = CreatePopupMenu();
-	AppendMenu(command_menu_handle, MF_STRING | MF_ENABLED,
-		ABOUT_ROVER_COMMAND, "About Flatland Rover");
-	AppendMenu(command_menu_handle, MF_STRING | MF_ENABLED,
-		ROVER_HELP_COMMAND, "Help using Flatland Rover");
-	AppendMenu(command_menu_handle, MF_SEPARATOR, 0, NULL);
-	AppendMenu(command_menu_handle, MF_STRING | MF_ENABLED, 
-		DOWNLOAD_ROVER_COMMAND, "Download full version of Flatland Rover");
-	AppendMenu(command_menu_handle, MF_SEPARATOR, 0, NULL);
-	AppendMenu(command_menu_handle, MF_STRING | 
-		(spot_loaded.get() ? MF_ENABLED : MF_GRAYED), 
-		VIEW_3DML_SOURCE_COMMAND, "View 3DML source");
-//	AppendMenu(command_menu_handle, MF_STRING |
-//		(spot_loaded.get() ? MF_ENABLED : MF_GRAYED),
-//		SAVE_3DML_SOURCE_COMMAND, "Save 3DML source");
-//	AppendMenu(command_menu_handle, MF_STRING | (spot_loaded.get() && 
-//		!snapshot_in_progress.get() ? MF_ENABLED : MF_GRAYED),
-//		TAKE_SNAPSHOT_COMMAND, "Take snapshot");
-	AppendMenu(command_menu_handle, MF_STRING | MF_ENABLED, 
-		MANAGE_BLOCKSETS_COMMAND, "Manage blocksets on hard drive");
-}
-
-//------------------------------------------------------------------------------
-// Track the user's movement across the command menu, and return the entry
-// that was selected.
-//------------------------------------------------------------------------------
-
-int
-track_command_menu(void)
-{
-	return(track_menu(command_menu_handle, COMMAND_BUTTON));
-}
-
-//------------------------------------------------------------------------------
-// Close the command menu.
-//------------------------------------------------------------------------------
-
-void
-close_command_menu(void)
-{
-	if (command_menu_handle) {
-		DestroyMenu(command_menu_handle);
-		command_menu_handle = NULL;
 	}
 }
 
@@ -5297,13 +4720,6 @@ display_frame_buffer(bool show_splash_graphic)
 
 	if (show_splash_graphic && splash_graphic_enabled)
 		draw_splash_graphic();
-
-	// Draw the task bar if it's enabled.
-
-	if (task_bar_enabled) {
-		draw_buttons();
-		draw_title();
-	}
 
 	// Draw the label if it's visible.
 

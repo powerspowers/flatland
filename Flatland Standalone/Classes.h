@@ -160,7 +160,8 @@ enum arrow {
 #define LINEAR_FOG		0
 #define EXPONENTIAL_FOG	1
 
-// Ripple styles
+// Ripple styles.
+
 #define RAIN_RIPPLE		0
 #define WAVES_RIPPLE	1
 
@@ -229,9 +230,8 @@ enum audiostyle { PASS_AUDIO, OCCLUDE_AUDIO };
 #define ANGLED_SPRITE		4
 #define REVOLVING_SPRITE	8
 #define FACING_SPRITE		16
-//#define PLAYER_SPRITE		32
 #define SPRITE_BLOCK		(MULTIFACETED_SPRITE | ANGLED_SPRITE | \
-							 REVOLVING_SPRITE | FACING_SPRITE) //| PLAYER_SPRITE)
+							 REVOLVING_SPRITE | FACING_SPRITE)
 
 // Playback mode of a sound.
 
@@ -1003,16 +1003,20 @@ struct action {
 	action *next_action_ptr;	// Next action in list.
 };
 
+#ifdef SIMKIN
+
 //------------------------------------------------------------------------------
 // Script definition class.
 //------------------------------------------------------------------------------
-//POWERS
-//struct script_def {
-//	unsigned int ID;
-//	string script;
-//	void *script_simkin_object_ptr;
-//	script_def *next_script_def_ptr;
-//};
+
+struct script_def {
+	unsigned int ID;
+	string script;
+	void *script_simkin_object_ptr;
+	script_def *next_script_def_ptr;
+};
+
+#endif
 
 //------------------------------------------------------------------------------
 // Trigger class.
@@ -1020,12 +1024,8 @@ struct action {
 
 struct square;					// Forward declaration.
 struct part;					// Forward declaration.
-struct hash;					// Forward declaration.
 
 struct trigger {
-	int objectid;				// the id of this trigger (these first two vars are made to match the hash struct)
-	int playerid;
-	hash* next_hash;			// pointer to the next hashed object
 	int trigger_flag;			// Trigger flag.
 	square *square_ptr;			// Square that trigger belongs to (if any).
 	block *block_ptr;			// Block that the trigger belongs to (if any).
@@ -1039,7 +1039,9 @@ struct trigger {
 	mapcoords target;			// Target location (for "location").
 	byte key_code;				// Key code (for "key up/down/hold").
 	action *action_list;		// List of actions.
-//POWERS	script_def *script_def_ptr;	// Script to execute (if action list is NULL).
+#ifdef SIMKIN
+	script_def *script_def_ptr;	// Script to execute (if action list is NULL).
+#endif
 	string label;				// Text for label (only used for "click on").
 	int partindex;              // *mp* Part that this trigger activates with - need to change
 	trigger *next_trigger_ptr;	// Next trigger in list.
@@ -1267,6 +1269,7 @@ struct BSP_node {
 //------------------------------------------------------------------------------
 // Frame definition class.
 //------------------------------------------------------------------------------
+
 struct frame_def {
 	vertex *vertex_list;
 };
@@ -1297,8 +1300,6 @@ struct block_def {
 	string name;					// Block name.
 	int type;						// Block type.
 	bool allow_entrance;			// TRUE if block permits an entrance.
-	bool physics;					// TRUE if block responds to physics
-	float mass;						// the weight of this block type
 	relinteger_triplet position;    // the relative position set by the POSITION param
 	bool animated;					// set if this block has frames
 	animation_def *animation;		// the structure holding all the animation frames
@@ -1453,9 +1454,10 @@ struct block {
 	bool solid;						// TRUE if block is solid.
 	COL_MESH *col_mesh_ptr;			// Pointer to the collision mesh.
 	int col_mesh_size;				// Size of collision mesh in bytes.
-	bool scripted;					// TRUE if this block has a script.
-//POWERS	void *block_simkin_object_ptr;	// Pointer to the block SimKin object.
-//	void *vertex_simkin_object_ptr;	// Pointer to the vertex SimKin object.
+#ifdef SIMKIN
+	void *block_simkin_object_ptr;	// Pointer to the block SimKin object.
+	void *vertex_simkin_object_ptr;	// Pointer to the vertex SimKin object.
+#endif
 	light *light_list;				// List of lights in block.
 	light_ref *active_light_list;	// List of lights illuminating block.
 	bool set_active_lights;			// TRUE if active lights need to be set.
@@ -1516,7 +1518,6 @@ struct world {
 	int levels;						// Number of levels in square map.
 	square *square_map;				// Map of squares.
 	float audio_scale;				// Audio scale (in metres per unit).
-	vertex gravity;					// The gravity value
 
 	world();
 	~world();
@@ -1553,24 +1554,4 @@ struct cosine_table {
 	cosine_table();
 	~cosine_table();
 	float operator[](float angle);
-};
-
-
-//------------------------------------------------------------------------------
-// Hash table class.
-//------------------------------------------------------------------------------
-
-struct hash {
-	int objectid;
-	int playerid;
-	hash* next_hash;
-};
-
-struct hash_table {
-	hash* table[256];
-
-	hash* get(int objectid, int playerid);
-	hash* add(hash* obj);
-	void  remove(hash* obj);
-	void clear();
 };

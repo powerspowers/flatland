@@ -22,7 +22,9 @@
 #include "Platform.h"
 #include "Plugin.h"
 #include "Utils.h"
-//POWERS #include "SimKin.h"
+#ifdef SIMKIN
+#include "SimKin.h"
+#endif
 
 // Version string.
 
@@ -158,13 +160,6 @@ imagemap *imagemap_list;
 
 light *global_light_list;
 
-// Global index of trigger ids (for use in networking)
-int	curr_triggerid;
-int curr_playerid;
-
-// Hash table of all triggers in use
-hash_table trigger_hash;
-
 // Orb direction, light, texture, brightness, size and exit.
 
 direction orb_direction;
@@ -216,9 +211,8 @@ block *player_block_ptr;
 vector player_camera_offset;
 viewpoint player_viewpoint, last_player_viewpoint;
 
-//block *client_block_ptr;
+// Player last turn delta.
 
-// Player last turn delta
 float last_delta;
 
 // Player movement flags.
@@ -234,7 +228,7 @@ float player_step_height;
 
 // Start, current time, clock for global timer and number of frames rendered.
 
-int start_time_ms, curr_time_ms, clocktimer_time_ms, physicstimer_time_ms;
+int start_time_ms, curr_time_ms, clocktimer_time_ms;
 int frames_rendered;
 
 // Current mouse position.
@@ -268,7 +262,7 @@ block *curr_area_block_ptr;
 square *prev_area_square_ptr;
 square *curr_area_square_ptr;
 
-//*mp* Previously and currently selected parts
+// Previously and currently selected parts.
 
 part *prev_selected_part_ptr;
 part *curr_selected_part_ptr;
@@ -313,10 +307,6 @@ bool curr_download_completed;
 
 bool displayed_error_log_file;
 
-//-------------------------------------------------------------------
-// variable for use by the ODE physics library
-//-------------------------------------------------------------------
-
 #ifdef STREAMING_MEDIA
 
 // Stream flag, name, and URLs for RealPlayer and Windows Media Player.
@@ -338,7 +328,6 @@ video_texture *scaled_video_texture_list;
 
 trigger *active_trigger_list[512];
 int active_trigger_count;
-//mp2 trigger *last_active_trigger_ptr;
 
 // Queue of active scripts.
 
@@ -346,7 +335,8 @@ trigger *active_script_list[256];
 int active_script_count;
 bool script_executing;
 
-// List of action tied to the global clock
+// List of action tied to the global clock.
+
 action *active_clock_action_list[256];
 int active_clock_action_count;
 
@@ -867,8 +857,6 @@ teleport(const char *entrance_name)
 	if (player_block_ptr != NULL) {
 		player_block_ptr->set_frame(0);
 		player_block_ptr->rotate_y(player_viewpoint.turn_angle);
-		//client_block_ptr->set_frame(0);
-		//client_block_ptr->rotate_y(player_viewpoint.turn_angle);
 	}
 
 	// If the player has landed in a square occupied by a block that has a
@@ -995,10 +983,6 @@ start_up_spot(void)
 	active_clock_action_list[0] = NULL;
 	active_clock_action_count = 0;
 
-	// Initialize the trigger hash table
-
-	trigger_hash.clear();
-
 	// Initialise various global lists.
 
 	global_entrance_list = NULL;
@@ -1009,11 +993,6 @@ start_up_spot(void)
 	last_global_popup_ptr = NULL;
 	movable_block_list = NULL;
 	fixed_block_list = NULL;
-
-	// Initialize the trigger count (used for networking)
-
-	curr_triggerid = 0;
-	curr_playerid = -2;
 
 	// Initialise various global objects.
 
@@ -1044,10 +1023,14 @@ start_up_spot(void)
 	warnings = false;
 	low_memory = false;
 
+#ifdef SIMKIN
+
 	// Start up SimKin.
-//POWERS
-//	if (!start_up_simkin())
-//		return(false);
+
+	if (!start_up_simkin())
+		return(false);
+
+#endif
 
 	// Set loading message in the title.
 
@@ -1139,7 +1122,6 @@ start_up_spot(void)
 	start_time_ms = get_time_ms();
 	curr_time_ms = start_time_ms;
 	clocktimer_time_ms = 0;
-	physicstimer_time_ms = 0;
 	frames_rendered = 0;
 	player_viewpoint_set = true;
 	player_fall_delta = 0;
@@ -1177,12 +1159,16 @@ start_up_spot(void)
 
 	teleport(curr_spot_entrance);
 
+#ifdef SIMKIN
+
 	// Call the "start" method of the global SimKin script, if there is one,
 	// and wait for it to complete.
 
-//POWERS	script_executing = call_global_method("start");
-//	while (script_executing)
-//		script_executing = resume_script();
+	script_executing = call_global_method("start");
+	while (script_executing)
+		script_executing = resume_script();
+
+#endif
 
 	// Indicate success.
 
@@ -1209,17 +1195,21 @@ shut_down_spot(void)
 
 	log_stats();
 
+#ifdef SIMKIN
+
 	// Call the "stop" method of the global SimKin script, if there is
 	// one, then shut down SimKin.  We must terminate any script currently
 	// executing before we can call the "stop" method, then we wait for it to 
 	// complete.
 
-//POWERS	if (script_executing)
-//		terminate_script();
-//	script_executing = call_global_method("stop");
-//	while (script_executing)
-//		script_executing = resume_script();
-//	shut_down_simkin();
+	if (script_executing)
+		terminate_script();
+	script_executing = call_global_method("stop");
+	while (script_executing)
+		script_executing = resume_script();
+	shut_down_simkin();
+
+#endif
 
 #ifdef STREAMING_MEDIA
 
@@ -1256,8 +1246,6 @@ shut_down_spot(void)
 	// Delete the movable block list.
 
 	while (movable_block_list != NULL) {
-		//block_def_ptr = movable_block_list->block_def_ptr;
-		//movable_block_list = block_def_ptr->del_block(movable_block_list);
 		next_block_ptr = movable_block_list;
 		while (movable_block_list != NULL) {
 			next_block_ptr = movable_block_list->next_block_ptr;
@@ -1342,9 +1330,6 @@ shut_down_spot(void)
 
 	delete_free_trigger_list();
 
-	// Clear the trigger hash table
-	trigger_hash.clear();
-
 	// Clear the actions attached to the global clock
 	active_clock_action_list[0] = NULL;
 	active_clock_action_count = 0;
@@ -1354,9 +1339,6 @@ shut_down_spot(void)
 	if (player_block_ptr != NULL) {
 		block_def_ptr = player_block_ptr->block_def_ptr;
 		block_def_ptr->del_block(player_block_ptr);
-
-		//block_def_ptr = client_block_ptr->block_def_ptr;
-		//block_def_ptr->del_block(client_block_ptr);
 	}
 
 	// Delete the custom blockset and the ground block definition.
@@ -1366,7 +1348,8 @@ shut_down_spot(void)
 	if (ground_block_def_ptr != NULL)
 		DEL(ground_block_def_ptr, block_def);
 
-	// Reset the movement delta so character is standing still
+	// Reset the movement delta so character is standing still.
+
 	curr_turn_delta.set(0.0f);
 	curr_move_delta.set(0.0f);
 	curr_side_delta.set(0.0f);
@@ -1513,8 +1496,6 @@ show_trigger_label(trigger *trigger_list)
 
 
 	while (trigger_ptr != NULL) {
-//		set_title("number %s %d %d",curr_selected_part_ptr->name, curr_selected_part_ptr->number,trigger_ptr->partindex);
-
 		if ((trigger_ptr->trigger_flag == CLICK_ON) &&
 			(trigger_ptr->partindex == ALL_PARTS || trigger_ptr->partindex == curr_selected_part_ptr->number))
 		{
@@ -1523,7 +1504,6 @@ show_trigger_label(trigger *trigger_list)
 					show_label(trigger_ptr->label);
 					label_shown = true;
 			} 
-			//set_title("Found part %s",curr_selected_part_ptr->name);
 			return(label_shown);
 		}
 		trigger_ptr = trigger_ptr->next_trigger_ptr;
@@ -1541,38 +1521,28 @@ check_for_mouse_selection(void)
 {
 	bool label_shown;
 
+	// If the currently selected part is different to the previously selected part, update the selection active flag and
+	// show or hide the label, if necessary.
 
 	if (curr_selected_part_ptr != prev_selected_part_ptr) {
 		if (curr_selected_part_ptr == NULL) {
 		    selection_active.set(false);
 			hide_label();
-			//set_title("no part");
-			//return;
-		}
-		else if (curr_selected_block_ptr->trigger_flags & CLICK_ON || curr_selected_block_ptr->trigger_flags & ROLL_ON) {
-				selection_active.set(false);
-				//set_title("showing label");
-				if (!show_trigger_label(curr_selected_block_ptr->trigger_list)) {
-					hide_label();
-				}
-				//set_title("Found part %s",curr_selected_part_ptr->name);
-                return;
-		}
-		else {
-				selection_active.set(false);
+		} else if (curr_selected_block_ptr->trigger_flags & CLICK_ON || curr_selected_block_ptr->trigger_flags & ROLL_ON) {
+			selection_active.set(false);
+			if (!show_trigger_label(curr_selected_block_ptr->trigger_list)) {
 				hide_label();
-				//set_title("no flags %s",curr_selected_part_ptr->name);
-				//set_title("Found negative");
-				//return;
 			}
+            return;
+		} else {
+			selection_active.set(false);
+			hide_label();
+		}
 	} 
-
-
 
 	// If the currently selected area or exit is different to the
 	// previously selected block, area or exit...
     
-	//if (curr_selected_block_ptr != prev_selected_block_ptr ||
 	if (curr_selected_area_ptr != prev_selected_area_ptr ||
 		curr_selected_exit_ptr != prev_selected_exit_ptr) {
 
@@ -1580,8 +1550,6 @@ check_for_mouse_selection(void)
 		// "click on" action...
 
 		label_shown = false;
-		//if ((curr_selected_block_ptr != NULL && 
-		//	 (curr_selected_block_ptr->trigger_flags & CLICK_ON)) ||
 		if	((curr_selected_square_ptr != NULL &&
 			 (curr_selected_square_ptr->trigger_flags & CLICK_ON)) ||
 			(curr_selected_area_ptr != NULL && 
@@ -1601,14 +1569,6 @@ check_for_mouse_selection(void)
 				show_label(curr_selected_exit_ptr->label);
 				label_shown = true;
 			}
-
-
-			// Otherwise if there is a currently selected block and one of it's
-			// triggers has a label, show it.
-
-			//else if (curr_selected_block_ptr != NULL && show_trigger_label(
-			//	curr_selected_block_ptr->trigger_list))
-			//	label_shown = true;
 
 			// Otherwise if there is a currently selected square and one of it's
 			// triggers has a label, show it.
@@ -1634,10 +1594,7 @@ check_for_mouse_selection(void)
 
 		if (!label_shown)
 			hide_label();
-
 	}
-
-	
 }
 
 //------------------------------------------------------------------------------
@@ -1750,7 +1707,6 @@ adjust_trajectory(vector &trajectory, float elapsed_time, bool &player_falling)
 	abs_dx = FABS(trajectory.dx);
 	abs_dz = FABS(trajectory.dz);
 
-
 	// If the X and Z components of the trajectory are less or equal to the
 	// X and Z components of the maximum trajectory vector, then use this 
 	// trajectory.
@@ -1803,8 +1759,6 @@ adjust_trajectory(vector &trajectory, float elapsed_time, bool &player_falling)
 			old_position.x, old_position.y, old_position.z,
 			&floor_y, player_step_height, &player_collision_box);
 	}
-
-
 	
 	// If the floor height is valid, do a gravity check.
 
@@ -1853,14 +1807,14 @@ adjust_trajectory(vector &trajectory, float elapsed_time, bool &player_falling)
 				}
 			}
 		}
-	} 
+	}
+
 	// If the floor height is not -1.0f, this means that COL_checkCollisions()
 	// returned a bogus new position, so set it to the old position.
 	
 	else if (FNE(floor_y, -1.0f))
 		new_position = old_position;	
 
-	
 	// Return the final trajectory vector.
 
 	return(new_position - old_position);
@@ -1874,14 +1828,16 @@ adjust_trajectory(vector &trajectory, float elapsed_time, bool &player_falling)
 static bool
 find_active_script(trigger *trigger_ptr)
 {
-//POWERS	int j;
-//
-//	for (j=0;j < active_script_count;j++) {
-//		if (active_script_list[j]->script_def_ptr->ID == 
-//			trigger_ptr->script_def_ptr->ID &&
-//			active_script_list[j]->block_ptr == trigger_ptr->block_ptr)
-//			return(true);
-//	}
+#ifdef SIMKIN
+
+	for (int j = 0; j < active_script_count; j++) {
+		if (active_script_list[j]->script_def_ptr->ID == trigger_ptr->script_def_ptr->ID &&
+			active_script_list[j]->block_ptr == trigger_ptr->block_ptr)
+			return(true);
+	}
+
+#endif
+
 	return(false);
 }
 
@@ -1899,32 +1855,27 @@ add_trigger_to_active_list(square *square_ptr, block *block_ptr,
 	// If the trigger neither has an action list nor a script, then it should
 	// be ignored.
 
-	if (trigger_ptr->action_list == NULL) //POWERS && trigger_ptr->script_def_ptr == NULL)
+#ifdef SIMKIN
+	if (trigger_ptr->action_list == NULL && trigger_ptr->script_def_ptr == NULL)
 		return;
+#else
+	if (trigger_ptr->action_list == NULL)
+		return;
+#endif
 
-	// Duplicate the trigger.
+	// Initialise the trigger.
 	
-	//mp2 new_trigger_ptr = dup_trigger(trigger_ptr);
 	new_trigger_ptr = trigger_ptr;
 	if (new_trigger_ptr != NULL) {
-
-		// Initialise the trigger.
-
 		new_trigger_ptr->square_ptr = square_ptr;
 		new_trigger_ptr->block_ptr = block_ptr;
-		//new_trigger_ptr->next_trigger_ptr = NULL;
 
 		// If the trigger has an action list, add the trigger to the end of the
 		// active trigger list.
 
-
-
 		if (new_trigger_ptr->action_list != NULL) {
-
 			active_trigger_list[active_trigger_count] = new_trigger_ptr;
 			active_trigger_count++;
-			//new_trigger_ptr->start_time_ms = curr_time_ms;
-
 		}
 
 		// If the trigger has a script, and there is currently no script on the
@@ -1935,7 +1886,6 @@ add_trigger_to_active_list(square *square_ptr, block *block_ptr,
 		else if (!find_active_script(new_trigger_ptr)) {
 			active_script_list[active_script_count] = new_trigger_ptr;
 			active_script_count++;
-			//new_trigger_ptr->start_time_ms = curr_time_ms;
 		}
 	}
 }
@@ -1959,12 +1909,10 @@ add_triggers_to_active_list(square *square_ptr, block *block_ptr,
 
 	trigger_ptr = trigger_list;
 	while (trigger_ptr != NULL) {
-		//*mp* check if the right part is selected - click and roll on
 		if (trigger_ptr->partindex == ALL_PARTS) {
 			if ((trigger_ptr->trigger_flag & CLICK_ON) || (trigger_ptr->trigger_flag & ROLL_ON)) {
-			add_trigger_to_active_list(square_ptr, block_ptr, trigger_ptr); 
-			}
-			else if ((trigger_ptr->trigger_flag & trigger_flags) != 0) {
+				add_trigger_to_active_list(square_ptr, block_ptr, trigger_ptr); 
+			} else if ((trigger_ptr->trigger_flag & trigger_flags) != 0) {
 				if (!trigger_in_block && trigger_ptr->action_list == NULL)
 					add_trigger_to_active_list(square_ptr, NULL, trigger_ptr);
 				else
@@ -1972,39 +1920,10 @@ add_triggers_to_active_list(square *square_ptr, block *block_ptr,
 			}
 		} else if ((curr_selected_part_ptr->number == trigger_ptr->partindex ) &&
 			((trigger_ptr->trigger_flag & CLICK_ON) || (trigger_ptr->trigger_flag & ROLL_ON))) {
-							    
-					//	&& (!trigger_in_block && trigger_ptr->action_list == NULL)) {
-					//if (!trigger_in_block && trigger_ptr->action_list == NULL)
-					//add_trigger_to_active_list(square_ptr, NULL, trigger_ptr);
-					//else
-			//set_title("just a part %d",trigger_ptr->partindex);
-					add_trigger_to_active_list(square_ptr, block_ptr, trigger_ptr); 
-		}
-		
-
-		trigger_ptr = trigger_ptr->next_trigger_ptr;
-	}
-	/*
-	while (trigger_ptr != NULL) {
-		//*mp* check if the right part is selected - click and roll on
-		if ((trigger_ptr->part_ptr == ALL_PARTS || 
-				curr_selected_part_ptr == trigger_ptr->part_ptr) && ((trigger_ptr->trigger_flag & CLICK_ON) || (trigger_ptr->trigger_flag & ROLL_ON)))
-		{			    
-			//	&& (!trigger_in_block && trigger_ptr->action_list == NULL)) {
-			//if (!trigger_in_block && trigger_ptr->action_list == NULL)
-					//add_trigger_to_active_list(square_ptr, NULL, trigger_ptr);
-			//else
-					add_trigger_to_active_list(square_ptr, block_ptr, trigger_ptr); 
-		}
-		else if ((trigger_ptr->trigger_flag & trigger_flags) != 0) {
-			if (!trigger_in_block && trigger_ptr->action_list == NULL)
-				add_trigger_to_active_list(square_ptr, NULL, trigger_ptr);
-			else
-				add_trigger_to_active_list(square_ptr, block_ptr, trigger_ptr);
+			add_trigger_to_active_list(square_ptr, block_ptr, trigger_ptr); 
 		}
 		trigger_ptr = trigger_ptr->next_trigger_ptr;
 	}
-	*/
 }
 
 //------------------------------------------------------------------------------
@@ -2086,8 +2005,6 @@ process_curr_selected_square(void)
 	if (mouse_was_clicked && 
 		((curr_selected_block_ptr != NULL && 
 		  (curr_selected_block_ptr->trigger_flags & CLICK_ON)) ||
-		//((curr_selected_part_ptr != NULL &&
-		// (curr_selected_part_ptr->trigger_flags & CLICK_ON)) ||
 		 (curr_selected_square_ptr != NULL &&
 		 (curr_selected_square_ptr->trigger_flags & CLICK_ON))))
 		trigger_flags |= CLICK_ON;
@@ -2154,7 +2071,6 @@ process_curr_selected_area(void)
 	// If there is a currently selected area, the previously selected area 
 	// is different, and the currently selected area has a "roll off" trigger,
 	// add this to the trigger flags.
-
 
 	if (curr_selected_area_ptr != prev_selected_area_ptr &&
 		curr_selected_area_ptr != NULL &&
@@ -2252,7 +2168,7 @@ process_global_triggers_in_trigger_list(trigger *trigger_list,
 
 			// If the trigger delay has elapsed, activate this trigger and
 			// set the next trigger delay.
-			//set_title("timer %d %d",trigger_ptr->delay_ms,curr_time_ms - trigger_ptr->start_time_ms);
+	
 			if (curr_time_ms - trigger_ptr->start_time_ms >= 
 				trigger_ptr->delay_ms) {
 				activated = true;
@@ -2570,7 +2486,6 @@ execute_replace_action(trigger *trigger_ptr, action *action_ptr)
 	}
 }
 
-
 //------------------------------------------------------------------------------
 // Execute a ripple action.
 //------------------------------------------------------------------------------
@@ -2578,71 +2493,59 @@ execute_replace_action(trigger *trigger_ptr, action *action_ptr)
 static void
 execute_ripple_action(action *action_ptr)
 {
-		block *block_ptr;
-		int s,n,p, index, drop;
-		float t;
-		float *temp;
+	block *block_ptr;
+	int s, n, p, index, drop;
+	float t;
+	float *temp;
 
-		block_ptr = action_ptr->trigger_ptr->block_ptr;
-			
-		s = (int)sqrt((float)action_ptr->vertices);
-
-		drop = (int)((float)rand() / RAND_MAX * 100);
-
-		
-			if (drop < (action_ptr->droprate) * 100){
-
-				if (action_ptr->style == RAIN_RIPPLE) {
-					drop = (int)((float)rand() / RAND_MAX * s * s);
-
-					action_ptr->curr_step_ptr[drop] = (float)rand() / RAND_MAX * action_ptr->force;;
-
-				} else {
-					if (action_ptr->temp > 5) {
-						for (n=s+1;n < (2*s)-2;n++) {
-							action_ptr->curr_step_ptr[n] = action_ptr->force;
-						}
-						action_ptr->temp = 0;
-					} else {
-						action_ptr->temp++;
-					}
+	block_ptr = action_ptr->trigger_ptr->block_ptr;			
+	s = (int)sqrt((float)action_ptr->vertices);
+	drop = (int)((float)rand() / RAND_MAX * 100);
+	if (drop < action_ptr->droprate * 100) {
+		if (action_ptr->style == RAIN_RIPPLE) {
+			drop = (int)((float)rand() / RAND_MAX * s * s);
+			action_ptr->curr_step_ptr[drop] = (float)rand() / RAND_MAX * action_ptr->force;
+		} else {
+			if (action_ptr->temp > 5) {
+				for (n=s+1;n < (2*s)-2;n++) {
+					action_ptr->curr_step_ptr[n] = action_ptr->force;
 				}
-
-				for (n=0;n < s;n++) {
-						action_ptr->curr_step_ptr[n] = (float)0.0;
-						action_ptr->prev_step_ptr[n] = (float)0.0;
-						action_ptr->curr_step_ptr[n*s] = (float)0.0;
-						action_ptr->prev_step_ptr[n*s] = (float)0.0;
-						if (n != 0) {
-							action_ptr->curr_step_ptr[n*s-1] = (float)0.0;
-							action_ptr->prev_step_ptr[n*s-1] = (float)0.0;
-						}
-						action_ptr->curr_step_ptr[s*s-n] = (float)0.0;
-						action_ptr->prev_step_ptr[s*s-n] = (float)0.0;
-				}
+				action_ptr->temp = 0;
+			} else {
+				action_ptr->temp++;
 			}
+		}
+		for (n=0;n < s;n++) {
+			action_ptr->curr_step_ptr[n] = 0.0f;
+			action_ptr->prev_step_ptr[n] = 0.0f;
+			action_ptr->curr_step_ptr[n * s] = 0.0f;
+			action_ptr->prev_step_ptr[n * s] = 0.0f;
+			if (n != 0) {
+				action_ptr->curr_step_ptr[n * s - 1] = 0.0f;
+				action_ptr->prev_step_ptr[n * s - 1] = 0.0f;
+			}
+			action_ptr->curr_step_ptr[s * s - n] = 0.0f;
+			action_ptr->prev_step_ptr[s * s - n] = 0.0f;
+		}
+	}
 
+	for (n = 1; n < s - 1; n++) {
+		for (p = 1; p < s - 1; p++) {
+			index = (p * s) + n;
+			t = action_ptr->damp * (((action_ptr->prev_step_ptr[index + 1] +
+				action_ptr->prev_step_ptr[index - 1] +
+				action_ptr->prev_step_ptr[index - s] +
+				action_ptr->prev_step_ptr[index + s]) * 0.5f) -
+				action_ptr->curr_step_ptr[index]);
+			block_ptr->vertex_list[index].y += t  - action_ptr->prev_step_ptr[index];
+			action_ptr->curr_step_ptr[index] = t;
+		}
+	}
 
-
-					for (n=1;n < s - 1;n++){
-						for (p=1;p < s - 1;p++){
-							index = (p * s) + n;
-							t = action_ptr->damp * (((action_ptr->prev_step_ptr[index + 1] +
-								action_ptr->prev_step_ptr[index - 1] +
-								action_ptr->prev_step_ptr[index - s] +
-								action_ptr->prev_step_ptr[index + s]) * (float)0.5) -
-								action_ptr->curr_step_ptr[index]);
-
-							block_ptr->vertex_list[index].y += t  - action_ptr->prev_step_ptr[index];
-							action_ptr->curr_step_ptr[index] = t;
-						}
-					}
-
-		temp = action_ptr->prev_step_ptr;
-		action_ptr->prev_step_ptr = action_ptr->curr_step_ptr;
-		action_ptr->curr_step_ptr = temp;
-
-  }
+	temp = action_ptr->prev_step_ptr;
+	action_ptr->prev_step_ptr = action_ptr->curr_step_ptr;
+	action_ptr->curr_step_ptr = temp;
+ }
 
 //------------------------------------------------------------------------------
 // Execute a spin action.
@@ -2651,15 +2554,10 @@ execute_ripple_action(action *action_ptr)
 static void
 execute_spin_action(action *action_ptr, int time_diff)
 {
-		block *block_ptr;
-
-
-		//set_title("spin %d %f",action_ptr->spin_angles.x,action_ptr->spin_angles.x * time_diff);
-		block_ptr = action_ptr->trigger_ptr->block_ptr;
-		
-		block_ptr->rotate_x(action_ptr->spin_angles.x * (float)time_diff / 1000.0f);
-		block_ptr->rotate_y(action_ptr->spin_angles.y * (float)time_diff / 1000.0f);
-		block_ptr->rotate_z(action_ptr->spin_angles.z * (float)time_diff / 1000.0f);
+	block *block_ptr = action_ptr->trigger_ptr->block_ptr;
+	block_ptr->rotate_x(action_ptr->spin_angles.x * (float)time_diff / 1000.0f);
+	block_ptr->rotate_y(action_ptr->spin_angles.y * (float)time_diff / 1000.0f);
+	block_ptr->rotate_z(action_ptr->spin_angles.z * (float)time_diff / 1000.0f);
 }
 
 //------------------------------------------------------------------------------
@@ -2669,35 +2567,28 @@ execute_spin_action(action *action_ptr, int time_diff)
 static void
 execute_orbit_action(action *action_ptr,int time_diff)
 {
-		block *block_ptr,*center_ptr;
-		block_def *block_def_ptr;
+	block *block_ptr, *center_ptr;
+	block_def *block_def_ptr;
 
-		block_ptr = action_ptr->trigger_ptr->block_ptr;
-
-		action_ptr->temp = action_ptr->temp + (time_diff * action_ptr->speed);
-
-		//set_title("orbit %f %d",action_ptr->spin_angles.x,action_ptr->source);
-		if (action_ptr->source.is_symbol) {
-			block_def_ptr = symbol_to_block_def(action_ptr->source.symbol);
-			center_ptr = block_def_ptr->used_block_list;
-			if (center_ptr == NULL) return;
-		}
-		else
-			return;
+	block_ptr = action_ptr->trigger_ptr->block_ptr;
+	action_ptr->temp = action_ptr->temp + (time_diff * action_ptr->speed);
+	if (action_ptr->source.is_symbol) {
+		block_def_ptr = symbol_to_block_def(action_ptr->source.symbol);
+		center_ptr = block_def_ptr->used_block_list;
+		if (center_ptr == NULL) return;
+	} else
+		return;
 	
-		//set_title("sine %d %f %d",(action_ptr->temp / 1000) % 180,sin(RAD(action_ptr->style)), action_ptr->style);
-		block_ptr->translation.z = center_ptr->translation.z +
-								(float)(sin(RAD((float)(action_ptr->temp) / 1000.0f)) * 
-								action_ptr->spin_angles.z / TEXELS_PER_UNIT);
-		block_ptr->translation.x = center_ptr->translation.x +
-								(float)(sin(RAD((float)(action_ptr->temp) / 1000.0f) + 90.0f) *
-								action_ptr->spin_angles.x / TEXELS_PER_UNIT);
-		block_ptr->translation.y = center_ptr->translation.y +
-								(float)(sin(RAD((float)(action_ptr->temp) / 1000.0f) + 180.0f) * 
-								action_ptr->spin_angles.y / TEXELS_PER_UNIT);
-
+	block_ptr->translation.z = center_ptr->translation.z +
+							(float)(sin(RAD((float)(action_ptr->temp) / 1000.0f)) * 
+							action_ptr->spin_angles.z / TEXELS_PER_UNIT);
+	block_ptr->translation.x = center_ptr->translation.x +
+							(float)(sin(RAD((float)(action_ptr->temp) / 1000.0f) + 90.0f) *
+							action_ptr->spin_angles.x / TEXELS_PER_UNIT);
+	block_ptr->translation.y = center_ptr->translation.y +
+							(float)(sin(RAD((float)(action_ptr->temp) / 1000.0f) + 180.0f) * 
+							action_ptr->spin_angles.y / TEXELS_PER_UNIT);
 }
-
 
 //------------------------------------------------------------------------------
 // Execute move action.
@@ -2706,133 +2597,125 @@ execute_orbit_action(action *action_ptr,int time_diff)
 static void
 execute_move_action(action *action_ptr, int time_diff)
 {
-		block *block_ptr;
-		float movex,movey,movez;
-		int done;
-		char *cptr;
+	block *block_ptr;
+	float movex,movey,movez;
+	int done;
+	char *cptr;
 
-		block_ptr = action_ptr->trigger_ptr->block_ptr;
-		done = 0;
+	block_ptr = action_ptr->trigger_ptr->block_ptr;
+	done = 0;
 
-		movex = action_ptr->speedx * (float)(time_diff) / 1000.0f;
-		movey = action_ptr->speedy * (float)(time_diff) / 1000.0f;
-		movez = action_ptr->speedz * (float)(time_diff) / 1000.0f;
+	movex = action_ptr->speedx * (float)(time_diff) / 1000.0f;
+	movey = action_ptr->speedy * (float)(time_diff) / 1000.0f;
+	movez = action_ptr->speedz * (float)(time_diff) / 1000.0f;
 
-
-		if (fabs(action_ptr->totalx) <= movex) {
-			movex = action_ptr->totalx;
-			action_ptr->totalx = 0.0f;
-			done++;
-		} else {
-			if (action_ptr->totalx < 0.0f) {
-				action_ptr->totalx += movex;
-				movex = movex * -1.0f;
-			}
-			else
-				action_ptr->totalx -= movex;
+	if (fabs(action_ptr->totalx) <= movex) {
+		movex = action_ptr->totalx;
+		action_ptr->totalx = 0.0f;
+		done++;
+	} else {
+		if (action_ptr->totalx < 0.0f) {
+			action_ptr->totalx += movex;
+			movex = movex * -1.0f;
 		}
+		else
+			action_ptr->totalx -= movex;
+	}
 
-
-		if (fabs(action_ptr->totaly) <= movey) {
-			movey = action_ptr->totaly;
-			action_ptr->totaly = 0.0f;
-			done++;
-		} else {
-			if (action_ptr->totaly < 0.0f) {
-				action_ptr->totaly += movey;
-				movey = movey * -1.0f;
-			}
-			else
-				action_ptr->totaly -= movey;
+	if (fabs(action_ptr->totaly) <= movey) {
+		movey = action_ptr->totaly;
+		action_ptr->totaly = 0.0f;
+		done++;
+	} else {
+		if (action_ptr->totaly < 0.0f) {
+			action_ptr->totaly += movey;
+			movey = movey * -1.0f;
 		}
+		else
+			action_ptr->totaly -= movey;
+	}
 
-		if (fabs(action_ptr->totalz) <= movez) {
-			movez = action_ptr->totalz;
-			action_ptr->totalz = 0.0f;
-			done++;
-		} else {
-			if (action_ptr->totalz < 0.0f) {
-				action_ptr->totalz += movez;
-				movey = movey * -1.0f;
-			}
-			else
-				action_ptr->totalz -= movez;
+	if (fabs(action_ptr->totalz) <= movez) {
+		movez = action_ptr->totalz;
+		action_ptr->totalz = 0.0f;
+		done++;
+	} else {
+		if (action_ptr->totalz < 0.0f) {
+			action_ptr->totalz += movez;
+			movey = movey * -1.0f;
 		}
+		else
+			action_ptr->totalz -= movez;
+	}
 
-
-		block_ptr->translation.x += movex / TEXELS_PER_UNIT;
-		block_ptr->translation.y += movey / TEXELS_PER_UNIT;
-		block_ptr->translation.z += movez / TEXELS_PER_UNIT;
+	block_ptr->translation.x += movex / TEXELS_PER_UNIT;
+	block_ptr->translation.y += movey / TEXELS_PER_UNIT;
+	block_ptr->translation.z += movez / TEXELS_PER_UNIT;
 		
-		if (done == 3) {
-				
-				try {
+	if (done == 3) {				
+		try {
+			cptr = action_ptr->charindex;
 
-					cptr = action_ptr->charindex;
+			// Skip opening whitespace or an open paren.
 
-					//skip opening whitespace or an open paren
-					while (*cptr == ' ' || *cptr == '\t' || *cptr == ')'
-						|| *cptr == '(' || *cptr == ',') {
-						cptr = cptr + 1;
-					}
+			while (*cptr == ' ' || *cptr == '\t' || *cptr == ')' || *cptr == '(' || *cptr == ',') {
+				cptr = cptr + 1;
+			}
 
-					if (*cptr == '/0' || *(cptr + 1) == '/0') throw false;
+			if (*cptr == '/0' || *(cptr + 1) == '/0') 
+				throw false;
 
-					switch (*cptr) {
-					case 's':
-						cptr = cptr + 1;
-						switch (*cptr) {
-						case 'p': // speed
-							cptr = cptr + 1;
-							if(!sscanf(cptr, ",%f,%f,%f)", &action_ptr->speedx,&action_ptr->speedy,&action_ptr->speedz))
-								throw false;
-							//action_ptr->charindex = cptr;
-							//set_title("set speed %f %f %f",action_ptr->speedx,action_ptr->speedy,action_ptr->speedz);
-							break;
-						default:
-							throw false;
-						}
-						break;
-					case 'l': 
-						cptr = cptr + 1;
-						switch (*cptr) {
-						case 'p': // loop
-							action_ptr->charindex = action_ptr->exit_URL.text;
-							return;
-							break;
-						default:
-							throw false;
-						}
-						break;
-					case 'm':
-						cptr = cptr + 1;
-						switch (*cptr) {
-						case 'v': // move
-							cptr = cptr + 1;
-							if (!sscanf(cptr, ",%f,%f,%f)", &action_ptr->totalx,&action_ptr->totaly,&action_ptr->totalz))
-								throw false;
-							//action_ptr->charindex = cptr;
-							//set_title("forward %f %f %f",action_ptr->totalx,action_ptr->totaly,action_ptr->totalz);
-							break;
-						default:
-							throw false;
-						}
-						break;
-					default:
+			switch (*cptr) {
+			case 's':
+				cptr = cptr + 1;
+				switch (*cptr) {
+				case 'p': // speed
+					cptr = cptr + 1;
+					if (!sscanf(cptr, ",%f,%f,%f)", &action_ptr->speedx,&action_ptr->speedy,&action_ptr->speedz))
 						throw false;
-					}
+					break;
+				default:
+					throw false;
 				}
-				catch (...) {
-					remove_clock_action(action_ptr);
+				break;
+			case 'l': 
+				cptr = cptr + 1;
+				switch (*cptr) {
+				case 'p': // loop
 					action_ptr->charindex = action_ptr->exit_URL.text;
 					return;
+					break;
+				default:
+					throw false;
 				}
-
-				while (*cptr != ')') cptr = cptr + 1;
-				action_ptr->charindex = cptr;
+				break;
+			case 'm':
+				cptr = cptr + 1;
+				switch (*cptr) {
+				case 'v': // move
+					cptr = cptr + 1;
+					if (!sscanf(cptr, ",%f,%f,%f)", &action_ptr->totalx,&action_ptr->totaly,&action_ptr->totalz))
+						throw false;
+					break;
+				default:
+					throw false;
+				}
+				break;
+			default:
+				throw false;
+			}
 		}
-}
+		catch (...) {
+			remove_clock_action(action_ptr);
+			action_ptr->charindex = action_ptr->exit_URL.text;
+			return;
+		}
 
+		while (*cptr != ')') 
+			cptr = cptr + 1;
+		action_ptr->charindex = cptr;
+	}
+}
 
 //------------------------------------------------------------------------------
 // Execute a setframe action.
@@ -2865,7 +2748,6 @@ execute_setframe_action(trigger *trigger_ptr, action *action_ptr)
 			}
 		}
 	}
-
 }
 
 //------------------------------------------------------------------------------
@@ -2900,14 +2782,11 @@ execute_animate_action(trigger *trigger_ptr, action *action_ptr)
 				block_ptr->current_frame--;
 				return;
 			}
-		} 
-		else {
+		} else {
 			block_ptr->set_frame(block_ptr->current_frame);
 		}
 	}
-
 }
-
 
 //------------------------------------------------------------------------------
 // Execute a setloop action.
@@ -2929,15 +2808,12 @@ execute_setloop_action(trigger *trigger_ptr, action *action_ptr)
 				block_ptr->next_loop = block_def_ptr->animation->loops - 1;
 			else
 				block_ptr->next_loop %= block_def_ptr->animation->loops;
-		}
-		else {
+		} else {
 			if (action_ptr->rel_number.value < (block_def_ptr->animation->loops)) {
 				block_ptr->next_loop = action_ptr->rel_number.value;
 			}
 		}
-
 	}
-
 }
 
 //------------------------------------------------------------------------------
@@ -2957,8 +2833,7 @@ execute_active_trigger_list(void)
 	// or square pointer, indicating that the block the trigger belonged to was
 	// removed from the map.
 
-
-	for(j=0; j < active_trigger_count; j++) {
+	for(j = 0; j < active_trigger_count; j++) {
 		trigger_ptr = active_trigger_list[j];
 		action_ptr = trigger_ptr->action_list;
 		if (trigger_ptr != NULL && (trigger_ptr->block_ptr != NULL || trigger_ptr->square_ptr != NULL)) {
@@ -3003,16 +2878,13 @@ execute_active_trigger_list(void)
 				case EXIT_ACTION:
 					spot_continues = handle_exit(action_ptr->exit_URL, 
 						action_ptr->exit_target, action_ptr->is_spot_URL);
-
 					active_trigger_list[0] = NULL;
 					active_trigger_count = 0;
-
 					return(spot_continues);
 				}
 				action_ptr = action_ptr->next_action_ptr;
 			}
 		}
-		//mp2 trigger_ptr = del_trigger(trigger_ptr);
 	}
 
 	// Clear the active trigger list and the last active trigger pointer.
@@ -3020,7 +2892,6 @@ execute_active_trigger_list(void)
 	active_trigger_list[0] = NULL;
 	active_trigger_count = 0;
 	return(true);
-
 }
 
 //------------------------------------------------------------------------------
@@ -3034,49 +2905,39 @@ execute_global_clock_action_list(int time_diff)
 	action *action_ptr;
 	int j;
 
-	// Step through the actions
+	// Step through the actions.
 
-	for(j=0; j < active_clock_action_count; j++) {
+	for(j = 0; j < active_clock_action_count; j++) {
 		action_ptr = active_clock_action_list[j];
-
-			switch (action_ptr->type) {
-			case RIPPLE_ACTION:
-				execute_ripple_action(action_ptr);
-				break;
-			case SPIN_ACTION:
-				execute_spin_action(action_ptr,time_diff);
-				break;
-			case ORBIT_ACTION:
-				execute_orbit_action(action_ptr,time_diff);
-				break;
-			case MOVE_ACTION:
-				execute_move_action(action_ptr,time_diff);
-				break;
-			}
+		switch (action_ptr->type) {
+		case RIPPLE_ACTION:
+			execute_ripple_action(action_ptr);
+			break;
+		case SPIN_ACTION:
+			execute_spin_action(action_ptr,time_diff);
+			break;
+		case ORBIT_ACTION:
+			execute_orbit_action(action_ptr,time_diff);
+			break;
+		case MOVE_ACTION:
+			execute_move_action(action_ptr,time_diff);
+			break;
+		}
 	}
 	return(true);
 }
 
 //------------------------------------------------------------------------------
-// Execute a single trigger (from the network)
+// Execute a single trigger.
 //------------------------------------------------------------------------------
 
 bool
-execute_trigger(trigger* trigger_ptr, int triggercounter, int playerid)
+execute_trigger(trigger* trigger_ptr)
 {
 	action *action_ptr;
 	bool spot_continues;
-	int tmp_triggerid,tmp_playerid;
-
-	tmp_triggerid = curr_triggerid;
-	curr_triggerid = triggercounter;
-	tmp_playerid = curr_playerid;
-	curr_playerid = playerid;
 
 	action_ptr = trigger_ptr->action_list;
-
-	//set_title("spin %d %d %d", trigger_ptr,curr_triggerid,action_ptr);
-
 	while (action_ptr != NULL) {
 		switch (action_ptr->type) {
 			case REPLACE_ACTION:
@@ -3118,22 +2979,12 @@ execute_trigger(trigger* trigger_ptr, int triggercounter, int playerid)
 			case EXIT_ACTION:
 				spot_continues = handle_exit(action_ptr->exit_URL, 
 					action_ptr->exit_target, action_ptr->is_spot_URL);
-
-				curr_triggerid = tmp_triggerid;
-				curr_playerid = tmp_playerid;
-
 				return(spot_continues);
 		}
-	
 		action_ptr = action_ptr->next_action_ptr;
 	}
-
-	curr_triggerid = tmp_triggerid;
-	curr_playerid = tmp_playerid;
 	return(true);
 }
-
-
 
 //------------------------------------------------------------------------------
 // Function to set up a clipping plane.
@@ -3243,7 +3094,6 @@ render_next_frame(void)
 	} else {
 		curr_time_ms = get_time_ms();
 		clocktimer_time_ms = curr_time_ms;
-		physicstimer_time_ms = curr_time_ms;
 		elapsed_time = 0.0f;
 	}
 
@@ -3330,7 +3180,6 @@ render_next_frame(void)
 
 	// Update the player's last position and current turn angle.
 
-
 	if (turn_delta != 0.0f) {
 		if (player_block_ptr != NULL) {
 			turn_delta += last_delta;
@@ -3345,11 +3194,9 @@ render_next_frame(void)
 
 			}
 		} else {
-		player_viewpoint.last_position = player_viewpoint.position;
-		player_viewpoint.turn_angle = pos_adjust_angle(player_viewpoint.turn_angle + turn_delta);
+			player_viewpoint.last_position = player_viewpoint.position;
+			player_viewpoint.turn_angle = pos_adjust_angle(player_viewpoint.turn_angle + turn_delta);
 		}
-
-
 	}
 
 	// Set the trajectory based upon the move delta, side delta, and the turn
@@ -3357,20 +3204,9 @@ render_next_frame(void)
 
 	trajectory.dx = move_delta * sine[player_viewpoint.turn_angle] +
 		side_delta * sine[player_viewpoint.turn_angle + 90.0f];
-	//trajectory.dy = 0.0f;
-	//jump_delta = curr_jump_delta.get();
-
-	/*if (FGT(jump_delta,(float)0.0)) {
-		jump_delta -= (float)0.05;
-
-		curr_jump_delta.set(jump_delta);
-		trajectory.dy = jump_delta;
-		
-	} //else */
 	trajectory.dy = 0.0f;
 	trajectory.dz = move_delta * cosine[player_viewpoint.turn_angle] +
 		side_delta * cosine[player_viewpoint.turn_angle + 90.0f];
-
 
 	// Adjust the trajectory to take in account collisions, then move the
 	// player along this trajectory.
@@ -3382,10 +3218,6 @@ render_next_frame(void)
 			new_trajectory;
 	} while (FNE(trajectory.dx, 0.0f) || FNE(trajectory.dz, 0.0f));
 
-//	if (FGT(jump_delta,(float)0.0)) {
-//	    player_viewpoint.position.y += jump_delta;
-//	}
-
 	// If the new trajectory is zero, adjust the look angle by the look delta.
 
 	if (!new_trajectory) {
@@ -3396,77 +3228,6 @@ render_next_frame(void)
 		else if (FLT(player_viewpoint.look_angle, -90.0f))
 			player_viewpoint.look_angle = -90.0f;
 	}
-
-
-
-/*
-	// If the new trajectory is non-zero, we set the look angle to match the
-	// slope been traversed, but only if the trajectory was tilted in the last
-	// frame, or is no longer tilted.
- 
-	else if (trajectory_tilted || FEQ(new_trajectory.dy, 0.0f)) {
-		float delta_look_angle;
-		float degrees_per_frame;
-		float desired_look_cosine;
-		float desired_look_angle;
-
-		// If the player is falling, the desired look angle should be zero.
-
-		if (player_falling)
-			desired_look_angle = 0.0f;
-		else {
-
-			// Determine the desired look angle by taking the dot product of the 
-			// normalised trajectory vector with a normalised vector pointing
-			// along the positive Y axis; this gives us the cosine of the look
-			// angle, which we convert to an angle via the arccos() function. 
-
-			unit_trajectory = new_trajectory;
-			unit_trajectory.normalise();
-			desired_look_cosine = unit_trajectory & world_y_axis;
-			desired_look_angle = (float)DEG(acos(desired_look_cosine)) - 90.0f;
-
-			// Otherwise compute the dot product between the normalised vector
-			// representing the turn angle (in the X-Z plane) and the normalised
-			// trajectory vector (also in the X-Z plane).  If the turn angle is 
-			// facing away from the trajectory, we must change the sign of the
-			// desired look angle to compensate.
-
-			orig_direction.dx = sine[player_viewpoint.turn_angle];
-			orig_direction.dy = 0.0;
-			orig_direction.dz = cosine[player_viewpoint.turn_angle];
-			new_direction = new_trajectory;
-			new_direction.dy = 0.0;
-			new_direction.normalise();
-			if (FLT(orig_direction & new_direction, 0.0))
-				desired_look_angle = -desired_look_angle;
-
-			// If the desired look angle is negative, reduce it by 75%;
-			// otherwise if it's positive and greater than zero, increase
-			// the angle by 25%.
-
-			if (FLT(desired_look_angle, 0.0f))
-				desired_look_angle *= 0.25f;
-			else
-				desired_look_angle *= 1.25f;
-		}
-
-		// Move the player look angle gradually towards the look angle
-		// determined above.  If the delta look angle is close enough to
-		// zero to not make a difference, we don't adjust the look angle.
-
-		delta_look_angle = player_viewpoint.look_angle - desired_look_angle;
-		if (FNE(delta_look_angle, 0.0f)) {
-			degrees_per_frame = 90.0f * elapsed_time;
-			if (FLT(FABS(delta_look_angle), degrees_per_frame))
-				player_viewpoint.look_angle = desired_look_angle;
-			else if (FLT(delta_look_angle, 0.0f))
-				player_viewpoint.look_angle += degrees_per_frame;
-			else
-				player_viewpoint.look_angle -= degrees_per_frame;
-		}
-	}
-*/
 	
 	// Compute the inverse of the player turn and look angles, and convert them
 	// to positive integers.
@@ -3487,7 +3248,6 @@ render_next_frame(void)
 	viewpoint_has_changed = FNE(turn_delta, 0.0f) || FNE(look_delta, 0.0f) ||
 		player_viewpoint.position != player_viewpoint.last_position;
 
-
 	// Update all lights and sounds
 
 	update_all_lights(elapsed_time);
@@ -3503,25 +3263,29 @@ render_next_frame(void)
 	display_frame_buffer(false);
 	frames_rendered++;
 
+#ifdef SIMKIN
+
 	// If there is a script currently executing, resume it.  Otherwise execute
 	// the script at the head of the active script queue.  When a script
 	// completes, it is removed from the head of the queue.
-//POWERS
-//	if (script_executing) {
-//		if (!(script_executing = resume_script()) && 
-//			active_script_count != 0) {
-//			for (j=0;j < active_script_count;j++)
-//				active_script_list[j] = active_script_list[j+1];
-//			active_script_count--;
-//		}
-//	} else if (active_script_count != 0) {
-//		if (!(script_executing = execute_script(active_script_list[0]->block_ptr, 
-//			active_script_list[0]->script_def_ptr))) {
-//			for (j=0;j < active_script_count;j++)
-//				active_script_list[j] = active_script_list[j+1];
-//			active_script_count--;
-//		}
-//	}
+
+	if (script_executing) {
+		if (!(script_executing = resume_script()) && 
+			active_script_count != 0) {
+			for (j = 0; j < active_script_count; j++)
+				active_script_list[j] = active_script_list[j + 1];
+			active_script_count--;
+		}
+	} else if (active_script_count != 0) {
+		if (!(script_executing = execute_script(active_script_list[0]->block_ptr, 
+			active_script_list[0]->script_def_ptr))) {
+			for (j = 0; j < active_script_count; j++)
+				active_script_list[j] = active_script_list[j + 1];
+			active_script_count--;
+		}
+	}
+
+#endif
 
 	// Check for a mouse selection and a mouse clicked event.
 
@@ -3551,7 +3315,6 @@ render_next_frame(void)
 	process_global_triggers_in_block_list(fixed_block_list);
 	process_global_triggers_in_block_list(player_block_ptr);
 
-
 	// Execute the list of active triggers.
 
 	player_block_replaced = false;
@@ -3559,7 +3322,7 @@ render_next_frame(void)
 		return(false);
 
 	// Check if global timer is ready - if so then activate triggers tied 
-	// to the master clock + update the physics simulation
+	// to the master clock.
 
 	if (curr_time_ms - clocktimer_time_ms > 50) {
 		if (!execute_global_clock_action_list(curr_time_ms - clocktimer_time_ms))

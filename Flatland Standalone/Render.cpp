@@ -39,10 +39,6 @@ static vertex camera_position;
 static int camera_column, camera_row, camera_level;
 static vertex relative_camera_position;
 
-// The current view vector in world space.
-
-//static vector view_vector;
-
 // The visiblity of the current block.
 
 static int curr_block_visibility;
@@ -1293,7 +1289,6 @@ render_polygon(polygon *polygon_ptr, float turn_angle)
 
 	if (texture_ptr != NULL) {
 		switch (curr_block_type) {
-		//case PLAYER_SPRITE:
 		case MULTIFACETED_SPRITE:
 			pixmap_ptr = 
 				&texture_ptr->pixmap_list[curr_block_ptr->pixmap_index];
@@ -1542,8 +1537,6 @@ render_polygon(polygon *polygon_ptr, float turn_angle)
 		}
 	}
 }
-
-
 
 //------------------------------------------------------------------------------
 // Determine whether the camera is in front or behind a polygon by substituting
@@ -1968,16 +1961,6 @@ render_player_block(void)
 {
 	vertex centre(UNITS_PER_HALF_BLOCK, UNITS_PER_HALF_BLOCK,
 		UNITS_PER_HALF_BLOCK);
-	//int vertex_no;
-	//vertex temp_vertex;
-	//float sprite_angle;
-	//polygon *polygon_ptr;
-	//polygon_def *polygon_def_ptr;
-	//part *part_ptr;
-	//texture *texture_ptr;
-	//float delta_x, delta_z;
-	//float distance;
-	//static float delta_distance = 0.0;
 
 	// Determine the translation and centre of the block.  We need to compensate
 	// for the fact that the player block needs to be centered on the player
@@ -2000,113 +1983,8 @@ render_player_block(void)
 	// Render the player block.
 
 	player_block_ptr->translation = block_translation;
-	//player_block_ptr->rotate_y(player_viewpoint.turn_angle);
-
 	render_block(NULL, player_block_ptr, true);
-	//polygon_ptr = player_block_ptr->polygon_list;
-	//curr_square_ptr = NULL;
-	//curr_block_ptr = player_block_ptr;
-	//curr_block_type = player_block_ptr->block_def_ptr->type;
-	//front_face_visible = true;
-	//curr_block_movable = true;
-	//render_polygon(polygon_ptr, player_viewpoint.turn_angle);
-	//render_block(NULL, client_block_ptr, true);
 }
-
-//------------------------------------------------------------------------------
-// Render the player block, which is a sprite block.
-//------------------------------------------------------------------------------
-/*
-static void
-render_player_block(void)
-{
-	vertex centre(UNITS_PER_HALF_BLOCK, UNITS_PER_HALF_BLOCK,
-		UNITS_PER_HALF_BLOCK);
-	int vertex_no;
-	vertex temp_vertex;
-	float sprite_angle;
-	polygon *polygon_ptr;
-	polygon_def *polygon_def_ptr;
-	part *part_ptr;
-	texture *texture_ptr;
-	float delta_x, delta_z;
-	float distance;
-	static float delta_distance = 0.0;
-
-	// Determine the translation and centre of the block.  We need to compensate
-	// for the fact that the player block needs to be centered on the player
-	// position in the X and Z direction, and placed at ground level in the Y
-	// direction.
-
-	block_translation.x = player_viewpoint.position.x - UNITS_PER_HALF_BLOCK;
-	block_translation.y = player_viewpoint.position.y - player_dimensions.y;
-	block_translation.z = player_viewpoint.position.z - UNITS_PER_HALF_BLOCK;
-	block_centre = block_translation + centre;
-
-	// The angle of the player sprite is equal to the player turn angle.
-
-	sprite_angle = pos_adjust_angle(player_viewpoint.turn_angle);
-
-	// Rotate each vertex around the block's centre by the sprite angle, 
-	// translate the block to the player's position, then transform each vertex
-	// by the player position and orientation, storing them in a global list.
-
-	for (vertex_no = 0; vertex_no < player_block_ptr->vertices; vertex_no++) {
-		temp_vertex = player_block_ptr->vertex_list[vertex_no];
-		temp_vertex -= centre;
-		temp_vertex.rotate_y(sprite_angle);
-		temp_vertex += block_centre;
-		transform_vertex(&temp_vertex, &block_tvertex_list[vertex_no]);
-	}
-
-	// Set the active lights for the player block.
-
-	if (player_block_ptr->set_active_lights) {
-		set_active_lights(player_block_ptr->active_light_list, 
-			&player_viewpoint.position);
-		player_block_ptr->set_active_lights = false;
-	}
-	
-	// Render the player sprite.
-
-	polygon_ptr = player_block_ptr->polygon_list;
-	curr_square_ptr = NULL;
-	curr_block_ptr = player_block_ptr;
-	curr_block_type = PLAYER_SPRITE;
-	front_face_visible = true;
-	curr_block_movable = true;
-	render_polygon(polygon_ptr, player_viewpoint.turn_angle);
-
-	// If the player sprite has no texture or has only one pixmap, we're done.
-
-	polygon_def_ptr = polygon_ptr->polygon_def_ptr;
-	part_ptr = polygon_def_ptr->part_ptr;
-	texture_ptr = part_ptr->texture_ptr;
-	if (texture_ptr == NULL || texture_ptr->pixmaps == 1)
-		return;
-	
-	// Increment or decrement the mipmap index if a distance of more than half
-	// a block has been traversed.
-
-	delta_x = player_viewpoint.position.x - player_viewpoint.last_position.x;
-	delta_z = player_viewpoint.position.z - player_viewpoint.last_position.z;
-	distance = (float)sqrt(delta_x * delta_x + delta_z * delta_z);
-	if (forward_movement)
-		delta_distance += distance;
-	else
-		delta_distance -= distance;
-	if (FGE(delta_distance, 0.5f)) {
-		player_block_ptr->pixmap_index = 
-			(player_block_ptr->pixmap_index + 1) % texture_ptr->pixmaps;
-		delta_distance = 0.0;
-	} else if (FLT(delta_distance, -0.5f)) {
-		player_block_ptr->pixmap_index = 
-			(player_block_ptr->pixmap_index + texture_ptr->pixmaps - 1) % 
-			texture_ptr->pixmaps;
-		delta_distance = 0.0;
-	}
-}
-*/
 
 //------------------------------------------------------------------------------
 // Compute the view bounding box.
@@ -3190,14 +3068,6 @@ render_frame(void)
 	sky_start_v = (float)((int)player_viewpoint.look_angle % 15) / 15.0f;
 	sky_end_u = sky_start_u + horz_field_of_view / 15.0f;
 	sky_end_v = sky_start_v + vert_field_of_view / 15.0f;
-		
-	// Compute the view vector in world space.
-
-	//view_vector.dx = 0.0;
-	//view_vector.dy = 0.0;
-	//view_vector.dz = 1.0;
-	//view_vector.rotate_x(player_viewpoint.look_angle);
-	//view_vector.rotate_y(player_viewpoint.turn_angle);
 
 	// Compute the position of the camera.
 

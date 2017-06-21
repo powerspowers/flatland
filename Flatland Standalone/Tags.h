@@ -426,15 +426,13 @@ static attr_def orb_attr_list[ORB_ATTRIBUTES] = {
 #define PARAM_MOVABLE		3
 #define PARAM_SCALE			4
 #define PARAM_ROTATE		5
-#define PARAM_MASS			6
-#define PARAM_POSITION		7
+#define PARAM_POSITION		6
 static orientation param_orientation;
 static vertex param_origin;
 static bool param_solid;
 static bool param_movable;
 static float_triplet param_scale;
 static float_triplet param_rotate;
-static float param_mass;
 static relinteger_triplet param_position;
 static attr_def param_attr_list[PARAM_ATTRIBUTES] = {
 	{TOKEN_ORIENTATION, VALUE_ORIENTATION, &param_orientation, false},
@@ -443,7 +441,6 @@ static attr_def param_attr_list[PARAM_ATTRIBUTES] = {
 	{TOKEN_MOVABLE, VALUE_BOOLEAN, &param_movable, false},
 	{TOKEN_SCALE, VALUE_SCALE, &param_scale, false},
 	{TOKEN_ROTATE, VALUE_SCALE, &param_rotate, false},
-	{TOKEN_MASS, VALUE_FLOAT, &param_mass, false},
 	{TOKEN_POSITION, VALUE_REL_INTEGER_TRIPLET, &param_position, false}
 };
 
@@ -903,13 +900,6 @@ static attr_def sky_attr_list[SKY_ATTRIBUTES] = {
 
 #endif
 
-#define PHYSICS_ATTRIBUTES	1
-#define PHYSICS_GRAVITY		0
-static vertex physics_gravity;
-static attr_def physics_attr_list[PHYSICS_ATTRIBUTES] = {
-	{TOKEN_GRAVITY,	VALUE_SCALE, &physics_gravity, false}
-};
-
 // SOUND tag (block and spot files)
 
 #define SOUND_ATTRIBUTES	9
@@ -1248,12 +1238,9 @@ static tag_def head_tag_list[] = {
 	{TOKEN_ORB, orb_attr_list, ORB_ATTRIBUTES, false},
 	{TOKEN_PLACEHOLDER, placeholder_attr_list, PLACEHOLDER_ATTRIBUTES, false},
 	{TOKEN_SKY, sky_attr_list, SKY_ATTRIBUTES, false},
-	{TOKEN_PHYSICS, physics_attr_list, PHYSICS_ATTRIBUTES, false},
-
 #ifdef STREAMING_MEDIA
 	{TOKEN_STREAM, stream_attr_list, STREAM_ATTRIBUTES, false},
 #endif
-
 	{TOKEN_TITLE, title_attr_list, TITLE_ATTRIBUTES, false},
 	{TOKEN_NONE}
 };
