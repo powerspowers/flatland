@@ -27,6 +27,7 @@
 #include <objbase.h>
 #include <cguid.h>
 #include <ddraw.h>
+#include <WinInet.h>
 #include "DirectX\d3d8.h"
 #include "DirectX\d3dx8.h"
 #include "DirectX\dsound.h"
@@ -3085,13 +3086,13 @@ create_main_window(void (*key_callback)(byte key_code, bool key_down),
 }
 
 //------------------------------------------------------------------------------
-// Return a transparent pointer to the main window.
+// Resize the main window.
 //------------------------------------------------------------------------------
 
-void *
-get_main_window()
+void
+resize_main_window(int width, int height)
 {
-	return (void *)main_window_handle;
+	MoveWindow(main_window_handle, 0, 0, width, height, TRUE);
 }
 
 //------------------------------------------------------------------------------

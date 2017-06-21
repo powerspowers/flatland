@@ -209,18 +209,15 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
         }
         break;
 	case WM_SIZE:
-		SendMessage(status_bar_handle, WM_SIZE, wParam, lParam);
-		if (get_main_window()) {
+		{
 			RECT app_window_rect;
 			RECT status_bar_rect;
-			int width;
-			int height;
 
+			SendMessage(status_bar_handle, WM_SIZE, wParam, lParam);
+	
 			GetClientRect(app_window_handle, &app_window_rect);
 			GetWindowRect(status_bar_handle, &status_bar_rect);
-			width = app_window_rect.right;
-			height = app_window_rect.bottom - (status_bar_rect.bottom - status_bar_rect.top);
-			MoveWindow((HWND)get_main_window(), 0, 0, width, height, TRUE);
+			resize_main_window(app_window_rect.right, app_window_rect.bottom - (status_bar_rect.bottom - status_bar_rect.top));
 		}
 		break;
     case WM_DESTROY:
