@@ -237,7 +237,7 @@ create_main_window(void (*key_callback)(byte key_code, bool key_down),
 				   void (*display_callback)(void));
 
 void
-resize_main_window(int width, int height);
+resize_main_window();
 
 void
 destroy_main_window(void);
@@ -269,10 +269,13 @@ open_URL_in_default_app(const char *URL);
 bool
 download_URL_to_file(const char *URL, char *file_path_buffer, int buffer_size);
 
-// Open file dialog.
+// Open file and URL dialogs.
 
 bool
 open_file_dialog(char *file_path_buffer, int buffer_size);
+
+bool
+open_URL_dialog(string *URL_ptr);
 
 // Progress window functions (called by the plugin thread only).
 

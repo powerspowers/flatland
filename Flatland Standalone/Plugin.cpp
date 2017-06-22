@@ -1097,7 +1097,7 @@ timer_event_callback(void)
 		result = download_URL_to_file(requested_URL, file_path, 256);
 		downloaded_URL.set(requested_URL);
 		downloaded_file_path.set(file_path);
-		URL_was_downloaded.send_event(true);
+		URL_was_downloaded.send_event(result);
 	}
 
 	// Check to see whether a URL cancel request has been signalled by the

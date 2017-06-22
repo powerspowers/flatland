@@ -2799,6 +2799,27 @@ set_main_window_size(int width, int height)
 }
 
 //------------------------------------------------------------------------------
+// Calculate the rectangle of the main window.
+//------------------------------------------------------------------------------
+
+static void
+calculate_main_window_rect(RECT *rect_ptr)
+{
+	RECT app_window_rect;
+	RECT status_bar_rect;
+
+	// Determine the size of the parent window and status bar, and use them to
+	// calculate the desired size of the main window.
+
+	GetClientRect(app_window_handle, &app_window_rect);
+	GetClientRect(status_bar_handle, &status_bar_rect);
+	rect_ptr->left = 0;
+	rect_ptr->right = app_window_rect.right;
+	rect_ptr->top = 0;
+	rect_ptr->bottom = app_window_rect.bottom - status_bar_rect.bottom;
+}
+
+//------------------------------------------------------------------------------
 // Create the main window.
 //------------------------------------------------------------------------------
 
@@ -2810,10 +2831,7 @@ create_main_window(void (*key_callback)(byte key_code, bool key_down),
 										   int height),
 				   void (*display_callback)(void))
 {
-	RECT app_window_rect;
-	RECT status_bar_rect;
-	int width;
-	int height;
+	RECT main_window_rect;
 	int index;
 
 	// Do nothing if the main window already exists.
@@ -2821,13 +2839,9 @@ create_main_window(void (*key_callback)(byte key_code, bool key_down),
 	if (main_window_handle != NULL)
 		return(false);
 
-	// Determine the size of the parent window and status bar, and use them to
-	// calculate the desired size of the main window.
+	// Determine the main window size.
 
-	GetClientRect(app_window_handle, &app_window_rect);
-	GetWindowRect(status_bar_handle, &status_bar_rect);
-	width = app_window_rect.right;
-	height = app_window_rect.bottom - (status_bar_rect.bottom - status_bar_rect.top);
+	calculate_main_window_rect(&main_window_rect);
 
 	// Initialise the global variables.
 
@@ -2883,14 +2897,17 @@ create_main_window(void (*key_callback)(byte key_code, bool key_down),
 	// Create the main window as a child of the app window.
 
 	main_window_handle = CreateWindow("MainWindow", nullptr, WS_CHILD | WS_VISIBLE,
-		0, 0, width, height, app_window_handle, nullptr, instance_handle, nullptr);
+		main_window_rect.left, main_window_rect.top, 
+		main_window_rect.right - main_window_rect.left,
+		main_window_rect.bottom - main_window_rect.top,
+		app_window_handle, nullptr, instance_handle, nullptr);
 	if (main_window_handle == NULL) {
 		return false;
 	}
 
 	// Set the main window size.
 
-	set_main_window_size(width, height);
+	set_main_window_size(main_window_rect.right - main_window_rect.left, main_window_rect.bottom - main_window_rect.top);
 
 	// Set the input focus to the main window, and set a timer to go off 33
 	// times a second.
@@ -3090,9 +3107,14 @@ create_main_window(void (*key_callback)(byte key_code, bool key_down),
 //------------------------------------------------------------------------------
 
 void
-resize_main_window(int width, int height)
+resize_main_window()
 {
-	MoveWindow(main_window_handle, 0, 0, width, height, TRUE);
+	RECT main_window_rect;
+
+	calculate_main_window_rect(&main_window_rect);
+	MoveWindow(main_window_handle, main_window_rect.left, main_window_rect.top,
+		main_window_rect.right - main_window_rect.left, 
+		main_window_rect.bottom - main_window_rect.top, TRUE);
 }
 
 //------------------------------------------------------------------------------
@@ -3221,7 +3243,7 @@ fatal_error(char *title, char *format, ...)
 
 	// Display this message in a message box, using the exclamation icon.
 
-	MessageBoxEx(NULL, message, title, 
+	MessageBoxEx(app_window_handle, message, title, 
 		MB_TASKMODAL | MB_OK | MB_ICONEXCLAMATION | MB_TOPMOST, 
 		MAKELANGID(LANG_ENGLISH, SUBLANG_ENGLISH_US));
 }
@@ -3245,7 +3267,7 @@ information(char *title, char *format, ...)
 
 	// Display this message in a message box, using the information icon.
 
-	MessageBoxEx(NULL, message, title, 
+	MessageBoxEx(app_window_handle, message, title, 
 		MB_TASKMODAL | MB_OK | MB_ICONINFORMATION | MB_TOPMOST,
 		MAKELANGID(LANG_ENGLISH, SUBLANG_ENGLISH_US));
 }
@@ -3275,7 +3297,7 @@ query(char *title, bool yes_no_format, char *format, ...)
 		options = MB_YESNO | MB_ICONQUESTION;
 	else
 		options = MB_OKCANCEL | MB_ICONINFORMATION;
-	result = MessageBoxEx(NULL, message, title, options | MB_TOPMOST | 
+	result = MessageBoxEx(app_window_handle, message, title, options | MB_TOPMOST | 
 		MB_TASKMODAL, MAKELANGID(LANG_ENGLISH, SUBLANG_ENGLISH_US));
 	return(result == IDYES || result == IDOK);
 }
@@ -3308,7 +3330,7 @@ download_URL_to_file(const char *URL, char *file_path_buffer, int buffer_size)
 }
 
 //==============================================================================
-// Open file dialog.
+// Open file and URL dialogs.
 //==============================================================================
 
 bool
@@ -3339,6 +3361,59 @@ open_file_dialog(char *file_path_buffer, int buffer_size)
 	// Show the open file dialog.
 
 	return GetOpenFileName(&ofn) == TRUE;
+}
+
+//------------------------------------------------------------------------------
+// Function to handle open URL events.
+//------------------------------------------------------------------------------
+
+static char spot_URL[256];
+
+static BOOL CALLBACK
+handle_open_URL_event(HWND window_handle, UINT message, WPARAM wParam,
+	LPARAM lParam)
+{
+	switch (message) {
+	case WM_COMMAND:
+		switch (HIWORD(wParam)) {
+		case BN_CLICKED:
+			switch (LOWORD(wParam)) {
+			case IDOK:
+				GetDlgItemText(window_handle, IDC_SPOTURL, spot_URL, 256);
+				EndDialog(window_handle, TRUE);
+				break;
+			case IDCANCEL:
+				EndDialog(window_handle, FALSE);
+				break;
+			}
+		}
+		return(TRUE);
+	default:
+		return(FALSE);
+	}
+}
+
+//------------------------------------------------------------------------------
+// Get a URL.
+//------------------------------------------------------------------------------
+
+bool
+open_URL_dialog(string *URL_ptr)
+{
+	// Bring up a dialog box that requests a spot URL.
+
+	if (DialogBox(instance_handle, MAKEINTRESOURCE(IDD_OPENSPOTURL),
+		main_window_handle, handle_open_URL_event)) {
+		char *trimmed_spot_URL = spot_URL;
+		while (*trimmed_spot_URL != 0 && *trimmed_spot_URL == ' ') {
+			trimmed_spot_URL++;
+		}
+		if (*trimmed_spot_URL != '\0') {
+			*URL_ptr = trimmed_spot_URL;
+			return(true);
+		}
+	}
+	return(false);
 }
 
 //==============================================================================

@@ -8,14 +8,17 @@
 #include "Plugin.h"
 #include "Main.h"
 
-#define MAX_LOADSTRING 100
-
 // Global Variables:
-HINSTANCE instance_handle;						// current instance
-static CHAR szTitle[MAX_LOADSTRING];			// The title bar text
-static CHAR szWindowClass[MAX_LOADSTRING];		// the main window class name
+
+HINSTANCE instance_handle;
 HWND app_window_handle;
 HWND status_bar_handle;
+
+// App window title and class.
+
+#define MAX_LOADSTRING 100
+static CHAR szTitle[MAX_LOADSTRING];
+static CHAR szWindowClass[MAX_LOADSTRING];
 
 // Forward declarations of functions included in this code module:
 ATOM                MyRegisterClass(HINSTANCE hInstance);
@@ -107,10 +110,10 @@ BOOL InitInstance(HINSTANCE hInstance, int nCmdShow)
 
 	InitCommonControls();
 
-	// Create theapplication window.
+	// Create the application window.
 
 	app_window_handle = CreateWindow(szWindowClass, szTitle, WS_OVERLAPPEDWINDOW,
-		CW_USEDEFAULT, 0, CW_USEDEFAULT, 0, nullptr, nullptr, hInstance, nullptr);
+		CW_USEDEFAULT, 0, CW_USEDEFAULT, 0, nullptr, nullptr, instance_handle, nullptr);
 	if (!app_window_handle) {
       return FALSE;
 	}
@@ -118,7 +121,7 @@ BOOL InitInstance(HINSTANCE hInstance, int nCmdShow)
 	// Add a status bar at the bottom of the main application window.
 
 	status_bar_handle = CreateWindow(STATUSCLASSNAME, NULL, SBARS_SIZEGRIP | WS_CHILD | WS_VISIBLE,
-		0, 0, 0, 0, app_window_handle, (HMENU)5000, hInstance, nullptr);
+		0, 0, 0, 0, app_window_handle, NULL, instance_handle, NULL);
 	if (!status_bar_handle) {
 		return FALSE;
 	}
@@ -170,14 +173,26 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 			case ID_HELP_VIEWHELP:
 				open_help_window();
 				break;
-			case ID_FILE_OPENSPOT:
+			case ID_FILE_OPENSPOTURL:
+				{
+					string spot_URL;
+					if (open_URL_dialog(&spot_URL)) {
+						raise_semaphore(recent_spot_list_semaphore);
+						selected_recent_spot_URL = spot_URL;
+						recent_spot_selected.send_event(true);
+						lower_semaphore(recent_spot_list_semaphore);
+					}
+				}
+				break;
+			case ID_FILE_OPENSPOTFILE:
 				{	
 					char file_path[256];
-					open_file_dialog(file_path, 256);
-					raise_semaphore(recent_spot_list_semaphore);
-					selected_recent_spot_URL = file_path;
-					recent_spot_selected.send_event(true);
-					lower_semaphore(recent_spot_list_semaphore);
+					if (open_file_dialog(file_path, 256)) {
+						raise_semaphore(recent_spot_list_semaphore);
+						selected_recent_spot_URL = file_path;
+						recent_spot_selected.send_event(true);
+						lower_semaphore(recent_spot_list_semaphore);
+					}
 				}
 				break;
 			case ID_FILE_OPTIONS:
@@ -195,6 +210,8 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
             case IDM_EXIT:
                 DestroyWindow(hWnd);
                 break;
+			case 5000:
+
             default:
                 return DefWindowProc(hWnd, message, wParam, lParam);
             }
@@ -210,14 +227,8 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
         break;
 	case WM_SIZE:
 		{
-			RECT app_window_rect;
-			RECT status_bar_rect;
-
 			SendMessage(status_bar_handle, WM_SIZE, wParam, lParam);
-	
-			GetClientRect(app_window_handle, &app_window_rect);
-			GetWindowRect(status_bar_handle, &status_bar_rect);
-			resize_main_window(app_window_rect.right, app_window_rect.bottom - (status_bar_rect.bottom - status_bar_rect.top));
+			resize_main_window();
 		}
 		break;
     case WM_DESTROY:
