@@ -38,9 +38,10 @@ string curr_spot_file_path;
 string cache_file_path;
 string new_rover_file_path;
 
-// Player thread handle.
+// Player and downloader thread handles.
 
 static unsigned long player_thread_handle;
+static unsigned long downloader_thread_handle;
 
 // Acceleration mode and hardware acceleration flag.
 
@@ -1081,41 +1082,6 @@ timer_event_callback(void)
 		set_mouse_cursor();
 	}
 
-	// Check to see whether a URL download request has been signalled by the
-	// player thread.
-
-	if (URL_download_requested.event_sent()) {
-		bool result;
-		char file_path[256];
-
-		// Reset the URL_was_opened flag, and send off the URL request to the
-		// browser.
-
-		URL_was_opened.reset_event();
-		URL_was_opened.send_event(true);
-		strcpy(file_path, (char *)requested_file_path);
-		result = download_URL_to_file(requested_URL, file_path, 256);
-		downloaded_URL.set(requested_URL);
-		downloaded_file_path.set(file_path);
-		URL_was_downloaded.send_event(result);
-	}
-
-	// Check to see whether a URL cancel request has been signalled by the
-	// player thread, and if there is currently a stream being downloaded,
-	// destroy it.
-
-	if (URL_cancel_requested.event_sent()) {
-		// TODO
-	}
-
-	// Check to see whether a javascript URL download request has been signalled
-	// by the player thread, and if so send off the URL request to the browser.
-	// We don't bother with notification of failure.
-
-	if (javascript_URL_download_requested.event_sent()) {
-		// TODO
-	}
-
 	// Check to see whether a display error request has been signalled by
 	// the player thread, and if so either display the error log if the player
 	// requests it, or display a generic error message.
@@ -1280,6 +1246,53 @@ open_local_file(char *file_path)
 }
 
 //------------------------------------------------------------------------------
+// Downloader thread.
+//------------------------------------------------------------------------------
+
+void
+downloader_thread(void *arg_list)
+{
+	// Keep this thread alive until the app dies.
+
+	for (;;) {
+
+		// Wait for a URL download request to be signalled by the player thread.
+
+		if (URL_download_requested.event_sent()) {
+			bool result;
+			char file_path[256];
+
+			// Reset the URL_was_opened flag, and send off the URL request to the
+			// browser.
+
+			URL_was_opened.reset_event();
+			URL_was_opened.send_event(true);
+			strcpy(file_path, (char *)requested_file_path);
+			result = download_URL_to_file(requested_URL, file_path, 256);
+			downloaded_URL.set(requested_URL);
+			downloaded_file_path.set(file_path);
+			URL_was_downloaded.send_event(result);
+		}
+
+		// Check to see whether a URL cancel request has been signalled by the
+		// player thread, and if there is currently a stream being downloaded,
+		// destroy it.
+
+		if (URL_cancel_requested.event_sent()) {
+			// TODO
+		}
+
+		// Check to see whether a javascript URL download request has been signalled
+		// by the player thread, and if so send off the URL request to the browser.
+		// We don't bother with notification of failure.
+
+		if (javascript_URL_download_requested.event_sent()) {
+			// TODO
+		}
+	}
+}
+
+//------------------------------------------------------------------------------
 // Initialize the app.
 //------------------------------------------------------------------------------
 
@@ -1405,9 +1418,11 @@ init_flatland()
 	first_key_event = 0;
 	last_key_event = 0;
 
-	// Start the player thread.
+	// Start the player thread and the downloader thread.
 
 	if ((player_thread_handle = start_thread(player_thread)) == 0)
+		return(false);
+	if ((downloader_thread_handle = start_thread(downloader_thread)) == 0)
 		return(false);
 
 	// Wait for an event from the player thread regarding it's initialisation.
