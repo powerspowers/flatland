@@ -64,17 +64,12 @@ extern string requested_blockset_name;
 extern semaphore<string> downloaded_URL;
 extern semaphore<string> downloaded_file_path;
 
-// Javascript URL.
-
-extern string javascript_URL;
-
 // Events sent by player thread.
 
 extern event player_thread_initialised;
 extern event player_window_initialised;
 extern event URL_download_requested;
 extern event URL_cancel_requested;
-extern event javascript_URL_download_requested;
 extern event player_window_shut_down;
 extern event show_spot_directory;
 

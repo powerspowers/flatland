@@ -1460,14 +1460,6 @@ handle_exit(const char *exit_URL, const char *exit_target, bool is_spot_URL)
 			spot_loaded.set(true);
 		}
 
-		// Else if the URL is javascript, request that it be executed but any
-		// data that might be downloaded be thrown away.
-
-		else if (!_strnicmp(URL, "javascript:", 11)) {
-			javascript_URL = URL;
-			javascript_URL_download_requested.send_event(true);
-		}
-
 		// Otherwise have the browser request that the URL be downloaded into
 		// the target window, or a new window if there is no target supplied.  
 

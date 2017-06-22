@@ -54,7 +54,6 @@ string requested_URL;
 string requested_target;
 string requested_file_path;
 string requested_blockset_name;			// Set if requesting a blockset.
-string javascript_URL;					// Set if requesting a javascript URL.
 
 // Downloaded URL and file path.
 
@@ -67,7 +66,6 @@ event player_thread_initialised;
 event player_window_initialised;
 event URL_download_requested;
 event URL_cancel_requested;
-event javascript_URL_download_requested;
 event player_window_shut_down;
 event show_spot_directory;
 
@@ -1281,14 +1279,6 @@ downloader_thread(void *arg_list)
 		if (URL_cancel_requested.event_sent()) {
 			// TODO
 		}
-
-		// Check to see whether a javascript URL download request has been signalled
-		// by the player thread, and if so send off the URL request to the browser.
-		// We don't bother with notification of failure.
-
-		if (javascript_URL_download_requested.event_sent()) {
-			// TODO
-		}
 	}
 }
 
@@ -1320,7 +1310,6 @@ init_flatland()
 	player_window_initialised.create_event();
 	URL_download_requested.create_event();
 	URL_cancel_requested.create_event();
-	javascript_URL_download_requested.create_event();
 	player_window_shut_down.create_event();
 	show_spot_directory.create_event();
 	display_error.create_event();
@@ -1501,7 +1490,6 @@ shutdown_flatland()
 	player_window_initialised.destroy_event();
 	URL_download_requested.destroy_event();
 	URL_cancel_requested.destroy_event();
-	javascript_URL_download_requested.destroy_event();
 	player_window_shut_down.destroy_event();
 	show_spot_directory.destroy_event();
 	display_error.destroy_event();

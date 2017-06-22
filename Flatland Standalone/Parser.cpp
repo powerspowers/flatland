@@ -638,15 +638,11 @@ create_URL(const char *URL_dir, const char *file_name)
 	string URL;
 
 	// If the file name starts with a slash, a drive letter followed by a colon,
-	// or the strings "http:", "file:", "javascript:", "mailto:", "telnet:" or
-	// "ftp:", then assume it's an absolute URL.
+	// or the strings "http:" or "file:", then assume it's an absolute URL.
 
 	if (file_name[0] == '/' || file_name[0] == '\\' ||
 		(strlen(file_name) > 1 && isalpha(file_name[0]) && file_name[1] == ':')
-		|| !_strnicmp(file_name, "http:", 5) || !_strnicmp(file_name, "file:", 5)
-		|| !_strnicmp(file_name, "javascript:", 11) ||
-		!_strnicmp(file_name, "mailto:", 7) || 
-		!_strnicmp(file_name, "telnet:", 7) || !_strnicmp(file_name, "ftp:", 4))
+		|| !_strnicmp(file_name, "http:", 5) || !_strnicmp(file_name, "file:", 5))
 		URL = file_name;
 
 	// Otherwise concatenate the URL directory and file name parameters to create
