@@ -134,8 +134,8 @@ BOOL InitInstance(HINSTANCE hInstance, int nCmdShow)
 
 	// Open the splash spot.
 
-	string splash_URL = flatland_dir + "splash.3dml";
-	open_local_file(splash_URL);
+	string splash_file_path = flatland_dir + "splash.3dml";
+	open_local_file(splash_file_path);
 
 	// Show and update the app window.
 

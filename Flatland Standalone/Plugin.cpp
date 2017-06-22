@@ -371,7 +371,6 @@ display_file_as_web_page(const char *file_path)
 
 	URL = "file:///";
 	URL += file_path;
-	URL = encode_URL(URL);
 
 	// Open the URL in the default external app.
 
@@ -1086,13 +1085,19 @@ timer_event_callback(void)
 	// player thread.
 
 	if (URL_download_requested.event_sent()) {
+		bool result;
+		char file_path[256];
 
 		// Reset the URL_was_opened flag, and send off the URL request to the
 		// browser.
 
 		URL_was_opened.reset_event();
-		open_local_file(requested_URL);
-		// TODO: Support URLs.
+		URL_was_opened.send_event(true);
+		strcpy(file_path, (char *)requested_file_path);
+		result = download_URL_to_file(requested_URL, file_path, 256);
+		downloaded_URL.set(requested_URL);
+		downloaded_file_path.set(file_path);
+		URL_was_downloaded.send_event(true);
 	}
 
 	// Check to see whether a URL cancel request has been signalled by the
@@ -1262,9 +1267,15 @@ display_event_callback(void)
 void
 open_local_file(char *file_path)
 {
+	bool result;
+	char cached_file_path[256];
+
+	URL_was_opened.reset_event();
 	URL_was_opened.send_event(true);
+	*cached_file_path = '\0';
+	result = download_URL_to_file(file_path, cached_file_path, 256);
 	downloaded_URL.set(file_path);
-	downloaded_file_path.set(file_path);
+	downloaded_file_path.set(cached_file_path);
 	URL_was_downloaded.send_event(true);
 }
 

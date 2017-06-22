@@ -27,7 +27,7 @@
 #include <objbase.h>
 #include <cguid.h>
 #include <ddraw.h>
-#include <WinInet.h>
+#include <Urlmon.h>
 #include "DirectX\d3d8.h"
 #include "DirectX\d3dx8.h"
 #include "DirectX\dsound.h"
@@ -3281,13 +3281,30 @@ query(char *title, bool yes_no_format, char *format, ...)
 }
 
 //==============================================================================
-// Open a URL in the default external app.
+// URL functions.
 //==============================================================================
+
+//------------------------------------------------------------------------------
+// Open a URL in the default external app.
+//------------------------------------------------------------------------------
 
 void
 open_URL_in_default_app(const char *URL)
 {
 	ShellExecute(NULL, NULL, URL, 0, 0, SW_SHOWNORMAL);
+}
+
+//------------------------------------------------------------------------------
+// Download a URL to a file or the cache.
+//------------------------------------------------------------------------------
+
+bool
+download_URL_to_file(const char *URL, char *file_path_buffer, int buffer_size)
+{
+	if (*file_path_buffer == '\0') {
+		return URLDownloadToCacheFile(NULL, URL, file_path_buffer, buffer_size, 0, NULL) == S_OK;
+	}
+	return URLDownloadToFile(NULL, URL, file_path_buffer, 0, NULL) == S_OK;
 }
 
 //==============================================================================

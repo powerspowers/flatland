@@ -261,10 +261,13 @@ information(char *title, char *format, ...);
 bool
 query(char *title, bool yes_no_format, char *format, ...);
 
-// URL loading functions.
+// URL functions.
 
 void
 open_URL_in_default_app(const char *URL);
+
+bool
+download_URL_to_file(const char *URL, char *file_path_buffer, int buffer_size);
 
 // Open file dialog.
 
