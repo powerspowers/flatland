@@ -261,7 +261,7 @@ information(char *title, char *format, ...);
 bool
 query(char *title, bool yes_no_format, char *format, ...);
 
-// Open URL in the default external app.
+// URL loading functions.
 
 void
 open_URL_in_default_app(const char *URL);

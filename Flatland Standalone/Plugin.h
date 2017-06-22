@@ -68,11 +68,6 @@ extern semaphore<string> downloaded_file_path;
 
 extern string javascript_URL;
 
-// Web browser ID and version.
-
-extern int web_browser_ID;
-extern string web_browser_version;
-
 // Events sent by player thread.
 
 extern event player_thread_initialised;

@@ -2458,12 +2458,10 @@ request_URL(const char *URL, const char *file_path, const char *target)
 	if (file_path == NULL && target == NULL)
 		loading_message(URL);
 
-	// Set the requested URL, encoding it if necessary to make it browser
-	// friendly.
+	// Set the requested URL, encoding it to make it browser friendly.
 
 	requested_URL = create_URL(spot_URL_dir, URL);
-	if (web_browser_ID == NAVIGATOR)
-		requested_URL = encode_URL(requested_URL);
+	requested_URL = encode_URL(requested_URL);
 
 	// Request that the given URL be downloaded to the given target.
 

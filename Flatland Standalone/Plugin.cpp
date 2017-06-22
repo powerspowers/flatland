@@ -60,11 +60,6 @@ string javascript_URL;					// Set if requesting a javascript URL.
 semaphore<string> downloaded_URL;
 semaphore<string> downloaded_file_path;
 
-// Web browser ID and version.
-
-int web_browser_ID;
-string web_browser_version;
-
 // Events sent by player thread.
 
 event player_thread_initialised;
@@ -374,22 +369,9 @@ display_file_as_web_page(const char *file_path)
 
 	// Construct the URL to the file.
 
-	switch (web_browser_ID) {
-	case NAVIGATOR:
-		URL = "file:///";
-		break;
-	case OPERA:
-		URL = "file://localhost/";
-		break;
-	default:
-		URL = "file://";
-	}
+	URL = "file:///";
 	URL += file_path;
-	if (web_browser_ID == NAVIGATOR) {
-		URL = encode_URL(URL);
-		if (URL[9] == ':')
-			URL[9] = '|';
-	}
+	URL = encode_URL(URL);
 
 	// Open the URL in the default external app.
 

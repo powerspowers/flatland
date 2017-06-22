@@ -8036,8 +8036,8 @@ draw_pixmap(pixmap *pixmap_ptr, int brightness_index, int x, int y, int width,
 	int row, col;
 	pixel *palette_ptr;
 	byte *palette_index_table;
-	int transparent_index;
-	pixel transparency_mask32;
+	int transparent_index = 0;
+	pixel transparency_mask32 = 0;
 	int image_width, span_width;
 	fixed u, v;
 
@@ -8111,7 +8111,6 @@ draw_pixmap(pixmap *pixmap_ptr, int brightness_index, int x, int y, int width,
 		image_width = pixmap_ptr->width * 2;
 		u = (clipped_x % pixmap_ptr->width) * 2;
 	} else {
-		transparency_mask32 = texture_pixel_format.alpha_comp_mask;
 		palette_ptr = pixmap_ptr->display_palette_list + 
 			brightness_index * pixmap_ptr->colours;
 		transparent_index = pixmap_ptr->transparent_index;
