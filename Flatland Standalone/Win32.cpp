@@ -3369,8 +3369,8 @@ public:
 			break;
 		case BINDSTATUS_DOWNLOADINGDATA:
 			if (ulProgressMax > 0) {
-				debug_message("Downloading %s (%f%% complete)\n", (char *)URL, ulProgress * 100.0f / ulProgressMax);
-				set_title("Downloading %s (%f%% complete)", (char *)URL, ulProgress * 100.0f / ulProgressMax);
+				debug_message("Downloading %s (%.1f%% complete)\n", (char *)URL, ulProgress * 100.0f / ulProgressMax);
+				set_title("Downloading %s (%.1f%% complete)", (char *)URL, ulProgress * 100.0f / ulProgressMax);
 			} else {
 				debug_message("Downloading %s\n", (char *)URL);
 				set_title("Downloading %s", (char *)URL);
