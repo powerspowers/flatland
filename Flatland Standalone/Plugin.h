@@ -89,6 +89,7 @@ extern event window_resize_requested;
 extern event mouse_clicked;
 extern event player_window_shutdown_requested;
 extern event player_window_init_requested;
+extern event downloader_thread_termination_requested;
 extern event pause_player_thread;
 extern event resume_player_thread;
 extern event spot_dir_entry_selected;

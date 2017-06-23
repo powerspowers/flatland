@@ -734,6 +734,9 @@ decode_URL(const char *URL)
 	string new_URL;
 	char *old_char_ptr, *new_char_ptr;
 
+	if (URL == NULL || *URL == '\0') {
+		return URL;
+	}
 	new_URL = URL;
 	old_char_ptr = new_URL;
 	new_char_ptr = new_URL;

@@ -85,6 +85,7 @@ event window_resize_requested;
 event mouse_clicked;
 event player_window_shutdown_requested;
 event player_window_init_requested;
+event downloader_thread_termination_requested;
 event pause_player_thread;
 event resume_player_thread;
 event spot_dir_entry_selected;
@@ -1250,9 +1251,9 @@ open_local_file(char *file_path)
 void
 downloader_thread(void *arg_list)
 {
-	// Keep this thread alive until the app dies.
+	// Keep this thread alive until requested to terminate.
 
-	for (;;) {
+	while (!downloader_thread_termination_requested.event_sent()) {
 
 		// Wait for a URL download request to be signalled by the player thread.
 
@@ -1260,24 +1261,24 @@ downloader_thread(void *arg_list)
 			bool result;
 			char file_path[256];
 
+			// If a target window was requested, simply open the URL in the default app.
+
+			if (requested_target != "") {
+				open_URL_in_default_app(requested_URL);
+			}
+
 			// Reset the URL_was_opened flag, and send off the URL request to the
 			// browser.
 
-			URL_was_opened.reset_event();
-			URL_was_opened.send_event(true);
-			strcpy(file_path, (char *)requested_file_path);
-			result = download_URL_to_file(requested_URL, file_path, 256);
-			downloaded_URL.set(requested_URL);
-			downloaded_file_path.set(file_path);
-			URL_was_downloaded.send_event(result);
-		}
-
-		// Check to see whether a URL cancel request has been signalled by the
-		// player thread, and if there is currently a stream being downloaded,
-		// destroy it.
-
-		if (URL_cancel_requested.event_sent()) {
-			// TODO
+			else {
+				URL_was_opened.reset_event();
+				URL_was_opened.send_event(true);
+				strcpy(file_path, (char *)requested_file_path);
+				result = download_URL_to_file(requested_URL, file_path, 256);
+				downloaded_URL.set(requested_URL);
+				downloaded_file_path.set(file_path);
+				URL_was_downloaded.send_event(result);
+			}
 		}
 	}
 }
@@ -1327,6 +1328,7 @@ init_flatland()
 	mouse_clicked.create_event();
 	player_window_shutdown_requested.create_event();
 	player_window_init_requested.create_event();
+	downloader_thread_termination_requested.create_event();
 	pause_player_thread.create_event();
 	resume_player_thread.create_event();
 	spot_dir_entry_selected.create_event();
@@ -1439,6 +1441,11 @@ shutdown_flatland()
 		wait_for_thread_termination(player_thread_handle);
 	}
 
+	// Signal the downloader thread to terminate, and wait for it to do so.
+
+	downloader_thread_termination_requested.send_event(true);
+	wait_for_thread_termination(downloader_thread_handle);
+
 	// Close any windows that might still be open.
 
 	close_progress_window();
@@ -1507,6 +1514,7 @@ shutdown_flatland()
 	mouse_clicked.destroy_event();
 	player_window_shutdown_requested.destroy_event();
 	player_window_init_requested.destroy_event();
+	downloader_thread_termination_requested.destroy_event();
 	pause_player_thread.destroy_event();
 	resume_player_thread.destroy_event();
 	spot_dir_entry_selected.destroy_event();
