@@ -86,7 +86,7 @@
       <PrecompiledHeader>NotUsing</PrecompiledHeader>
       <WarningLevel>Level3</WarningLevel>
       <Optimization>Disabled</Optimization>
-      <PreprocessorDefinitions>_CRT_SECURE_NO_WARNINGS;WIN32;_DEBUG;_WINDOWS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>XML_BUILDING_EXPAT;SIMKIN;_CRT_SECURE_NO_WARNINGS;WIN32;_DEBUG;_WINDOWS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <RuntimeLibrary>MultiThreadedDebugDLL</RuntimeLibrary>
     </ClCompile>
     <Link>
@@ -116,14 +116,14 @@
       <Optimization>MaxSpeed</Optimization>
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
-      <PreprocessorDefinitions>SYMBOLIC_DEBUG;_CRT_SECURE_NO_WARNINGS;WIN32;NDEBUG;_WINDOWS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>XML_BUILDING_EXPAT;SIMKIN;SYMBOLIC_DEBUG;_CRT_SECURE_NO_WARNINGS;WIN32;NDEBUG;_WINDOWS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <OptimizeReferences>true</OptimizeReferences>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <AdditionalDependencies>imagehlp.lib;mpr.lib;netapi32.lib;rpcrt4.lib;ddraw.lib;dsound.lib;winmm.lib;comctl32.lib;Ws2_32.lib;kernel32.lib;user32.lib;gdi32.lib;winspool.lib;comdlg32.lib;advapi32.lib;shell32.lib;ole32.lib;oleaut32.lib;uuid.lib;odbc32.lib;odbccp32.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>urlmon.lib;imagehlp.lib;mpr.lib;netapi32.lib;rpcrt4.lib;ddraw.lib;dsound.lib;winmm.lib;comctl32.lib;Ws2_32.lib;kernel32.lib;user32.lib;gdi32.lib;winspool.lib;comdlg32.lib;advapi32.lib;shell32.lib;ole32.lib;oleaut32.lib;uuid.lib;odbc32.lib;odbccp32.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
@@ -165,6 +165,20 @@
     <ClInclude Include="DirectX\ddraw.h" />
     <ClInclude Include="DirectX\dsound.h" />
     <ClInclude Include="DirectX\dxfile.h" />
+    <ClInclude Include="Expat\ascii.h" />
+    <ClInclude Include="Expat\asciitab.h" />
+    <ClInclude Include="Expat\expat.h" />
+    <ClInclude Include="Expat\expat_external.h" />
+    <ClInclude Include="Expat\iasciitab.h" />
+    <ClInclude Include="Expat\internal.h" />
+    <ClInclude Include="Expat\latin1tab.h" />
+    <ClInclude Include="Expat\nametab.h" />
+    <ClInclude Include="Expat\siphash.h" />
+    <ClInclude Include="Expat\utf8tab.h" />
+    <ClInclude Include="Expat\winconfig.h" />
+    <ClInclude Include="Expat\xmlrole.h" />
+    <ClInclude Include="Expat\xmltok.h" />
+    <ClInclude Include="Expat\xmltok_impl.h" />
     <ClInclude Include="Fileio.h" />
     <ClInclude Include="Flatland Standalone.h" />
     <ClInclude Include="Image.h" />
@@ -187,6 +201,48 @@
     <ClInclude Include="Plugin.h" />
     <ClInclude Include="Render.h" />
     <ClInclude Include="Resource.h" />
+    <ClInclude Include="SimKin.h" />
+    <ClInclude Include="Simkin\skAlist.h" />
+    <ClInclude Include="Simkin\skAttribute.h" />
+    <ClInclude Include="Simkin\skBoundsException.h" />
+    <ClInclude Include="Simkin\skCDataNode.h" />
+    <ClInclude Include="Simkin\skConstants.h" />
+    <ClInclude Include="Simkin\skElement.h" />
+    <ClInclude Include="Simkin\skElementExecutable.h" />
+    <ClInclude Include="Simkin\skElementObject.h" />
+    <ClInclude Include="Simkin\skElementObjectEnumerator.h" />
+    <ClInclude Include="Simkin\skException.h" />
+    <ClInclude Include="Simkin\skExecutable.h" />
+    <ClInclude Include="Simkin\skExecutableContext.h" />
+    <ClInclude Include="Simkin\skExecutableIterator.h" />
+    <ClInclude Include="Simkin\skExpatParser.h" />
+    <ClInclude Include="Simkin\skGeneral.h" />
+    <ClInclude Include="Simkin\skHashTable.h" />
+    <ClInclude Include="Simkin\skiExecutable.h" />
+    <ClInclude Include="Simkin\skInputSource.h" />
+    <ClInclude Include="Simkin\skInterpreter.h" />
+    <ClInclude Include="Simkin\skMethodTable.h" />
+    <ClInclude Include="Simkin\skNode.h" />
+    <ClInclude Include="Simkin\skNull.h" />
+    <ClInclude Include="Simkin\skosfcn.h" />
+    <ClInclude Include="Simkin\skOutputDestination.h" />
+    <ClInclude Include="Simkin\skParseException.h" />
+    <ClInclude Include="Simkin\skParseNode.h" />
+    <ClInclude Include="Simkin\skParser.h" />
+    <ClInclude Include="Simkin\skRuntimeException.h" />
+    <ClInclude Include="Simkin\skRValue.h" />
+    <ClInclude Include="Simkin\skRValueArray.h" />
+    <ClInclude Include="Simkin\skRValueTable.h" />
+    <ClInclude Include="Simkin\skStatementStepper.h" />
+    <ClInclude Include="Simkin\skString.h" />
+    <ClInclude Include="Simkin\skStringBuffer.h" />
+    <ClInclude Include="Simkin\skStringList.h" />
+    <ClInclude Include="Simkin\skStringTokenizer.h" />
+    <ClInclude Include="Simkin\skTextNode.h" />
+    <ClInclude Include="Simkin\skTraceCallback.h" />
+    <ClInclude Include="Simkin\skTracer.h" />
+    <ClInclude Include="Simkin\skValist.h" />
+    <ClInclude Include="Simkin\skXMLParseException.h" />
     <ClInclude Include="Spans.h" />
     <ClInclude Include="stdafx.h" />
     <ClInclude Include="Tags.h" />
@@ -211,6 +267,11 @@
     <ClCompile Include="Collision\Mat.cpp" />
     <ClCompile Include="Collision\Maths.cpp" />
     <ClCompile Include="Collision\Vec.cpp" />
+    <ClCompile Include="Expat\xmlparse.c" />
+    <ClCompile Include="Expat\xmlrole.c" />
+    <ClCompile Include="Expat\xmltok.c" />
+    <ClCompile Include="Expat\xmltok_impl.c" />
+    <ClCompile Include="Expat\xmltok_ns.c" />
     <ClCompile Include="Fileio.cpp" />
     <ClCompile Include="Flatland Standalone.cpp" />
     <ClCompile Include="Image.cpp" />
@@ -266,6 +327,36 @@
     <ClCompile Include="Parser.cpp" />
     <ClCompile Include="Plugin.cpp" />
     <ClCompile Include="Render.cpp" />
+    <ClCompile Include="SimKin.cpp" />
+    <ClCompile Include="Simkin\skAlist.cpp" />
+    <ClCompile Include="Simkin\skAttribute.cpp" />
+    <ClCompile Include="Simkin\skCDataNode.cpp" />
+    <ClCompile Include="Simkin\skConstants.cpp" />
+    <ClCompile Include="Simkin\skElement.cpp" />
+    <ClCompile Include="Simkin\skElementExecutable.cpp" />
+    <ClCompile Include="Simkin\skElementObject.cpp" />
+    <ClCompile Include="Simkin\skElementObjectEnumerator.cpp" />
+    <ClCompile Include="Simkin\skExecutable.cpp" />
+    <ClCompile Include="Simkin\skExecutableContext.cpp" />
+    <ClCompile Include="Simkin\skExecutableIterator.cpp" />
+    <ClCompile Include="Simkin\skExpatParser.cpp" />
+    <ClCompile Include="Simkin\skHashTable.cpp" />
+    <ClCompile Include="Simkin\skInputSource.cpp" />
+    <ClCompile Include="Simkin\skInterpreter.cpp" />
+    <ClCompile Include="Simkin\skInterpreterByte.cpp" />
+    <ClCompile Include="Simkin\skInterpreterNode.cpp" />
+    <ClCompile Include="Simkin\skNode.cpp" />
+    <ClCompile Include="Simkin\skOutputDestination.cpp" />
+    <ClCompile Include="Simkin\skParseNode.cpp" />
+    <ClCompile Include="Simkin\skParser.cpp" />
+    <ClCompile Include="Simkin\skRValue.cpp" />
+    <ClCompile Include="Simkin\skSHashTable.cpp" />
+    <ClCompile Include="Simkin\skStackFrame.cpp" />
+    <ClCompile Include="Simkin\skString.cpp" />
+    <ClCompile Include="Simkin\skStringBuffer.cpp" />
+    <ClCompile Include="Simkin\skStringTokenizer.cpp" />
+    <ClCompile Include="Simkin\skTextNode.cpp" />
+    <ClCompile Include="Simkin\skTracer.cpp" />
     <ClCompile Include="Spans.cpp" />
     <ClCompile Include="stdafx.cpp">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Create</PrecompiledHeader>
@@ -323,6 +414,12 @@
     <None Include="bitmaps\arrow_w.cur" />
     <None Include="bitmaps\hand.cur" />
     <None Include="DirectX\d3dx8math.inl" />
+    <None Include="Simkin\skAlist.inl" />
+    <None Include="Simkin\skHashTable.inl" />
+    <None Include="Simkin\skKeywords.inl" />
+    <None Include="Simkin\skParseNode.inl" />
+    <None Include="Simkin\skRValue.inl" />
+    <None Include="Simkin\skString.inl" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

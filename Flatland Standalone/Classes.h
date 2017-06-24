@@ -1455,6 +1455,7 @@ struct block {
 	COL_MESH *col_mesh_ptr;			// Pointer to the collision mesh.
 	int col_mesh_size;				// Size of collision mesh in bytes.
 #ifdef SIMKIN
+	bool scripted;					// TRUE if this block has scripts.
 	void *block_simkin_object_ptr;	// Pointer to the block SimKin object.
 	void *vertex_simkin_object_ptr;	// Pointer to the vertex SimKin object.
 #endif

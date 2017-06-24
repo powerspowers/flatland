@@ -3264,14 +3264,14 @@ render_next_frame(void)
 	if (script_executing) {
 		if (!(script_executing = resume_script()) && 
 			active_script_count != 0) {
-			for (j = 0; j < active_script_count; j++)
+			for (int j = 0; j < active_script_count; j++)
 				active_script_list[j] = active_script_list[j + 1];
 			active_script_count--;
 		}
 	} else if (active_script_count != 0) {
 		if (!(script_executing = execute_script(active_script_list[0]->block_ptr, 
 			active_script_list[0]->script_def_ptr))) {
-			for (j = 0; j < active_script_count; j++)
+			for (int j = 0; j < active_script_count; j++)
 				active_script_list[j] = active_script_list[j + 1];
 			active_script_count--;
 		}
@@ -4312,7 +4312,12 @@ player_thread(void *arg_list)
 			// If a player window shutdown has not been requested, repeat the
 			// event loop.
 
+			static long long counter = 0;
+			debug_message("Checking for player window shutdown request: %lld\n", counter++);
+
 		} while (!player_window_shutdown_requested.event_sent());
+
+		debug_message("--> Got it\n");
 
 		// Shut down the spot if it were loaded.
 

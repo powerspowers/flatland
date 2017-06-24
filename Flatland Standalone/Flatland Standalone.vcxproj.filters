@@ -34,6 +34,18 @@
     <Filter Include="Header Files\DirectX">
       <UniqueIdentifier>{9879e7ed-57a4-4467-a772-ebcd6597fe8f}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Header Files\Simkin">
+      <UniqueIdentifier>{7b3d8a54-e991-4a09-887b-63284b3f1080}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\Simkin">
+      <UniqueIdentifier>{098c3016-3929-4e1c-b0db-b24da04cc939}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Header Files\Expat">
+      <UniqueIdentifier>{ea7ac0cb-975c-41ed-b63d-bd44f1947d29}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\Expat">
+      <UniqueIdentifier>{b049ddbf-bf44-45a0-84e1-915f1567ba30}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <Text Include="ReadMe.txt" />
@@ -209,6 +221,174 @@
     </ClInclude>
     <ClInclude Include="Plugin.h">
       <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="SimKin.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Simkin\skAlist.h">
+      <Filter>Header Files\Simkin</Filter>
+    </ClInclude>
+    <ClInclude Include="Simkin\skAttribute.h">
+      <Filter>Header Files\Simkin</Filter>
+    </ClInclude>
+    <ClInclude Include="Simkin\skBoundsException.h">
+      <Filter>Header Files\Simkin</Filter>
+    </ClInclude>
+    <ClInclude Include="Simkin\skCDataNode.h">
+      <Filter>Header Files\Simkin</Filter>
+    </ClInclude>
+    <ClInclude Include="Simkin\skElement.h">
+      <Filter>Header Files\Simkin</Filter>
+    </ClInclude>
+    <ClInclude Include="Simkin\skElementExecutable.h">
+      <Filter>Header Files\Simkin</Filter>
+    </ClInclude>
+    <ClInclude Include="Simkin\skElementObject.h">
+      <Filter>Header Files\Simkin</Filter>
+    </ClInclude>
+    <ClInclude Include="Simkin\skElementObjectEnumerator.h">
+      <Filter>Header Files\Simkin</Filter>
+    </ClInclude>
+    <ClInclude Include="Simkin\skExecutable.h">
+      <Filter>Header Files\Simkin</Filter>
+    </ClInclude>
+    <ClInclude Include="Simkin\skExecutableIterator.h">
+      <Filter>Header Files\Simkin</Filter>
+    </ClInclude>
+    <ClInclude Include="Simkin\skExpatParser.h">
+      <Filter>Header Files\Simkin</Filter>
+    </ClInclude>
+    <ClInclude Include="Simkin\skGeneral.h">
+      <Filter>Header Files\Simkin</Filter>
+    </ClInclude>
+    <ClInclude Include="Simkin\skHashTable.h">
+      <Filter>Header Files\Simkin</Filter>
+    </ClInclude>
+    <ClInclude Include="Simkin\skiExecutable.h">
+      <Filter>Header Files\Simkin</Filter>
+    </ClInclude>
+    <ClInclude Include="Simkin\skInterpreter.h">
+      <Filter>Header Files\Simkin</Filter>
+    </ClInclude>
+    <ClInclude Include="Simkin\skMethodTable.h">
+      <Filter>Header Files\Simkin</Filter>
+    </ClInclude>
+    <ClInclude Include="Simkin\skNode.h">
+      <Filter>Header Files\Simkin</Filter>
+    </ClInclude>
+    <ClInclude Include="Simkin\skNull.h">
+      <Filter>Header Files\Simkin</Filter>
+    </ClInclude>
+    <ClInclude Include="Simkin\skosfcn.h">
+      <Filter>Header Files\Simkin</Filter>
+    </ClInclude>
+    <ClInclude Include="Simkin\skParseException.h">
+      <Filter>Header Files\Simkin</Filter>
+    </ClInclude>
+    <ClInclude Include="Simkin\skParseNode.h">
+      <Filter>Header Files\Simkin</Filter>
+    </ClInclude>
+    <ClInclude Include="Simkin\skParser.h">
+      <Filter>Header Files\Simkin</Filter>
+    </ClInclude>
+    <ClInclude Include="Simkin\skRuntimeException.h">
+      <Filter>Header Files\Simkin</Filter>
+    </ClInclude>
+    <ClInclude Include="Simkin\skRValue.h">
+      <Filter>Header Files\Simkin</Filter>
+    </ClInclude>
+    <ClInclude Include="Simkin\skRValueArray.h">
+      <Filter>Header Files\Simkin</Filter>
+    </ClInclude>
+    <ClInclude Include="Simkin\skRValueTable.h">
+      <Filter>Header Files\Simkin</Filter>
+    </ClInclude>
+    <ClInclude Include="Simkin\skStatementStepper.h">
+      <Filter>Header Files\Simkin</Filter>
+    </ClInclude>
+    <ClInclude Include="Simkin\skString.h">
+      <Filter>Header Files\Simkin</Filter>
+    </ClInclude>
+    <ClInclude Include="Simkin\skStringBuffer.h">
+      <Filter>Header Files\Simkin</Filter>
+    </ClInclude>
+    <ClInclude Include="Simkin\skStringList.h">
+      <Filter>Header Files\Simkin</Filter>
+    </ClInclude>
+    <ClInclude Include="Simkin\skStringTokenizer.h">
+      <Filter>Header Files\Simkin</Filter>
+    </ClInclude>
+    <ClInclude Include="Simkin\skTextNode.h">
+      <Filter>Header Files\Simkin</Filter>
+    </ClInclude>
+    <ClInclude Include="Simkin\skTraceCallback.h">
+      <Filter>Header Files\Simkin</Filter>
+    </ClInclude>
+    <ClInclude Include="Simkin\skTracer.h">
+      <Filter>Header Files\Simkin</Filter>
+    </ClInclude>
+    <ClInclude Include="Simkin\skValist.h">
+      <Filter>Header Files\Simkin</Filter>
+    </ClInclude>
+    <ClInclude Include="Expat\ascii.h">
+      <Filter>Header Files\Expat</Filter>
+    </ClInclude>
+    <ClInclude Include="Expat\asciitab.h">
+      <Filter>Header Files\Expat</Filter>
+    </ClInclude>
+    <ClInclude Include="Expat\expat.h">
+      <Filter>Header Files\Expat</Filter>
+    </ClInclude>
+    <ClInclude Include="Expat\expat_external.h">
+      <Filter>Header Files\Expat</Filter>
+    </ClInclude>
+    <ClInclude Include="Expat\iasciitab.h">
+      <Filter>Header Files\Expat</Filter>
+    </ClInclude>
+    <ClInclude Include="Expat\internal.h">
+      <Filter>Header Files\Expat</Filter>
+    </ClInclude>
+    <ClInclude Include="Expat\latin1tab.h">
+      <Filter>Header Files\Expat</Filter>
+    </ClInclude>
+    <ClInclude Include="Expat\nametab.h">
+      <Filter>Header Files\Expat</Filter>
+    </ClInclude>
+    <ClInclude Include="Expat\siphash.h">
+      <Filter>Header Files\Expat</Filter>
+    </ClInclude>
+    <ClInclude Include="Expat\utf8tab.h">
+      <Filter>Header Files\Expat</Filter>
+    </ClInclude>
+    <ClInclude Include="Expat\winconfig.h">
+      <Filter>Header Files\Expat</Filter>
+    </ClInclude>
+    <ClInclude Include="Expat\xmlrole.h">
+      <Filter>Header Files\Expat</Filter>
+    </ClInclude>
+    <ClInclude Include="Expat\xmltok.h">
+      <Filter>Header Files\Expat</Filter>
+    </ClInclude>
+    <ClInclude Include="Expat\xmltok_impl.h">
+      <Filter>Header Files\Expat</Filter>
+    </ClInclude>
+    <ClInclude Include="Simkin\skException.h">
+      <Filter>Header Files\Simkin</Filter>
+    </ClInclude>
+    <ClInclude Include="Simkin\skExecutableContext.h">
+      <Filter>Header Files\Simkin</Filter>
+    </ClInclude>
+    <ClInclude Include="Simkin\skInputSource.h">
+      <Filter>Header Files\Simkin</Filter>
+    </ClInclude>
+    <ClInclude Include="Simkin\skOutputDestination.h">
+      <Filter>Header Files\Simkin</Filter>
+    </ClInclude>
+    <ClInclude Include="Simkin\skXMLParseException.h">
+      <Filter>Header Files\Simkin</Filter>
+    </ClInclude>
+    <ClInclude Include="Simkin\skConstants.h">
+      <Filter>Header Files\Simkin</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
@@ -443,6 +623,111 @@
     <ClCompile Include="Plugin.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="SimKin.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="Simkin\skAlist.cpp">
+      <Filter>Source Files\Simkin</Filter>
+    </ClCompile>
+    <ClCompile Include="Simkin\skCDataNode.cpp">
+      <Filter>Source Files\Simkin</Filter>
+    </ClCompile>
+    <ClCompile Include="Simkin\skElement.cpp">
+      <Filter>Source Files\Simkin</Filter>
+    </ClCompile>
+    <ClCompile Include="Simkin\skElementExecutable.cpp">
+      <Filter>Source Files\Simkin</Filter>
+    </ClCompile>
+    <ClCompile Include="Simkin\skElementObject.cpp">
+      <Filter>Source Files\Simkin</Filter>
+    </ClCompile>
+    <ClCompile Include="Simkin\skElementObjectEnumerator.cpp">
+      <Filter>Source Files\Simkin</Filter>
+    </ClCompile>
+    <ClCompile Include="Simkin\skExecutable.cpp">
+      <Filter>Source Files\Simkin</Filter>
+    </ClCompile>
+    <ClCompile Include="Simkin\skExecutableIterator.cpp">
+      <Filter>Source Files\Simkin</Filter>
+    </ClCompile>
+    <ClCompile Include="Simkin\skExpatParser.cpp">
+      <Filter>Source Files\Simkin</Filter>
+    </ClCompile>
+    <ClCompile Include="Simkin\skHashTable.cpp">
+      <Filter>Source Files\Simkin</Filter>
+    </ClCompile>
+    <ClCompile Include="Simkin\skInterpreter.cpp">
+      <Filter>Source Files\Simkin</Filter>
+    </ClCompile>
+    <ClCompile Include="Simkin\skNode.cpp">
+      <Filter>Source Files\Simkin</Filter>
+    </ClCompile>
+    <ClCompile Include="Simkin\skParser.cpp">
+      <Filter>Source Files\Simkin</Filter>
+    </ClCompile>
+    <ClCompile Include="Simkin\skRValue.cpp">
+      <Filter>Source Files\Simkin</Filter>
+    </ClCompile>
+    <ClCompile Include="Simkin\skString.cpp">
+      <Filter>Source Files\Simkin</Filter>
+    </ClCompile>
+    <ClCompile Include="Simkin\skStringBuffer.cpp">
+      <Filter>Source Files\Simkin</Filter>
+    </ClCompile>
+    <ClCompile Include="Simkin\skStringTokenizer.cpp">
+      <Filter>Source Files\Simkin</Filter>
+    </ClCompile>
+    <ClCompile Include="Simkin\skTextNode.cpp">
+      <Filter>Source Files\Simkin</Filter>
+    </ClCompile>
+    <ClCompile Include="Simkin\skTracer.cpp">
+      <Filter>Source Files\Simkin</Filter>
+    </ClCompile>
+    <ClCompile Include="Expat\xmlparse.c">
+      <Filter>Source Files\Expat</Filter>
+    </ClCompile>
+    <ClCompile Include="Expat\xmlrole.c">
+      <Filter>Source Files\Expat</Filter>
+    </ClCompile>
+    <ClCompile Include="Expat\xmltok.c">
+      <Filter>Source Files\Expat</Filter>
+    </ClCompile>
+    <ClCompile Include="Expat\xmltok_impl.c">
+      <Filter>Source Files\Expat</Filter>
+    </ClCompile>
+    <ClCompile Include="Expat\xmltok_ns.c">
+      <Filter>Source Files\Expat</Filter>
+    </ClCompile>
+    <ClCompile Include="Simkin\skAttribute.cpp">
+      <Filter>Source Files\Simkin</Filter>
+    </ClCompile>
+    <ClCompile Include="Simkin\skConstants.cpp">
+      <Filter>Source Files\Simkin</Filter>
+    </ClCompile>
+    <ClCompile Include="Simkin\skExecutableContext.cpp">
+      <Filter>Source Files\Simkin</Filter>
+    </ClCompile>
+    <ClCompile Include="Simkin\skInputSource.cpp">
+      <Filter>Source Files\Simkin</Filter>
+    </ClCompile>
+    <ClCompile Include="Simkin\skInterpreterByte.cpp">
+      <Filter>Source Files\Simkin</Filter>
+    </ClCompile>
+    <ClCompile Include="Simkin\skInterpreterNode.cpp">
+      <Filter>Source Files\Simkin</Filter>
+    </ClCompile>
+    <ClCompile Include="Simkin\skOutputDestination.cpp">
+      <Filter>Source Files\Simkin</Filter>
+    </ClCompile>
+    <ClCompile Include="Simkin\skParseNode.cpp">
+      <Filter>Source Files\Simkin</Filter>
+    </ClCompile>
+    <ClCompile Include="Simkin\skSHashTable.cpp">
+      <Filter>Source Files\Simkin</Filter>
+    </ClCompile>
+    <ClCompile Include="Simkin\skStackFrame.cpp">
+      <Filter>Source Files\Simkin</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="Flatland Standalone.rc">
@@ -538,6 +823,24 @@
     </None>
     <None Include="bitmaps\hand.cur">
       <Filter>Resource Files</Filter>
+    </None>
+    <None Include="Simkin\skAlist.inl">
+      <Filter>Header Files\Simkin</Filter>
+    </None>
+    <None Include="Simkin\skHashTable.inl">
+      <Filter>Header Files\Simkin</Filter>
+    </None>
+    <None Include="Simkin\skRValue.inl">
+      <Filter>Header Files\Simkin</Filter>
+    </None>
+    <None Include="Simkin\skString.inl">
+      <Filter>Header Files\Simkin</Filter>
+    </None>
+    <None Include="Simkin\skParseNode.inl">
+      <Filter>Header Files\Simkin</Filter>
+    </None>
+    <None Include="Simkin\skKeywords.inl">
+      <Filter>Header Files\Simkin</Filter>
     </None>
   </ItemGroup>
 </Project>
