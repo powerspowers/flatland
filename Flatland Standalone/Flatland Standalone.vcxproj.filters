@@ -60,9 +60,6 @@
     <ClInclude Include="Resource.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="Flatland Standalone.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="Classes.h">
       <Filter>Header Files</Filter>
     </ClInclude>
@@ -388,6 +385,9 @@
       <Filter>Header Files\Simkin</Filter>
     </ClInclude>
     <ClInclude Include="Simkin\skConstants.h">
+      <Filter>Header Files\Simkin</Filter>
+    </ClInclude>
+    <ClInclude Include="Simkin\skStackFrame.h">
       <Filter>Header Files\Simkin</Filter>
     </ClInclude>
   </ItemGroup>

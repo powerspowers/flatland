@@ -207,10 +207,15 @@ public:
 // Start up/shut down functions (called by the plugin thread only).
 
 bool
-start_up_platform_API(void);
+start_up_platform_API(void *instance_handle, int show_command, void (*quit_callback)());
 
 void
 shut_down_platform_API(void);
+
+// Main event loop.
+
+int
+run_event_loop();
 
 // Thread functions.
 

@@ -10,6 +10,7 @@
 
 #include <windows.h>
 #include <windowsx.h>
+#include "resource.h"
 
 #if SYMBOLIC_DEBUG
 #include "Dbghelp.h"
@@ -40,7 +41,6 @@
 #include "resource.h"
 #include "Classes.h"
 #include "Fileio.h"
-#include "Flatland Standalone.h"
 #include "Image.h"
 #include "Light.h"
 #include "Main.h"
@@ -476,6 +476,13 @@ static unsigned long streaming_thread_handle;
 static texture *splash_texture_ptr;
 static bitmap *splash_bitmap_ptr;
 
+// App window data.
+
+static HINSTANCE app_instance_handle;
+static HWND app_window_handle;
+static HWND status_bar_handle;
+static void (*quit_callback_ptr)();
+
 // Main window data.
 
 static HWND main_window_handle;
@@ -853,13 +860,13 @@ load_GIF_resource(int resource_ID)
 
 	// Find the resource with the given ID.
 
-	if ((resource_handle = FindResource(instance_handle, 
+	if ((resource_handle = FindResource(app_instance_handle, 
 		MAKEINTRESOURCE(resource_ID), "GIF")) == NULL)
 		return(NULL);
 
 	// Load the resource.
 
-	if ((GIF_handle = LoadResource(instance_handle, resource_handle)) == NULL)
+	if ((GIF_handle = LoadResource(app_instance_handle, resource_handle)) == NULL)
 		return(NULL);
 
 	// Lock the resource, obtaining a pointer to the raw data.
@@ -870,7 +877,7 @@ load_GIF_resource(int resource_ID)
 	// Open the raw data as if it were a file.
 
 	if (!push_buffer((const char *)GIF_ptr, 
-		SizeofResource(instance_handle, resource_handle)))
+		SizeofResource(app_instance_handle, resource_handle)))
 		return(NULL);
 
 	// Load the raw data as a GIF.
@@ -2265,12 +2272,116 @@ exception_filter(EXCEPTION_POINTERS *exception_ptr)
 // Start up/Shut down functions.
 //==============================================================================
 
+// About box dialog procedure.
+
+INT_PTR CALLBACK about_box_dialog_proc(HWND hDlg, UINT message, WPARAM wParam, LPARAM lParam)
+{
+	UNREFERENCED_PARAMETER(lParam);
+	switch (message)
+	{
+	case WM_INITDIALOG:
+		return (INT_PTR)TRUE;
+
+	case WM_COMMAND:
+		if (LOWORD(wParam) == IDOK || LOWORD(wParam) == IDCANCEL)
+		{
+			EndDialog(hDlg, LOWORD(wParam));
+			return (INT_PTR)TRUE;
+		}
+		break;
+	}
+	return (INT_PTR)FALSE;
+}
+
+// Application window procedure.
+
+LRESULT CALLBACK app_window_proc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
+{
+	switch (message)
+	{
+	case WM_COMMAND:
+		{
+			int wmId = LOWORD(wParam);
+			switch (wmId)
+			{
+			case IDM_ABOUT:
+				DialogBox(app_instance_handle, MAKEINTRESOURCE(IDD_ABOUTBOX), hWnd, about_box_dialog_proc);
+				break;
+			case ID_HELP_VIEWHELP:
+				open_help_window();
+				break;
+			case ID_FILE_OPENSPOTURL:
+				{
+					string spot_URL;
+					if (open_URL_dialog(&spot_URL)) {
+						raise_semaphore(recent_spot_list_semaphore);
+						selected_recent_spot_URL = spot_URL;
+						recent_spot_selected.send_event(true);
+						lower_semaphore(recent_spot_list_semaphore);
+					}
+				}
+				break;
+			case ID_FILE_OPENSPOTFILE:
+				{	
+					char file_path[256];
+					if (open_file_dialog(file_path, 256)) {
+						raise_semaphore(recent_spot_list_semaphore);
+						selected_recent_spot_URL = file_path;
+						recent_spot_selected.send_event(true);
+						lower_semaphore(recent_spot_list_semaphore);
+					}
+				}
+				break;
+			case ID_FILE_OPTIONS:
+				show_options_window();
+				break;
+			case ID_FILE_BRIGHTNESS:
+				show_light_window();
+				break;
+			case ID_FILE_MANAGEBLOCKSETS:
+				open_blockset_manager_window();
+				break;
+			case ID_FILE_VIEW3DMLSOURCE:
+				display_file_as_web_page(curr_spot_file_path);
+				break;
+			case IDM_EXIT:
+				DestroyWindow(hWnd);
+				break;
+			default:
+				return DefWindowProc(hWnd, message, wParam, lParam);
+			}
+		}
+		break;
+	case WM_PAINT:
+		{
+			PAINTSTRUCT ps;
+			HDC hdc = BeginPaint(hWnd, &ps);
+			// TODO: Add any drawing code that uses hdc here...
+			EndPaint(hWnd, &ps);
+		}
+		break;
+	case WM_SIZE:
+		{
+			SendMessage(status_bar_handle, WM_SIZE, wParam, lParam);
+			resize_main_window();
+		}
+		break;
+	case WM_DESTROY:
+		quit_callback_ptr();
+		PostQuitMessage(0);
+		break;
+	default:
+		return DefWindowProc(hWnd, message, wParam, lParam);
+	}
+	return 0;
+}
+
 //------------------------------------------------------------------------------
 // Start up the platform API.
 //------------------------------------------------------------------------------
 
 bool
-start_up_platform_API(void)
+start_up_platform_API(void *instance_handle, int show_command, void (*quit_callback)())
 {
 	char dll_path[_MAX_PATH];
 	HANDLE find_handle;
@@ -2283,8 +2394,53 @@ start_up_platform_API(void)
 
 	// Initialise global variables.
 
+	app_instance_handle = (HINSTANCE)instance_handle;
+	quit_callback_ptr = quit_callback;
 	splash_texture_ptr = NULL;
 	splash_bitmap_ptr = NULL;
+
+	// Initialise the common control DLL.
+
+	InitCommonControls();
+
+	// Initialise the COM library.
+
+	CoInitialize(NULL);
+
+	// Register the application window class.
+
+	WNDCLASSEX wcex;
+	wcex.cbSize = sizeof(WNDCLASSEX);
+	wcex.style          = CS_HREDRAW | CS_VREDRAW;
+	wcex.lpfnWndProc    = app_window_proc;
+	wcex.cbClsExtra     = 0;
+	wcex.cbWndExtra     = 0;
+	wcex.hInstance      = app_instance_handle;
+	wcex.hIcon          = LoadIcon(app_instance_handle, MAKEINTRESOURCE(IDI_FLATLANDSTANDALONE));
+	wcex.hCursor        = LoadCursor(nullptr, IDC_ARROW);
+	wcex.hbrBackground  = (HBRUSH)(COLOR_WINDOW+1);
+	wcex.lpszMenuName   = MAKEINTRESOURCE(IDC_FLATLANDSTANDALONE);
+	wcex.lpszClassName  = "FlatlandAppWindow";
+	wcex.hIconSm        = LoadIcon(app_instance_handle, MAKEINTRESOURCE(IDI_SMALL));
+	if (!RegisterClassEx(&wcex)) {
+		return FALSE;
+	}
+
+	// Create the application window.
+
+	app_window_handle = CreateWindow("FlatlandAppWindow", "Flatland", WS_OVERLAPPEDWINDOW,
+		CW_USEDEFAULT, 0, CW_USEDEFAULT, 0, nullptr, nullptr, app_instance_handle, nullptr);
+	if (!app_window_handle) {
+		return FALSE;
+	}
+
+	// Add a status bar at the bottom of the main application window.
+
+	status_bar_handle = CreateWindow(STATUSCLASSNAME, NULL, SBARS_SIZEGRIP | WS_CHILD | WS_VISIBLE,
+		0, 0, 0, 0, app_window_handle, NULL, app_instance_handle, NULL);
+	if (!status_bar_handle) {
+		return FALSE;
+	}
 
 	// Check whether d3d8.dll exists, and if so load it and get a pointer to
 	// the Direct3DCreate8 function.
@@ -2344,10 +2500,10 @@ start_up_platform_API(void)
 	// Get handles to all of the required cursors.
 
 	for (index = 0; index < MOVEMENT_CURSORS; index++)
-		movement_cursor_handle_list[index] = LoadCursor(instance_handle, 
+		movement_cursor_handle_list[index] = LoadCursor(app_instance_handle, 
 			MAKEINTRESOURCE(movement_cursor_ID_list[index]));
 	arrow_cursor_handle = LoadCursor(NULL, IDC_ARROW);
-	hand_cursor_handle = LoadCursor(instance_handle, MAKEINTRESOURCE(IDC_HAND_CURSOR));
+	hand_cursor_handle = LoadCursor(app_instance_handle, MAKEINTRESOURCE(IDC_HAND_CURSOR));
 	crosshair_cursor_handle = LoadCursor(NULL, IDC_CROSS);	
 
 	// Register the main window class.
@@ -2355,7 +2511,7 @@ start_up_platform_API(void)
 	window_class.style = CS_HREDRAW | CS_VREDRAW;
 	window_class.cbClsExtra = 0;
 	window_class.cbWndExtra = 0;
-	window_class.hInstance = instance_handle;
+	window_class.hInstance = app_instance_handle;
 	window_class.lpfnWndProc = handle_main_window_event;
 	window_class.hIcon = LoadIcon(NULL, IDI_APPLICATION);
 	window_class.hCursor = arrow_cursor_handle;
@@ -2380,9 +2536,10 @@ start_up_platform_API(void)
 	snapshot_window_handle = NULL;
 	blockset_manager_window_handle = NULL;
 
-	// Initialise the COM library.
+	// Show and update the app window.
 
-	CoInitialize(NULL);
+	ShowWindow(app_window_handle, show_command);
+	UpdateWindow(app_window_handle);
 
 	// Load the splash graphic GIF resource as a texture and bitmap.
 
@@ -2413,8 +2570,8 @@ shut_down_platform_API(void)
 
 	// Unregister the main window class.
 
-	if (instance_handle != NULL)
-		UnregisterClass("MainWindow", instance_handle);
+	if (app_instance_handle != NULL)
+		UnregisterClass("MainWindow", app_instance_handle);
 
 	// Uninitialize the COM library.
 
@@ -2612,6 +2769,26 @@ shut_down_software_renderer(void)
 
 	if (ddraw_object_ptr != NULL)
 		ddraw_object_ptr->Release();
+}
+
+//------------------------------------------------------------------------------
+// Application event loop.
+//------------------------------------------------------------------------------
+
+int
+run_event_loop()
+{
+	HACCEL hAccelTable = LoadAccelerators(app_instance_handle, MAKEINTRESOURCE(IDC_FLATLANDSTANDALONE));
+	MSG msg;
+
+	while (GetMessage(&msg, nullptr, 0, 0)) {
+		if (!TranslateAccelerator(msg.hwnd, hAccelTable, &msg)) {
+			TranslateMessage(&msg);
+			DispatchMessage(&msg);
+		}
+	}
+
+	return (int) msg.wParam;
 }
 
 //==============================================================================
@@ -2900,7 +3077,7 @@ create_main_window(void (*key_callback)(byte key_code, bool key_down),
 		main_window_rect.left, main_window_rect.top, 
 		main_window_rect.right - main_window_rect.left,
 		main_window_rect.bottom - main_window_rect.top,
-		app_window_handle, nullptr, instance_handle, nullptr);
+		app_window_handle, nullptr, app_instance_handle, nullptr);
 	if (main_window_handle == NULL) {
 		return false;
 	}
@@ -3465,7 +3642,7 @@ open_URL_dialog(string *URL_ptr)
 {
 	// Bring up a dialog box that requests a spot URL.
 
-	if (DialogBox(instance_handle, MAKEINTRESOURCE(IDD_OPENSPOTURL),
+	if (DialogBox(app_instance_handle, MAKEINTRESOURCE(IDD_OPENSPOTURL),
 		main_window_handle, handle_open_URL_event)) {
 		char *trimmed_spot_URL = spot_URL;
 		while (*trimmed_spot_URL != 0 && *trimmed_spot_URL == ' ') {
@@ -3533,7 +3710,7 @@ open_progress_window(int file_size, void (*progress_callback)(void),
 
 	// Create the progress window.
 
-	progress_window_handle = CreateDialog(instance_handle,
+	progress_window_handle = CreateDialog(app_instance_handle,
 		MAKEINTRESOURCE(IDD_PROGRESS), NULL, handle_progress_event);
 
 	// Get the handle to the progress text static control, and set it's text.
@@ -3658,7 +3835,7 @@ open_light_window(float brightness, void (*light_callback)(float brightness,
 
 	// Create the light window.
 
-	light_window_handle = CreateDialog(instance_handle,
+	light_window_handle = CreateDialog(app_instance_handle,
 		MAKEINTRESOURCE(IDD_LIGHT), main_window_handle, 
 		handle_light_event);
 
@@ -3788,7 +3965,7 @@ open_options_window(bool download_sounds_value, int visible_radius_value,
 
 	// Create the options window.
 
-	options_window_handle = CreateDialog(instance_handle,
+	options_window_handle = CreateDialog(app_instance_handle,
 		MAKEINTRESOURCE(IDD_OPTIONS), main_window_handle,
 		handle_options_event);
 
@@ -3928,7 +4105,7 @@ open_help_window(void)
 
 	// Create the help window.
 
-	help_window_handle = CreateDialog(instance_handle,
+	help_window_handle = CreateDialog(app_instance_handle,
 		MAKEINTRESOURCE(IDD_HELP), main_window_handle,
 		handle_help_event);
 
@@ -4014,7 +4191,7 @@ open_about_window(void)
 
 	// Create the about window.
 
-	about_window_handle = CreateDialog(instance_handle,
+	about_window_handle = CreateDialog(app_instance_handle,
 		MAKEINTRESOURCE(IDD_ABOUT), main_window_handle,
 		handle_about_event);
 
@@ -4117,7 +4294,7 @@ open_snapshot_window(int width, int height, void (*snapshot_callback)(int width,
 
 	// Create the snapshot window.
 
-	snapshot_window_handle = CreateDialog(instance_handle,
+	snapshot_window_handle = CreateDialog(app_instance_handle,
 		MAKEINTRESOURCE(IDD_SNAPSHOT), main_window_handle,
 		handle_snapshot_event);
 
@@ -4485,7 +4662,7 @@ open_blockset_manager_window(void)
 
 	// Create the blockset manager dialog box.
 
-	blockset_manager_window_handle = CreateDialog(instance_handle,
+	blockset_manager_window_handle = CreateDialog(app_instance_handle,
 		MAKEINTRESOURCE(IDD_BLOCKSET_MANAGER), main_window_handle,
 		handle_blockset_manager_event);
 
@@ -4583,7 +4760,7 @@ get_password(string *username_ptr, string *password_ptr)
 {
 	// Bring up a dialog box that requests a username and password.
 
-	if (DialogBox(instance_handle, MAKEINTRESOURCE(IDD_PASSWORD), 
+	if (DialogBox(app_instance_handle, MAKEINTRESOURCE(IDD_PASSWORD), 
 		main_window_handle, handle_password_event)) {
 		*username_ptr = username;
 		*password_ptr = password;

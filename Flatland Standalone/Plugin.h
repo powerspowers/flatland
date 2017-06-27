@@ -149,17 +149,8 @@ extern const char *snapshot_file_path;
 
 // Entry points called by the application.
 
-bool
-init_flatland();
-
-void
-shutdown_flatland();
-
-bool
-create_player_window();
-
-void
-destroy_player_window();
+int
+run_app(void *instance_handle, int show_command);
 
 void
 open_local_file(char *file_path);

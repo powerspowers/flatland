@@ -180,7 +180,6 @@
     <ClInclude Include="Expat\xmltok.h" />
     <ClInclude Include="Expat\xmltok_impl.h" />
     <ClInclude Include="Fileio.h" />
-    <ClInclude Include="Flatland Standalone.h" />
     <ClInclude Include="Image.h" />
     <ClInclude Include="Jpeg\JCHUFF.H" />
     <ClInclude Include="Jpeg\jconfig.h" />
@@ -233,6 +232,7 @@
     <ClInclude Include="Simkin\skRValue.h" />
     <ClInclude Include="Simkin\skRValueArray.h" />
     <ClInclude Include="Simkin\skRValueTable.h" />
+    <ClInclude Include="Simkin\skStackFrame.h" />
     <ClInclude Include="Simkin\skStatementStepper.h" />
     <ClInclude Include="Simkin\skString.h" />
     <ClInclude Include="Simkin\skStringBuffer.h" />

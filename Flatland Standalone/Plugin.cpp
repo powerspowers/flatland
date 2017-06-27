@@ -240,10 +240,10 @@ static void
 display_event_callback(void);
 
 //------------------------------------------------------------------------------
-// Create and the player window.
+// Create the player window.
 //------------------------------------------------------------------------------
 
-bool
+static bool
 create_player_window()
 {
 	// Tell the player thread we're about to create the player window.
@@ -291,7 +291,7 @@ create_player_window()
 // Destroy the player window.
 //------------------------------------------------------------------------------
 
-void
+static void
 destroy_player_window()
 {
 	// Send the sequence of signals required to ensure that the player thread
@@ -1226,6 +1226,19 @@ display_event_callback(void)
 }
 
 //------------------------------------------------------------------------------
+// Quit callback procedure.
+//------------------------------------------------------------------------------
+
+static void shut_down_app();
+
+static void
+quit_callback()
+{
+	destroy_player_window();
+	shut_down_app();
+}
+
+//------------------------------------------------------------------------------
 // Open a local file.
 //------------------------------------------------------------------------------
 
@@ -1284,11 +1297,11 @@ downloader_thread(void *arg_list)
 }
 
 //------------------------------------------------------------------------------
-// Initialize the app.
+// Run the app.
 //------------------------------------------------------------------------------
 
-bool
-init_flatland()
+int
+run_app(void *instance_handle, int show_command)
 {
 	// Start the memory trace.
 
@@ -1302,7 +1315,7 @@ init_flatland()
 
 	// Start up the platform API.
 
-	if (!start_up_platform_API())
+	if (!start_up_platform_API(instance_handle, show_command, quit_callback))
 		return(false);
 
 	// Create the events sent by the player thread.
@@ -1420,18 +1433,32 @@ init_flatland()
 
 	player_active = player_thread_initialised.wait_for_event();
 
+	// Create the player window.
+
+	if (!create_player_window()) {
+		return false;
+	}
+
+	// Open the splash spot.
+
+	string splash_file_path = flatland_dir + "splash.3dml";
+	open_local_file(splash_file_path);
+
 	// Indicate Rover started up sucessfully.
 
 	rover_started_up = true;
-	return(true);
+
+	// Run the event loop until the user chooses to quit.
+
+	return run_event_loop();
 }
 
 //------------------------------------------------------------------------------
 // Shut down the app.
 //------------------------------------------------------------------------------
 
-void
-shutdown_flatland()
+static void
+shut_down_app()
 {
 	// If the player thread is active, signal it to terminate, and wait for it
 	// to do so.
