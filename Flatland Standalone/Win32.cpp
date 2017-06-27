@@ -3541,15 +3541,12 @@ public:
 	{
 		switch (ulStatusCode) {
 		case BINDSTATUS_CONNECTING:
-			debug_message("Connecting to %S\n", szStatusText);
 			set_title("Connecting to %S\n", szStatusText);
 			break;
 		case BINDSTATUS_DOWNLOADINGDATA:
 			if (ulProgressMax > 0) {
-				debug_message("Downloading %s (%.1f%% complete)\n", (char *)URL, ulProgress * 100.0f / ulProgressMax);
 				set_title("Downloading %s (%.1f%% complete)", (char *)URL, ulProgress * 100.0f / ulProgressMax);
 			} else {
-				debug_message("Downloading %s\n", (char *)URL);
 				set_title("Downloading %s", (char *)URL);
 			}
 			break;

@@ -3000,17 +3000,13 @@ perform_script_execution(void)
 				get_block_simkin_object(simkin_block_ptr);
 			skRValue vertex_simkin_value =
 				get_vertex_simkin_object(simkin_block_ptr);
-			debug_message("Executing block script\n");
 			simkin_interpreter_ptr->executeParseTree("block", 
 				block_simkin_value.obj(), script_simkin_object_ptr, args, 
 				return_value, *simkin_context_ptr);
-			debug_message("Done\n");
 		} else {
-			debug_message("Executing spot script\n");
 			simkin_interpreter_ptr->executeParseTree("spot", 
 				spot_simkin_object_ptr, script_simkin_object_ptr, args, 
 				return_value, *simkin_context_ptr);
-			debug_message("Done\n");
 		}
 	}
 	catch (skRuntimeException e) {
@@ -3141,11 +3137,9 @@ simkin_thread(void *arg_list)
 			
 		switch (command_code) {
 		case EXECUTE_SCRIPT:
-			debug_message("Executing script\n");
 			script_start_time_ms = get_time_ms();
 			script_resume_time_ms = script_start_time_ms;
 			perform_script_execution();
-			debug_message("Done\n");
 			break;
 		case CALL_GLOBAL_METHOD:
 			script_start_time_ms = get_time_ms();
