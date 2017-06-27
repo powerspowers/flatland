@@ -26,10 +26,6 @@
 #include "SimKin.h"
 #endif
 
-// Version string.
-
-#define ROVER_VERSION_NUMBER			0x03050001 // ff at the end usually unless beta
-
 // Update types.
 
 #define AUTO_UPDATE						0

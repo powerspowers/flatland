@@ -4,6 +4,10 @@
 // All Rights Reserved. 
 //******************************************************************************
 
+// Version string.
+
+#define ROVER_VERSION_NUMBER			0x03060001 // ff at the end usually unless beta
+
 // Activation status.
 
 #define ERROR_STATUS		0

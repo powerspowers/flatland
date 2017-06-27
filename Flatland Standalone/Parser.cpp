@@ -929,16 +929,16 @@ version_number_to_string(unsigned int version_number)
 	version4 = version_number & 255;
 	if (version3 == 0) {
 		if (version4 == 255)
-			bprintf(version_string, 16, "%d.%d", version1, version2);
+			bprintf(version_string, 16, "v%d.%d", version1, version2);
 		else
-			bprintf(version_string, 16, "%d.%db%d", version1, version2, 
+			bprintf(version_string, 16, "v%d.%d-beta.%d", version1, version2, 
 				version4);
 	} else {
 		if (version4 == 255)
-			bprintf(version_string, 16, "%d.%d.%d", version1, version2, 
+			bprintf(version_string, 16, "v%d.%d.%d", version1, version2, 
 				version3);
 		else
-			bprintf(version_string, 16, "%d.%d.%db%d", version1, version2, 
+			bprintf(version_string, 16, "v%d.%d.%d-beta.%d", version1, version2, 
 				version3, version4);
 	}
 	return(version_string);

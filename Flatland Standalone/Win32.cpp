@@ -22,6 +22,7 @@
 #include <time.h>
 #include <math.h>
 #include <process.h>
+#include <direct.h>
 
 #include <commdlg.h>
 #include <commctrl.h>
@@ -2167,7 +2168,7 @@ exception_filter(EXCEPTION_POINTERS *exception_ptr)
 	code_base_address = ((DWORD)descriptor.BaseLow | 
 		((DWORD)descriptor.HighWord.Bytes.BaseMid << 16) |
 		((DWORD)descriptor.HighWord.Bytes.BaseHi << 24)) + 
-		(DWORD)instance_handle;
+		(DWORD)app_instance_handle;
 	
 	// Attempt to obtain the symbol table for the application.  If this fails, we
 	// will generate numerical addresses only in our exception report.
@@ -2179,7 +2180,7 @@ exception_filter(EXCEPTION_POINTERS *exception_ptr)
 	if (SymInitialize(process_handle, app_dir, FALSE)) {
 		sym_initialised = true;
 		if (SymLoadModule(process_handle, NULL, "Flatland Standalone.exe", NULL,
-			(DWORD)instance_handle, 0))
+			(DWORD)app_instance_handle, 0))
 			got_symbol_table = true;
 	}
 
@@ -2247,7 +2248,7 @@ exception_filter(EXCEPTION_POINTERS *exception_ptr)
 
 		// We're done, so unload the symbol table.
 		
-		SymUnloadModule(process_handle, (DWORD)instance_handle);
+		SymUnloadModule(process_handle, (DWORD)app_instance_handle);
 	}
 
 	// If the image helper API was initialised, clean up now.
@@ -2258,7 +2259,7 @@ exception_filter(EXCEPTION_POINTERS *exception_ptr)
 	// Show the exception report dialog box.  It will handle the creation of
 	// the report.
 
-	DialogBox(instance_handle, MAKEINTRESOURCE(IDD_EXCEPTION_REPORT), NULL, 
+	DialogBox(app_instance_handle, MAKEINTRESOURCE(IDD_EXCEPTION_REPORT), NULL, 
 		handle_exception_report_event);
 
 	// Let the normal exception handler execute.
@@ -2428,7 +2429,9 @@ start_up_platform_API(void *instance_handle, int show_command, void (*quit_callb
 
 	// Create the application window.
 
-	app_window_handle = CreateWindow("FlatlandAppWindow", "Flatland", WS_OVERLAPPEDWINDOW,
+	string version = "Flatland ";
+	version += version_number_to_string(ROVER_VERSION_NUMBER);
+	app_window_handle = CreateWindow("FlatlandAppWindow", version, WS_OVERLAPPEDWINDOW,
 		CW_USEDEFAULT, 0, CW_USEDEFAULT, 0, nullptr, nullptr, app_instance_handle, nullptr);
 	if (!app_window_handle) {
 		return FALSE;
@@ -2460,9 +2463,9 @@ start_up_platform_API(void *instance_handle, int show_command, void (*quit_callb
 		FindClose(find_handle);
 	}
 
-	// Strip out the application directory.
+	// Find the path to the executable, and strip out the file name.
 
-	GetCurrentDirectory(_MAX_PATH, buffer);
+	GetModuleFileName(NULL, buffer, _MAX_PATH);
 	app_name = strrchr(buffer, '\\') + 1;
 	*app_name = '\0';
 	app_dir = buffer;
