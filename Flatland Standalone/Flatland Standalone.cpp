@@ -13,5 +13,5 @@ int APIENTRY WinMain(_In_ HINSTANCE hInstance,
 {
 	// Run the app.
 
-	return run_app(hInstance, nCmdShow);
+	return run_app(hInstance, nCmdShow, lpCmdLine);
 }

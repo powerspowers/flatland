@@ -150,7 +150,7 @@ extern const char *snapshot_file_path;
 // Entry points called by the application.
 
 int
-run_app(void *instance_handle, int show_command);
+run_app(void *instance_handle, int show_command, char *spot_file_path);
 
 void
 open_local_file(char *file_path);

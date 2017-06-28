@@ -6,6 +6,7 @@
 
 #include <stdio.h>
 #include <stdarg.h>
+#include <stdlib.h>
 #include <string.h>
 #include <time.h>
 #include <math.h>
@@ -1246,14 +1247,22 @@ void
 open_local_file(char *file_path)
 {
 	bool result;
-	char cached_file_path[256];
+	char full_file_path[_MAX_PATH];
+	char cached_file_path[_MAX_PATH];
+
+	// Convert the file path to a full path.
+
+	_fullpath(full_file_path, file_path, _MAX_PATH);
+
+	// Signal that a URL was opened.
 
 	URL_was_opened.reset_event();
 	URL_was_opened.send_event(true);
-	*cached_file_path = '\0';
-	result = download_URL_to_file(file_path, cached_file_path, 256);
-	downloaded_URL.set(file_path);
-	downloaded_file_path.set(cached_file_path);
+
+	// Set up the downloaded URL and file path, and signal that it was downloaded.
+
+	downloaded_URL.set(full_file_path);
+	downloaded_file_path.set(full_file_path);
 	URL_was_downloaded.send_event(true);
 }
 
@@ -1301,7 +1310,7 @@ downloader_thread(void *arg_list)
 //------------------------------------------------------------------------------
 
 int
-run_app(void *instance_handle, int show_command)
+run_app(void *instance_handle, int show_command, char *spot_file_path)
 {
 	// Start the memory trace.
 
@@ -1439,10 +1448,15 @@ run_app(void *instance_handle, int show_command)
 		return false;
 	}
 
-	// Open the splash spot.
+	// Open the spot at the provided file path or the splash spot if there
+	// is no file path.
 
-	string splash_file_path = flatland_dir + "splash.3dml";
-	open_local_file(splash_file_path);
+	if (strlen(spot_file_path) > 0) {
+		open_local_file(spot_file_path);
+	} else {
+		string splash_file_path = flatland_dir + "splash.3dml";
+		open_local_file(splash_file_path);
+	}
 
 	// Indicate Rover started up sucessfully.
 
