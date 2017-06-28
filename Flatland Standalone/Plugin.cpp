@@ -1246,9 +1246,7 @@ quit_callback()
 void
 open_local_file(char *file_path)
 {
-	bool result;
 	char full_file_path[_MAX_PATH];
-	char cached_file_path[_MAX_PATH];
 
 	// Convert the file path to a full path.
 
