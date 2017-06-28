@@ -31,8 +31,11 @@
 #include <Urlmon.h>
 
 #include <d3d11.h>
+#include <DirectXMath.h>
 #include <ddraw.h>
 #include <dsound.h>
+
+using namespace DirectX;
 
 #ifdef STREAMING_MEDIA
 #include <mmstream.h>
@@ -151,7 +154,6 @@ pixel_format texture_pixel_format;
 
 int display_width, display_height, display_depth;
 int window_width, window_height;
-bool hardware_acceleration_available;
 
 // Flag indicating whether the main window is ready.
 
@@ -405,9 +407,10 @@ static LPDIRECTDRAWCLIPPER ddraw_clipper_ptr;
 
 // Direct3D data.
 
-IDXGISwapChain *swap_chain_ptr;
+IDXGISwapChain *d3d_swap_chain_ptr;
 ID3D11Device *d3d_device_ptr;
 ID3D11DeviceContext *d3d_device_context_ptr;
+ID3D11RenderTargetView *d3d_render_target_view_ptr;
 
 static byte *framebuffer_ptr;
 static int framebuffer_width;
@@ -1817,10 +1820,10 @@ check_depth_buffer_format(D3DFORMAT depth_buffer_format)
 // Create or recreate the Direct3D device.
 //------------------------------------------------------------------------------
 
+/*
 static bool
 create_d3d_device(bool recreate)
 {
-	/*
 	D3DPRESENT_PARAMETERS d3d_pp;
 	D3DVIEWPORT8 d3d_viewport;
 
@@ -1921,12 +1924,12 @@ create_d3d_device(bool recreate)
 		failed_to_get("frame buffer surface");
 		return(false);
 	}
-	*/
 
 	// Indicate success.
 
 	return(true);
 }
+*/
 
 //------------------------------------------------------------------------------
 // Destroy the Direct3D device.
@@ -2571,16 +2574,6 @@ shut_down_platform_API(void)
 }
 
 //------------------------------------------------------------------------------
-// Check for the existence of 3D acceleration hardware.
-//------------------------------------------------------------------------------
-
-static bool
-check_for_hardware_acceleration(void)
-{
-	return(false);
-}
-
-//------------------------------------------------------------------------------
 // Start up the hardware accelerated renderer.
 //------------------------------------------------------------------------------
 
@@ -2592,8 +2585,8 @@ start_up_hardware_renderer(void)
 	DXGI_SWAP_CHAIN_DESC sd;
 	ZeroMemory(&sd, sizeof(sd));
 	sd.BufferCount = 1;
-	sd.BufferDesc.Width = 0;
-	sd.BufferDesc.Height = 0;
+	sd.BufferDesc.Width = window_width;
+	sd.BufferDesc.Height = window_height;
 	sd.BufferDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
 	sd.BufferDesc.RefreshRate.Numerator = 60;
 	sd.BufferDesc.RefreshRate.Denominator = 1;
@@ -2603,9 +2596,9 @@ start_up_hardware_renderer(void)
 	sd.SampleDesc.Quality = 0;
 	sd.Windowed = TRUE;
 
-	D3D_FEATURE_LEVEL feature_levels_requested = D3D_FEATURE_LEVEL_11_0;
-	D3D_FEATURE_LEVEL feature_level_supported;
+	// Create the device and swap chain.
 
+	D3D_FEATURE_LEVEL feature_levels_requested = D3D_FEATURE_LEVEL_11_0;
 	if (FAILED(D3D11CreateDeviceAndSwapChain(
 		NULL, 
 		D3D_DRIVER_TYPE_HARDWARE, 
@@ -2615,47 +2608,43 @@ start_up_hardware_renderer(void)
 		1,
 		D3D11_SDK_VERSION, 
 		&sd, 
-		&swap_chain_ptr, 
+		&d3d_swap_chain_ptr, 
 		&d3d_device_ptr, 
-		&feature_level_supported,
+		NULL,
 		&d3d_device_context_ptr))) {
 		return false;
 	}
 
-	// Determine the colour component masks.
+	// Get a pointer to the back buffer.
 
-	/*
-	switch (display_format) {
-	case D3DFMT_R8G8B8:
-	case D3DFMT_X8R8G8B8:
-	case D3DFMT_A8R8G8B8:
-		red_comp_mask = 0xff0000;
-		green_comp_mask = 0x00ff00;
-		blue_comp_mask = 0x0000ff;
-		break;
-	case D3DFMT_R5G6B5:
-		red_comp_mask = 0xf800;
-		green_comp_mask = 0x07e0;
-		blue_comp_mask = 0x001f;
-		break;
-	case D3DFMT_X1R5G5B5:
-	case D3DFMT_A1R5G5B5:
-		red_comp_mask = 0x7c00;
-		green_comp_mask = 0x03e0;
-		blue_comp_mask = 0x001f;
-		break;
-	case D3DFMT_X4R4G4B4:
-	case D3DFMT_A4R4G4B4:
-		red_comp_mask = 0x0f00;
-		green_comp_mask = 0x00f0;
-		blue_comp_mask = 0x000f;
+	ID3D11Texture2D *back_buffer_ptr;
+	if (FAILED(d3d_swap_chain_ptr->GetBuffer(0, __uuidof(ID3D11Texture2D), (LPVOID *)&back_buffer_ptr))) {
+		return false;
 	}
-	*/
 
-	// Attempt to create the Direct3D device.
+	// Create a render-target view, and bind it.
 
-	if (!create_d3d_device(false))
-		return(false);
+	if (FAILED(d3d_device_ptr->CreateRenderTargetView(back_buffer_ptr, NULL, &d3d_render_target_view_ptr))) {
+		return false;
+	}
+	d3d_device_context_ptr->OMSetRenderTargets(1, &d3d_render_target_view_ptr, NULL);
+
+	// Set up the viewport.
+
+	D3D11_VIEWPORT vp;
+	vp.Width = (FLOAT)window_width;
+	vp.Height = (FLOAT)window_height;
+	vp.MinDepth = 0.0f;
+	vp.MaxDepth = 1.0f;
+	vp.TopLeftX = 0;
+	vp.TopLeftY = 0;
+	d3d_device_context_ptr->RSSetViewports(1, &vp);
+
+	// Set the colour component masks.
+
+	red_comp_mask = 0xff0000;
+	green_comp_mask = 0x00ff00;
+	blue_comp_mask = 0x0000ff;
 
 	// Indicate success.
 
@@ -2669,9 +2658,22 @@ start_up_hardware_renderer(void)
 static void
 shut_down_hardware_renderer(void)
 {
-	// Destroy the Direct3D device.
-
-	destroy_d3d_device();
+	if (d3d_render_target_view_ptr) {
+		d3d_render_target_view_ptr->Release();
+		d3d_render_target_view_ptr = NULL;
+	}
+	if (d3d_swap_chain_ptr) {
+		d3d_swap_chain_ptr->Release();
+		d3d_swap_chain_ptr = NULL;
+	}
+	if (d3d_device_context_ptr) {
+		d3d_device_context_ptr->Release();
+		d3d_device_context_ptr = NULL;
+	}
+	if (d3d_device_ptr) {
+		d3d_device_ptr->Release();
+		d3d_device_ptr = NULL;
+	}
 }
 
 //------------------------------------------------------------------------------
@@ -2991,6 +2993,9 @@ create_main_window(void (*key_callback)(byte key_code, bool key_down),
 	ddraw_framebuffer_surface_ptr = NULL;
 	ddraw_clipper_ptr = NULL;
 	d3d_device_ptr = NULL;
+	d3d_swap_chain_ptr = NULL;
+	d3d_device_context_ptr = NULL;
+	d3d_render_target_view_ptr = NULL;
 	framebuffer_ptr = NULL;
 	//curr_hardware_texture_ptr = NULL;
 	dsound_object_ptr = NULL;
@@ -3062,24 +3067,14 @@ create_main_window(void (*key_callback)(byte key_code, bool key_down),
 	resize_callback_ptr = resize_callback;
 	display_callback_ptr = display_callback;
 
-	// Check for hardware accelerated hardware.
-
-	if (check_for_hardware_acceleration())
-		hardware_acceleration_available = true;
-	else {
-		hardware_acceleration_available = false;
-		hardware_acceleration = false;
-	}
-
-	// If hardware acceleration is enabled, start up the hardware accelerated
-	// renderer: if this fails, shut it down and disable hardware acceleration.
+	// If requested, attempt to start up the hardware accelerated renderer,
+	// and if this fails, shut it down and disable hardware acceleration.
 
 	if (hardware_acceleration) {
 		if (!start_up_hardware_renderer()) {
 			shut_down_hardware_renderer();
 			hardware_acceleration = false;
-			failed_to("start up 3D accelerated renderer--trying software "
-				"renderer instead");
+			failed_to("start up 3D accelerated renderer--trying software renderer instead");
 		}
 	}
 
@@ -3941,8 +3936,6 @@ open_options_window(bool download_sounds_value, int visible_radius_value,
 	control_handle = GetDlgItem(options_window_handle, IDB_3D_ACCELERATION);
 	SendMessage(control_handle, BM_SETCHECK, hardware_acceleration ? 
 		BST_CHECKED : BST_UNCHECKED, 0);
-	if (!hardware_acceleration_available)
-		EnableWindow(control_handle, false);
 	
 	// Initialise the "viewing distance" edit box and spin control.
 
@@ -4800,11 +4793,8 @@ create_frame_buffer(void)
 bool
 recreate_frame_buffer(void)
 {
-	/*
-	d3d_framebuffer_surface_ptr->Release();
-	d3d_framebuffer_surface_ptr = NULL;
-	*/
-	return(create_d3d_device(true));
+	shut_down_hardware_renderer();
+	return (start_up_hardware_renderer());
 }
 
 //------------------------------------------------------------------------------

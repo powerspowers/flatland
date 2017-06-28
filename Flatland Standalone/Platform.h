@@ -135,7 +135,6 @@ extern pixel_format texture_pixel_format;
 
 extern int display_width, display_height, display_depth;
 extern int window_width, window_height;
-extern bool hardware_acceleration_available;
 
 // Flag indicating whether the main window is ready.
 

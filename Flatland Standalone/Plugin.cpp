@@ -760,9 +760,8 @@ options_window_callback(int option_ID, int option_value)
 	case OK_BUTTON:
 		download_sounds.set(download_sounds_flag);
 		close_options_window();
-		if (hardware_acceleration_available && 
-			hardware_acceleration_flag != hardware_acceleration)
-				toggle_window_mode();
+		if (hardware_acceleration_flag != hardware_acceleration)
+			toggle_window_mode();
 		save_config_file();
 		break;
 	case CANCEL_BUTTON:
