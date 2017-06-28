@@ -28,18 +28,18 @@
 #include <commctrl.h>
 #include <objbase.h>
 #include <cguid.h>
-#include <ddraw.h>
 #include <Urlmon.h>
-#include "DirectX\d3d8.h"
-#include "DirectX\d3dx8.h"
-#include "DirectX\dsound.h"
+
+#include <d3d11.h>
+#include <ddraw.h>
+#include <dsound.h>
+
 #ifdef STREAMING_MEDIA
 #include <mmstream.h>
 #include <amstream.h>
 #include <ddstream.h>
 #include <real.h>
 #endif
-#include "resource.h"
 #include "Classes.h"
 #include "Fileio.h"
 #include "Image.h"
@@ -272,6 +272,7 @@ icon::~icon()
 // Miscellaneous classes.
 //------------------------------------------------------------------------------
 
+/*
 // Hardware texture class.
 
 struct hardware_texture {
@@ -303,6 +304,7 @@ struct hardware_vertex {
 		tv = new_tv;
 	}
 };
+*/
 
 // Structure to hold the colour palette.
 
@@ -394,26 +396,23 @@ static cursor *crosshair_cursor_ptr;
 
 static cursor *curr_cursor_ptr;
 
-// DirectDraw and Direct3D data.
+// DirectDraw data.
 
 static LPDIRECTDRAW ddraw_object_ptr;
 static LPDIRECTDRAWSURFACE ddraw_primary_surface_ptr;
 static LPDIRECTDRAWSURFACE ddraw_framebuffer_surface_ptr;
 static LPDIRECTDRAWCLIPPER ddraw_clipper_ptr;
-static HMODULE d3d_library_handle;
 
-typedef LPDIRECT3D8 (WINAPI *d3d_create_func)(UINT SDKVersion);
+// Direct3D data.
 
-static d3d_create_func d3d_create;
-static LPDIRECT3D8 d3d_object_ptr;
-static D3DFORMAT display_format;
-static D3DFORMAT depth_buffer_format;
-static LPDIRECT3DDEVICE8 d3d_device_ptr;
-static LPDIRECT3DSURFACE8 d3d_framebuffer_surface_ptr;
+IDXGISwapChain *swap_chain_ptr;
+ID3D11Device *d3d_device_ptr;
+ID3D11DeviceContext *d3d_device_context_ptr;
+
 static byte *framebuffer_ptr;
 static int framebuffer_width;
-static hardware_texture *curr_hardware_texture_ptr;
-static hardware_vertex *d3d_vertex_list;
+//static hardware_texture *curr_hardware_texture_ptr;
+//static hardware_vertex *d3d_vertex_list;
 
 // Private sound data.
 
@@ -1770,6 +1769,7 @@ set_active_cursor(cursor *cursor_ptr)
 // Set a render state.
 //------------------------------------------------------------------------------
 
+/*
 static bool
 set_render_state(D3DRENDERSTATETYPE type, DWORD value)
 {
@@ -1778,11 +1778,13 @@ set_render_state(D3DRENDERSTATETYPE type, DWORD value)
 	diagnose("Failed to set render state %d to %d", type, value);
 	return(false);
 }
+*/
 
 //------------------------------------------------------------------------------
 // Set a texture stage state.
 //------------------------------------------------------------------------------
 
+/*
 static bool
 set_texture_stage_state(DWORD stage, D3DTEXTURESTAGESTATETYPE type, DWORD value)
 {
@@ -1792,11 +1794,13 @@ set_texture_stage_state(DWORD stage, D3DTEXTURESTAGESTATETYPE type, DWORD value)
 		value);
 	return(false);
 }
+*/
 
 //------------------------------------------------------------------------------
 // Check a given depth buffer format with the display format.
 //------------------------------------------------------------------------------
 
+/*
 static bool
 check_depth_buffer_format(D3DFORMAT depth_buffer_format)
 {
@@ -1805,7 +1809,9 @@ check_depth_buffer_format(D3DFORMAT depth_buffer_format)
 		depth_buffer_format)) && 
 		SUCCEEDED(d3d_object_ptr->CheckDepthStencilMatch(D3DADAPTER_DEFAULT,
 		D3DDEVTYPE_HAL, display_format, display_format, depth_buffer_format)));
+	return(false);
 }
+*/
 
 //------------------------------------------------------------------------------
 // Create or recreate the Direct3D device.
@@ -1814,6 +1820,7 @@ check_depth_buffer_format(D3DFORMAT depth_buffer_format)
 static bool
 create_d3d_device(bool recreate)
 {
+	/*
 	D3DPRESENT_PARAMETERS d3d_pp;
 	D3DVIEWPORT8 d3d_viewport;
 
@@ -1914,6 +1921,7 @@ create_d3d_device(bool recreate)
 		failed_to_get("frame buffer surface");
 		return(false);
 	}
+	*/
 
 	// Indicate success.
 
@@ -1927,6 +1935,7 @@ create_d3d_device(bool recreate)
 static void
 destroy_d3d_device(void)
 {
+	/*
 	// Release the frame buffer surface.
 
 	if (d3d_framebuffer_surface_ptr != NULL)
@@ -1936,6 +1945,7 @@ destroy_d3d_device(void)
 
 	if (d3d_device_ptr != NULL)
 		d3d_device_ptr->Release();
+	*/
 }
 
 //------------------------------------------------------------------------------
@@ -2384,9 +2394,6 @@ LRESULT CALLBACK app_window_proc(HWND hWnd, UINT message, WPARAM wParam, LPARAM 
 bool
 start_up_platform_API(void *instance_handle, int show_command, void (*quit_callback)())
 {
-	char dll_path[_MAX_PATH];
-	HANDLE find_handle;
-	WIN32_FIND_DATA find_data;
 	char buffer[_MAX_PATH];
 	char *app_name;
 	WNDCLASS window_class;
@@ -2443,24 +2450,6 @@ start_up_platform_API(void *instance_handle, int show_command, void (*quit_callb
 		0, 0, 0, 0, app_window_handle, NULL, app_instance_handle, NULL);
 	if (!status_bar_handle) {
 		return FALSE;
-	}
-
-	// Check whether d3d8.dll exists, and if so load it and get a pointer to
-	// the Direct3DCreate8 function.
-
-	d3d_library_handle = NULL;
-	GetSystemDirectory(dll_path, _MAX_PATH);
-	strcat(dll_path, "\\d3d8.dll");
-	if ((find_handle = FindFirstFile(dll_path, &find_data)) != 
-		INVALID_HANDLE_VALUE) {
-		if ((d3d_library_handle = LoadLibrary(dll_path)) != NULL) {
-			if ((d3d_create = (d3d_create_func)GetProcAddress(
-				d3d_library_handle, "Direct3DCreate8")) == NULL) {
-				FreeLibrary(d3d_library_handle);
-				d3d_library_handle = NULL;
-			}
-		}
-		FindClose(find_handle);
 	}
 
 	// Find the path to the executable, and strip out the file name.
@@ -2579,11 +2568,6 @@ shut_down_platform_API(void)
 	// Uninitialize the COM library.
 
 	CoUninitialize();
-
-	// Free d3d8.dll, if it were loaded.
-
-	if (d3d_library_handle != NULL)
-		FreeLibrary(d3d_library_handle);
 }
 
 //------------------------------------------------------------------------------
@@ -2593,55 +2577,7 @@ shut_down_platform_API(void)
 static bool
 check_for_hardware_acceleration(void)
 {
-	D3DDISPLAYMODE display_mode;
-
-	// If d3d8.dll was not loaded, hardware acceleration is not available.
-
-	if (d3d_library_handle == NULL) {
-		diagnose("DirectX 8 not installed");
-		return(false);
-	}
-
-	// Attempt to create the Direct3D object.  If this fails, hardware
-	// acceleration is not available.
-
-	if ((d3d_object_ptr = d3d_create(D3D_SDK_VERSION)) == NULL) {
-		failed_to_create("Direct3D interface");
-		return(false);
-	}
-
-	// Attempt to get the desktop display mode and check for a HAL device on
-	// the default adapter.  If either of these fail, hardware acceleration
-	// is not available.
-
-	if (FAILED(d3d_object_ptr->GetAdapterDisplayMode(D3DADAPTER_DEFAULT, 
-		&display_mode)) || 
-		FAILED(d3d_object_ptr->CheckDeviceType(D3DADAPTER_DEFAULT,
-		D3DDEVTYPE_HAL, display_mode.Format, display_mode.Format, TRUE))) {
-		d3d_object_ptr->Release();
-		return(false);
-	}
-
-	// Save the display format and verify that there is a depth buffer format
-	// compatible with it.  If not, we cannot use hardware acceleration.
-
-	display_format = display_mode.Format;
-	if (check_depth_buffer_format(D3DFMT_D32))
-		depth_buffer_format = D3DFMT_D32;
-	else if (check_depth_buffer_format(D3DFMT_D24X8))
-		depth_buffer_format = D3DFMT_D24X8;
-	else if (check_depth_buffer_format(D3DFMT_D16))
-		depth_buffer_format = D3DFMT_D16;
-	else {
-		diagnose("No Z buffer available");
-		d3d_object_ptr->Release();
-		return(false);
-	}
-
-	// Release the Direct3D object and indicate success.
-
-	d3d_object_ptr->Release();
-	return(true);
+	return(false);
 }
 
 //------------------------------------------------------------------------------
@@ -2651,15 +2587,44 @@ check_for_hardware_acceleration(void)
 static bool
 start_up_hardware_renderer(void)
 {
-	// Attempt to create the Direct3D object.
+	// Initialize the swap chain description.
 
-	if ((d3d_object_ptr = d3d_create(D3D_SDK_VERSION)) == NULL) {
-		failed_to_create("Direct3D interface");
-		return(false);
+	DXGI_SWAP_CHAIN_DESC sd;
+	ZeroMemory(&sd, sizeof(sd));
+	sd.BufferCount = 1;
+	sd.BufferDesc.Width = 0;
+	sd.BufferDesc.Height = 0;
+	sd.BufferDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
+	sd.BufferDesc.RefreshRate.Numerator = 60;
+	sd.BufferDesc.RefreshRate.Denominator = 1;
+	sd.BufferUsage = DXGI_USAGE_RENDER_TARGET_OUTPUT;
+	sd.OutputWindow = main_window_handle;
+	sd.SampleDesc.Count = 1;
+	sd.SampleDesc.Quality = 0;
+	sd.Windowed = TRUE;
+
+	D3D_FEATURE_LEVEL feature_levels_requested = D3D_FEATURE_LEVEL_11_0;
+	D3D_FEATURE_LEVEL feature_level_supported;
+
+	if (FAILED(D3D11CreateDeviceAndSwapChain(
+		NULL, 
+		D3D_DRIVER_TYPE_HARDWARE, 
+		NULL, 
+		0,
+		&feature_levels_requested, 
+		1,
+		D3D11_SDK_VERSION, 
+		&sd, 
+		&swap_chain_ptr, 
+		&d3d_device_ptr, 
+		&feature_level_supported,
+		&d3d_device_context_ptr))) {
+		return false;
 	}
 
 	// Determine the colour component masks.
 
+	/*
 	switch (display_format) {
 	case D3DFMT_R8G8B8:
 	case D3DFMT_X8R8G8B8:
@@ -2685,6 +2650,7 @@ start_up_hardware_renderer(void)
 		green_comp_mask = 0x00f0;
 		blue_comp_mask = 0x000f;
 	}
+	*/
 
 	// Attempt to create the Direct3D device.
 
@@ -2706,11 +2672,6 @@ shut_down_hardware_renderer(void)
 	// Destroy the Direct3D device.
 
 	destroy_d3d_device();
-
-	// Release the Direct3D object.
-
-	if (d3d_object_ptr != NULL)
-		d3d_object_ptr->Release();
 }
 
 //------------------------------------------------------------------------------
@@ -3029,11 +2990,9 @@ create_main_window(void (*key_callback)(byte key_code, bool key_down),
 	ddraw_primary_surface_ptr = NULL;
 	ddraw_framebuffer_surface_ptr = NULL;
 	ddraw_clipper_ptr = NULL;
-	d3d_object_ptr = NULL;
 	d3d_device_ptr = NULL;
-	d3d_framebuffer_surface_ptr = NULL;
 	framebuffer_ptr = NULL;
-	curr_hardware_texture_ptr = NULL;
+	//curr_hardware_texture_ptr = NULL;
 	dsound_object_ptr = NULL;
 	label_visible = false;
 	progress_window_handle = NULL;	
@@ -4841,8 +4800,10 @@ create_frame_buffer(void)
 bool
 recreate_frame_buffer(void)
 {
+	/*
 	d3d_framebuffer_surface_ptr->Release();
 	d3d_framebuffer_surface_ptr = NULL;
+	*/
 	return(create_d3d_device(true));
 }
 
@@ -4884,7 +4845,7 @@ destroy_frame_buffer(void)
 void
 begin_3D_scene(void)
 {
-	d3d_device_ptr->BeginScene();
+	//d3d_device_ptr->BeginScene();
 }
 
 //------------------------------------------------------------------------------
@@ -4894,7 +4855,7 @@ begin_3D_scene(void)
 void
 end_3D_scene(void)
 {
-	d3d_device_ptr->EndScene();
+	//d3d_device_ptr->EndScene();
 }
 
 //------------------------------------------------------------------------------
@@ -4908,6 +4869,7 @@ lock_frame_buffer(byte *&fb_ptr, int &row_pitch)
 	// If hardware acceleration is enabled, lock the entire rectangle.
 
 	if (hardware_acceleration) {
+		/*
 		D3DLOCKED_RECT locked_rect;
 
 		if (FAILED(d3d_framebuffer_surface_ptr->LockRect(&locked_rect, NULL,
@@ -4915,6 +4877,7 @@ lock_frame_buffer(byte *&fb_ptr, int &row_pitch)
 			return(false);
 		fb_ptr = (byte *)locked_rect.pBits;
 		row_pitch = locked_rect.Pitch;
+		*/
 	}
 
 	// Otherwise if the display depth is 8, return the 16-bit frame buffer 
@@ -4968,8 +4931,9 @@ unlock_frame_buffer(void)
 {
 	// If hardware acceleration is active, end the 3D scene.
 
-	if (hardware_acceleration)
-		d3d_framebuffer_surface_ptr->UnlockRect();
+	if (hardware_acceleration) {
+		//d3d_framebuffer_surface_ptr->UnlockRect();
+	}
 
 	// Otherwise if the display depth is 16, 24 or 32 and the frame buffer is 
 	// locked, unlock it.
@@ -5062,9 +5026,9 @@ display_frame_buffer(bool show_splash_graphic)
 	// If hardware acceleration is enabled, present the frame buffer.  Otherwise
 	// blit the frame buffer onto the primary surface.
 
-	if (hardware_acceleration)
-		d3d_device_ptr->Present(NULL, NULL, NULL, NULL);
-	else
+	if (hardware_acceleration) {
+		//d3d_device_ptr->Present(NULL, NULL, NULL, NULL);
+	} else
 		blit_frame_buffer();
 	return(true);
 }
@@ -5083,6 +5047,7 @@ clear_frame_buffer(int x, int y, int width, int height)
 	// Lock the frame buffer surface.
 
 	if (hardware_acceleration) {
+		/*
 		D3DLOCKED_RECT locked_rect;
 
 		if (FAILED(d3d_framebuffer_surface_ptr->LockRect(&locked_rect, NULL,
@@ -5090,6 +5055,7 @@ clear_frame_buffer(int x, int y, int width, int height)
 			return;
 		fb_ptr = (byte *)locked_rect.pBits;
 		row_pitch = locked_rect.Pitch;
+		*/
 	} else {
 		DDSURFACEDESC ddraw_surface_desc;
 
@@ -5114,9 +5080,9 @@ clear_frame_buffer(int x, int y, int width, int height)
 
 	// Unlock the frame buffer surface.
 
-	if (hardware_acceleration)
-		d3d_framebuffer_surface_ptr->UnlockRect();
-	else
+	if (hardware_acceleration) {
+		//d3d_framebuffer_surface_ptr->UnlockRect();
+	} else
 		ddraw_framebuffer_surface_ptr->Unlock(fb_ptr);
 }
 
@@ -7664,7 +7630,7 @@ render_popup_span32(span *span_ptr)
 void
 hardware_init_vertex_list(void)
 {
-	d3d_vertex_list = NULL;
+	//d3d_vertex_list = NULL;
 }
 
 //------------------------------------------------------------------------------
@@ -7674,8 +7640,11 @@ hardware_init_vertex_list(void)
 bool
 hardware_create_vertex_list(int max_vertices)
 {
+	/*
 	NEWARRAY(d3d_vertex_list, hardware_vertex, max_vertices);
 	return(d3d_vertex_list != NULL);
+	*/
+	return false;
 }
 
 //------------------------------------------------------------------------------
@@ -7685,10 +7654,12 @@ hardware_create_vertex_list(int max_vertices)
 void
 hardware_destroy_vertex_list(int max_vertices)
 {
+	/*
 	if (d3d_vertex_list != NULL) {
 		DELBASEARRAY(d3d_vertex_list, hardware_vertex, max_vertices);
 		d3d_vertex_list = NULL;
 	}
+	*/
 }
 
 //------------------------------------------------------------------------------
@@ -7700,6 +7671,7 @@ hardware_set_projection_transform(float horz_field_of_view,
 								  float vert_field_of_view,
 								  float near_z, float far_z)
 {
+	/*
 	D3DXMATRIX perspective_matrix;
     float h, w, Q;
  
@@ -7715,6 +7687,7 @@ hardware_set_projection_transform(float horz_field_of_view,
     perspective_matrix(2, 3) = 1;
 
 	d3d_device_ptr->SetTransform(D3DTS_PROJECTION, &perspective_matrix);
+	*/
 }
 
 //------------------------------------------------------------------------------
@@ -7724,7 +7697,7 @@ hardware_set_projection_transform(float horz_field_of_view,
 void
 hardware_enable_fog(void)
 {
-	set_render_state(D3DRS_FOGENABLE, TRUE);
+	//set_render_state(D3DRS_FOGENABLE, TRUE);
 }
 
 //------------------------------------------------------------------------------
@@ -7734,6 +7707,7 @@ hardware_enable_fog(void)
 void
 hardware_update_fog_settings(fog *fog_ptr)
 {
+	/*
 	float radius;
 
 	// Set the fog colour.
@@ -7762,6 +7736,7 @@ hardware_update_fog_settings(fog *fog_ptr)
 		set_render_state(D3DRS_FOGTABLEMODE, D3DFOG_EXP2);
 		set_render_state(D3DRS_FOGDENSITY, *((DWORD *)(&fog_ptr->density)));
 	}
+	*/
 }
 
 //------------------------------------------------------------------------------
@@ -7771,7 +7746,7 @@ hardware_update_fog_settings(fog *fog_ptr)
 void
 hardware_disable_fog(void)
 {
-	set_render_state(D3DRS_FOGENABLE, FALSE);
+	//set_render_state(D3DRS_FOGENABLE, FALSE);
 }
 
 //------------------------------------------------------------------------------
@@ -7781,6 +7756,7 @@ hardware_disable_fog(void)
 void *
 hardware_create_texture(int image_size_index)
 {
+	/*
 	int image_dimensions;
 	LPDIRECT3DTEXTURE8 d3d_texture_ptr;
 	hardware_texture *hardware_texture_ptr;
@@ -7802,6 +7778,8 @@ hardware_create_texture(int image_size_index)
 	hardware_texture_ptr->image_size_index = image_size_index;
 	hardware_texture_ptr->d3d_texture_ptr = d3d_texture_ptr;
 	return(hardware_texture_ptr);
+	*/
+	return NULL;
 }
 
 //------------------------------------------------------------------------------
@@ -7811,12 +7789,14 @@ hardware_create_texture(int image_size_index)
 void
 hardware_destroy_texture(void *hardware_texture_ptr)
 {
+	/*
 	if (hardware_texture_ptr != NULL) {
 		hardware_texture *cast_hardware_texture_ptr = 
 			(hardware_texture *)hardware_texture_ptr;
 		cast_hardware_texture_ptr->d3d_texture_ptr->Release();
 		delete cast_hardware_texture_ptr;
 	}
+	*/
 }
 
 //------------------------------------------------------------------------------
@@ -7826,6 +7806,7 @@ hardware_destroy_texture(void *hardware_texture_ptr)
 void
 hardware_set_texture(cache_entry *cache_entry_ptr)
 {
+	/*
 	hardware_texture *hardware_texture_ptr;
 	D3DLOCKED_RECT locked_rect;
 	LPDIRECT3DTEXTURE8 d3d_texture_ptr;
@@ -8057,6 +8038,7 @@ hardware_set_texture(cache_entry *cache_entry_ptr)
 
 	if (FAILED(d3d_texture_ptr->UnlockRect(0)))
 		diagnose("Failed to unlock texture");
+	*/
 }
 
 //------------------------------------------------------------------------------
@@ -8066,6 +8048,7 @@ hardware_set_texture(cache_entry *cache_entry_ptr)
 static void
 hardware_enable_texture(void *hardware_texture_ptr)
 {
+	/*
 	if (hardware_texture_ptr != NULL) {
 		hardware_texture *cast_hardware_texture_ptr =
 			(hardware_texture *)hardware_texture_ptr;
@@ -8080,6 +8063,7 @@ hardware_enable_texture(void *hardware_texture_ptr)
 				diagnose("Failed to set texture");
 		}
 	}
+	*/
 }
 
 //------------------------------------------------------------------------------
@@ -8089,11 +8073,13 @@ hardware_enable_texture(void *hardware_texture_ptr)
 static void
 hardware_disable_texture(void)
 {
+	/*
 	if (curr_hardware_texture_ptr != NULL) {
 		if (FAILED(d3d_device_ptr->SetTexture(0, NULL)))
 			diagnose("Failed to unset texture");
 		curr_hardware_texture_ptr = NULL;
 	}
+	*/
 }
 
 //------------------------------------------------------------------------------
@@ -8108,6 +8094,7 @@ hardware_render_2D_polygon(pixmap *pixmap_ptr, RGBcolour colour,
 						   float height, float start_u, float start_v,
 						   float end_u, float end_v, bool disable_transparency)
 {
+	/*
 	// If transparency is disabled, turn off alpha blending.
 
 	if (disable_transparency) {
@@ -8170,6 +8157,7 @@ hardware_render_2D_polygon(pixmap *pixmap_ptr, RGBcolour colour,
 		if (!set_render_state(D3DRS_ALPHABLENDENABLE, TRUE))
 			diagnose("Failed to re-enable alpha blending");
 	}
+	*/
 }
 
 //------------------------------------------------------------------------------
@@ -8179,6 +8167,7 @@ hardware_render_2D_polygon(pixmap *pixmap_ptr, RGBcolour colour,
 void
 hardware_render_polygon(spolygon *spolygon_ptr)
 {
+	/*
 	pixmap *pixmap_ptr;
 	int index;
 
@@ -8209,6 +8198,7 @@ hardware_render_polygon(spolygon *spolygon_ptr)
 		spolygon_ptr->spoints - 2, 
 		d3d_vertex_list, sizeof(hardware_vertex))))
 		diagnose("Failed to render polygon");
+	*/
 }
 
 //==============================================================================
@@ -8273,6 +8263,7 @@ draw_bitmap(bitmap *bitmap_ptr, int x, int y)
 	// Lock the frame buffer surface.
 
 	if (hardware_acceleration) {
+		/*
 		D3DLOCKED_RECT locked_rect;
 
 		if (FAILED(d3d_framebuffer_surface_ptr->LockRect(&locked_rect, NULL,
@@ -8280,6 +8271,7 @@ draw_bitmap(bitmap *bitmap_ptr, int x, int y)
 			return;
 		surface_ptr = (byte *)locked_rect.pBits;
 		fb_bytes_per_row = locked_rect.Pitch;
+		*/
 	} else {
 		DDSURFACEDESC ddraw_surface_desc;
 
@@ -8344,9 +8336,9 @@ draw_bitmap(bitmap *bitmap_ptr, int x, int y)
 
 	// Unlock the frame buffer surface.
 
-	if (hardware_acceleration)
-		d3d_framebuffer_surface_ptr->UnlockRect();
-	else
+	if (hardware_acceleration) {
+		//d3d_framebuffer_surface_ptr->UnlockRect();
+	} else
 		ddraw_framebuffer_surface_ptr->Unlock(surface_ptr);
 }
 
@@ -8411,6 +8403,7 @@ draw_pixmap(pixmap *pixmap_ptr, int brightness_index, int x, int y, int width,
 	// Lock the frame buffer surface.
 
 	if (hardware_acceleration) {
+		/*
 		D3DLOCKED_RECT locked_rect;
 
 		if (FAILED(d3d_framebuffer_surface_ptr->LockRect(&locked_rect, NULL,
@@ -8418,6 +8411,7 @@ draw_pixmap(pixmap *pixmap_ptr, int brightness_index, int x, int y, int width,
 			return;
 		surface_ptr = (byte *)locked_rect.pBits;
 		fb_bytes_per_row = locked_rect.Pitch;
+		*/
 	} else {
 		DDSURFACEDESC ddraw_surface_desc;
 
@@ -8514,7 +8508,7 @@ draw_pixmap(pixmap *pixmap_ptr, int brightness_index, int x, int y, int width,
 	// Unlock the frame buffer surface.
 
 	if (hardware_acceleration) {
-		d3d_framebuffer_surface_ptr->UnlockRect();
+		//d3d_framebuffer_surface_ptr->UnlockRect();
 	} else {
 		ddraw_framebuffer_surface_ptr->Unlock(surface_ptr);
 	}

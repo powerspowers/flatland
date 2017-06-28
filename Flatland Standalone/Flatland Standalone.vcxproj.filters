@@ -31,9 +31,6 @@
     <Filter Include="Source Files\Jpeg">
       <UniqueIdentifier>{3c077a9c-b1ab-4630-be87-cc1b818abad3}</UniqueIdentifier>
     </Filter>
-    <Filter Include="Header Files\DirectX">
-      <UniqueIdentifier>{9879e7ed-57a4-4467-a772-ebcd6597fe8f}</UniqueIdentifier>
-    </Filter>
     <Filter Include="Header Files\Simkin">
       <UniqueIdentifier>{7b3d8a54-e991-4a09-887b-63284b3f1080}</UniqueIdentifier>
     </Filter>
@@ -176,45 +173,6 @@
     </ClInclude>
     <ClInclude Include="Jpeg\JVERSION.H">
       <Filter>Header Files\Jpeg</Filter>
-    </ClInclude>
-    <ClInclude Include="DirectX\d3d8.h">
-      <Filter>Header Files\DirectX</Filter>
-    </ClInclude>
-    <ClInclude Include="DirectX\d3d8caps.h">
-      <Filter>Header Files\DirectX</Filter>
-    </ClInclude>
-    <ClInclude Include="DirectX\d3d8types.h">
-      <Filter>Header Files\DirectX</Filter>
-    </ClInclude>
-    <ClInclude Include="DirectX\d3dx8.h">
-      <Filter>Header Files\DirectX</Filter>
-    </ClInclude>
-    <ClInclude Include="DirectX\d3dx8core.h">
-      <Filter>Header Files\DirectX</Filter>
-    </ClInclude>
-    <ClInclude Include="DirectX\d3dx8effect.h">
-      <Filter>Header Files\DirectX</Filter>
-    </ClInclude>
-    <ClInclude Include="DirectX\d3dx8math.h">
-      <Filter>Header Files\DirectX</Filter>
-    </ClInclude>
-    <ClInclude Include="DirectX\d3dx8mesh.h">
-      <Filter>Header Files\DirectX</Filter>
-    </ClInclude>
-    <ClInclude Include="DirectX\d3dx8shape.h">
-      <Filter>Header Files\DirectX</Filter>
-    </ClInclude>
-    <ClInclude Include="DirectX\d3dx8tex.h">
-      <Filter>Header Files\DirectX</Filter>
-    </ClInclude>
-    <ClInclude Include="DirectX\ddraw.h">
-      <Filter>Header Files\DirectX</Filter>
-    </ClInclude>
-    <ClInclude Include="DirectX\dsound.h">
-      <Filter>Header Files\DirectX</Filter>
-    </ClInclude>
-    <ClInclude Include="DirectX\dxfile.h">
-      <Filter>Header Files\DirectX</Filter>
     </ClInclude>
     <ClInclude Include="Plugin.h">
       <Filter>Header Files</Filter>
@@ -794,9 +752,6 @@
     </Image>
   </ItemGroup>
   <ItemGroup>
-    <None Include="DirectX\d3dx8math.inl">
-      <Filter>Header Files\DirectX</Filter>
-    </None>
     <None Include="bitmaps\arrow_n.cur">
       <Filter>Resource Files</Filter>
     </None>

@@ -92,7 +92,7 @@
     <Link>
       <SubSystem>Windows</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <AdditionalDependencies>Urlmon.lib;imagehlp.lib;mpr.lib;netapi32.lib;rpcrt4.lib;ddraw.lib;dsound.lib;winmm.lib;comctl32.lib;Ws2_32.lib;kernel32.lib;user32.lib;gdi32.lib;winspool.lib;comdlg32.lib;advapi32.lib;shell32.lib;ole32.lib;oleaut32.lib;uuid.lib;odbc32.lib;odbccp32.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>D3D11.lib;Urlmon.lib;imagehlp.lib;mpr.lib;netapi32.lib;rpcrt4.lib;ddraw.lib;dsound.lib;winmm.lib;comctl32.lib;Ws2_32.lib;kernel32.lib;user32.lib;gdi32.lib;winspool.lib;comdlg32.lib;advapi32.lib;shell32.lib;ole32.lib;oleaut32.lib;uuid.lib;odbc32.lib;odbccp32.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <AdditionalLibraryDirectories>
       </AdditionalLibraryDirectories>
     </Link>
@@ -152,19 +152,6 @@
     <ClInclude Include="Collision\Mat.h" />
     <ClInclude Include="Collision\Maths.h" />
     <ClInclude Include="Collision\Vec.h" />
-    <ClInclude Include="DirectX\d3d8.h" />
-    <ClInclude Include="DirectX\d3d8caps.h" />
-    <ClInclude Include="DirectX\d3d8types.h" />
-    <ClInclude Include="DirectX\d3dx8.h" />
-    <ClInclude Include="DirectX\d3dx8core.h" />
-    <ClInclude Include="DirectX\d3dx8effect.h" />
-    <ClInclude Include="DirectX\d3dx8math.h" />
-    <ClInclude Include="DirectX\d3dx8mesh.h" />
-    <ClInclude Include="DirectX\d3dx8shape.h" />
-    <ClInclude Include="DirectX\d3dx8tex.h" />
-    <ClInclude Include="DirectX\ddraw.h" />
-    <ClInclude Include="DirectX\dsound.h" />
-    <ClInclude Include="DirectX\dxfile.h" />
     <ClInclude Include="Expat\ascii.h" />
     <ClInclude Include="Expat\asciitab.h" />
     <ClInclude Include="Expat\expat.h" />
@@ -413,7 +400,6 @@
     <None Include="bitmaps\arrow_sw.cur" />
     <None Include="bitmaps\arrow_w.cur" />
     <None Include="bitmaps\hand.cur" />
-    <None Include="DirectX\d3dx8math.inl" />
     <None Include="Simkin\skAlist.inl" />
     <None Include="Simkin\skHashTable.inl" />
     <None Include="Simkin\skKeywords.inl" />

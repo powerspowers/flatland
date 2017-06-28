@@ -126,7 +126,9 @@ init_renderer(void)
 	block_tvertex_list = NULL;
 	vertex_colour_list = NULL;
 	temp_spoint_list = NULL;
-	hardware_init_vertex_list();
+	if (hardware_acceleration) {
+		hardware_init_vertex_list();
+	}
 }
 
 //------------------------------------------------------------------------------
@@ -200,7 +202,7 @@ set_up_renderer(void)
 	NEWARRAY(temp_spoint_list, spoint, max_polygon_vertices + 5);
 	if (temp_spoint_list == NULL)
 		memory_error("screen point list");
-	if (!hardware_create_vertex_list(max_polygon_vertices + 5))
+	if (hardware_acceleration && !hardware_create_vertex_list(max_polygon_vertices + 5))
 		memory_error("hardware vertex list");
 }
 
@@ -224,7 +226,9 @@ clean_up_renderer(void)
 		DELARRAY(temp_spoint_list, spoint, max_polygon_vertices + 5);
 		temp_spoint_list = NULL;
 	}
-	hardware_destroy_vertex_list(max_polygon_vertices + 5);
+	if (hardware_acceleration) {
+		hardware_destroy_vertex_list(max_polygon_vertices + 5);
+	}
 }
 
 //------------------------------------------------------------------------------
