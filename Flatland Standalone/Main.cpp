@@ -3093,7 +3093,6 @@ render_next_frame(void)
 	// Determine the motion deltas.
 
 	if (absolute_motion.get()) {
-
 		move_delta = 0.0f;
 		side_delta = 0.0f;
 		if (enable_player_rotation) {
@@ -3179,7 +3178,6 @@ render_next_frame(void)
 				player_block_ptr->rotate_y(turn_delta);
 				player_viewpoint.last_position = player_viewpoint.position;
 				player_viewpoint.turn_angle = pos_adjust_angle(player_viewpoint.turn_angle + turn_delta);
-
 			}
 		} else {
 			player_viewpoint.last_position = player_viewpoint.position;

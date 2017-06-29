@@ -65,7 +65,7 @@ public:
 #if defined __GNUC__
 #define STRCMPI strcasecmp
 #else
-#define STRCMPI strcmpi
+#define STRCMPI _strcmpi
 #endif
 #define STRCPY strcpy
 #define STRCAT strcat
