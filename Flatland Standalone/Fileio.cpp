@@ -658,7 +658,7 @@ static void
 parse_part_tag(blockset *blockset_ptr, block_def *block_def_ptr)
 {
 	part *part_ptr;
-	texture *texture_ptr;
+	texture *texture_ptr = NULL;
 	int tag_token;
 
 	// Verify the part name hasn't been used in this block already.
@@ -688,10 +688,10 @@ parse_part_tag(blockset *blockset_ptr, block_def *block_def_ptr)
 
 	part_ptr->trigger_flags = NULL;
 
-	// If the texture parameter was present, load or retrieve the texture,
+	// If the texture parameter was present, load or retrieve the texture.
 
 	if (parsed_attribute[PART_TEXTURE]) 
-		texture_ptr = load_texture(blockset_ptr, part_texture, true, false);
+		texture_ptr = load_texture(blockset_ptr, part_texture, true);
 
 	// Initialise the part's common fields.
 	
@@ -811,7 +811,7 @@ parse_sprite_part_tag(blockset *blockset_ptr, block_def *block_def_ptr)
 	// given name.
 
 	if (parsed_attribute[PART_TEXTURE])
-		texture_ptr = load_texture(blockset_ptr, part_texture, true, false);
+		texture_ptr = load_texture(blockset_ptr, part_texture, true);
 
 	// Initialise the part's common fields.
 	
@@ -1234,7 +1234,7 @@ parse_popup_tag(popup *&popup_list, popup *&last_popup_ptr,
 
 	if (parsed_attribute[POPUP_TEXTURE])
 		popup_ptr->bg_texture_ptr = load_texture(custom_blockset_ptr,
-			popup_texture, true, true);
+			popup_texture, true);
 
 #ifdef STREAMING_MEDIA
 
@@ -1783,7 +1783,7 @@ parse_ground_tag(blockset *blockset_ptr)
 
 	if (parsed_attribute[GROUND_TEXTURE])
 		blockset_ptr->ground_texture_ptr = 
-			load_texture(blockset_ptr, ground_texture, true, false);
+			load_texture(blockset_ptr, ground_texture, true);
 
 #ifdef STREAMING_MEDIA
 
@@ -1816,7 +1816,7 @@ parse_orb_tag(blockset *blockset_ptr)
 
 	if (parsed_attribute[ORB_TEXTURE])
 		blockset_ptr->orb_texture_ptr = 
-			load_texture(blockset_ptr, orb_texture, true, false);
+			load_texture(blockset_ptr, orb_texture, true);
 
 #ifdef STREAMING_MEDIA
 
@@ -1877,10 +1877,9 @@ parse_placeholder_tag(blockset *blockset_ptr)
 	// Download the placeholder texture now, even if it's a custom texture.
 	// If the download fails, we won't use a placeholder texture.
 
-	if ((texture_ptr = load_texture(blockset_ptr, placeholder_texture, false,
-		false)) == NULL || (texture_ptr->blockset_ptr == NULL && 
-		(!download_URL(texture_ptr->URL, NULL) ||
-		 !load_image(texture_ptr->URL, curr_file_path, texture_ptr, false)))) {
+	if ((texture_ptr = load_texture(blockset_ptr, placeholder_texture, false)) == NULL || 
+		(texture_ptr->blockset_ptr == NULL && (!download_URL(texture_ptr->URL, NULL) ||
+		 !load_image(texture_ptr->URL, curr_file_path, texture_ptr)))) {
 		warning("Unable to download placeholder texture from %s", 
 			placeholder_texture);
 		if (texture_ptr != NULL)
@@ -1909,8 +1908,7 @@ parse_sky_tag(blockset *blockset_ptr)
 	// Initialise the sky parameters that were given.
 
 	if (parsed_attribute[SKY_TEXTURE])
-		blockset_ptr->sky_texture_ptr = 
-			load_texture(blockset_ptr, sky_texture, true, false);
+		blockset_ptr->sky_texture_ptr = load_texture(blockset_ptr, sky_texture, true);
 
 #ifdef STREAMING_MEDIA
 
@@ -3016,8 +3014,7 @@ parse_create_part_tag(block_def *block_def_ptr)
 	// If the texture parameter was given, then load the texture.
 
 	if (parsed_attribute[PART_TEXTURE])
-		texture_ptr = load_texture(custom_blockset_ptr, part_texture, true,
-			false);
+		texture_ptr = load_texture(custom_blockset_ptr, part_texture, true);
 
 #ifdef STREAMING_MEDIA
 
@@ -3540,7 +3537,7 @@ parse_load_tag(void)
 	// Load the specified texture or wave URL.
 
 	if (parsed_attribute[LOAD_TEXTURE])
-		load_texture(custom_blockset_ptr, load_texture_href, true, false);
+		load_texture(custom_blockset_ptr, load_texture_href, true);
 	else
 		load_wave(custom_blockset_ptr, load_sound_href);
 }

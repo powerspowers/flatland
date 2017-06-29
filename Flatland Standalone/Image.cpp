@@ -1161,8 +1161,7 @@ save_frame_buffer_to_JPEG(int width, int height, const char *file_path)
 //------------------------------------------------------------------------------
 
 bool
-load_image(const char *URL, const char *file_path, texture *texture_ptr, 
-		   bool unlimited_size)
+load_image(const char *URL, const char *file_path, texture *texture_ptr)
 {
 	int index;
 
@@ -1209,12 +1208,6 @@ load_image(const char *URL, const char *file_path, texture *texture_ptr,
 	// report them as warnings instead.
 
 	try {
-
-		// If unlimited_size is FALSE, and the texture width or height is 
-		// greater than 256 pixels, this is an error.
-
-		if (!unlimited_size && (image_width > 256 || image_height > 256))
-			image_error("Image has a width or height greater than 256 pixels");
 
 		// Initialise the texture object.
 

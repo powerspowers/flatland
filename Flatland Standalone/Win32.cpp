@@ -37,7 +37,7 @@
 #include <mmstream.h>
 #include <amstream.h>
 #include <ddstream.h>
-#include <real.h>
+//#include <real.h>
 #endif
 #include "resource.h"
 #include "Classes.h"
@@ -434,20 +434,6 @@ static event stream_opened;
 static event terminate_streaming_thread;
 static event rp_download_requested;
 static event wmp_download_requested;
-
-// Private streaming media data specific to RealPlayer.
-
-static HINSTANCE hDll;
-static ExampleClientContext *exContext;
-static FPRMCREATEENGINE	m_fpCreateEngine;
-static FPRMCLOSEENGINE m_fpCloseEngine;
-static IRMAClientEngine *pEngine;
-static IRMAPlayer *pPlayer;
-static IRMAPlayer2 *pPlayer2;
-static IRMAAudioPlayer *pAudioPlayer;
-static IRMAErrorSink *pErrorSink;
-static IRMAErrorSinkControl *pErrorSinkControl;
-static byte *video_buffer_ptr;
 
 // Private streaming media data specific to WMP.
 
@@ -9484,14 +9470,6 @@ init_video_textures(int video_width, int video_height, int pixel_format)
 
 	if (unscaled_video_texture_ptr != NULL)
 		init_unscaled_video_texture();
-
-	// If the unscaled video texture doesn't exist, and we're using RealPlayer,
-	// allocate a seperate 16-bit image buffer for receiving the downconverted
-	// video frame.
-
-	else if (media_player == REAL_PLAYER)
-		NEWARRAY(video_buffer_ptr, byte,
-			unscaled_video_width * unscaled_video_height * 2);
 
 	// Step through the list of scaled video textures, and initialise each one.
 

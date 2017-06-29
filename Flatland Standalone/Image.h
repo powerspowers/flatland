@@ -10,8 +10,7 @@ bool
 save_frame_buffer_to_JPEG(int width, int height, const char *file_path);
 
 bool
-load_image(const char *URL, const char *file_path, texture *texture_ptr, 
-		   bool unlimited_size);
+load_image(const char *URL, const char *file_path, texture *texture_ptr);
 
 texture *
 load_GIF_image(void);

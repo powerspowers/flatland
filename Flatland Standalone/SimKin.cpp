@@ -80,7 +80,7 @@ static unsigned int curr_script_def_ID;
 static void
 load_custom_texture(texture *&texture_ptr, const char *URL)
 {	
-	texture_ptr = load_texture(custom_blockset_ptr, (char *)URL, true, false);
+	texture_ptr = load_texture(custom_blockset_ptr, (char *)URL, true);
 	if (texture_ptr != NULL) {
 		if (texture_ptr->pixmap_list == NULL) {
 			if (curr_custom_texture_ptr == NULL)

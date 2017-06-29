@@ -132,29 +132,20 @@ get_block_def(const char *block_identifier)
 
 //------------------------------------------------------------------------------
 // Find a texture in the given blockset, and return a pointer to it, or NULL if
-// not found.  If unlimited_size is FALSE, then a warning is generating if the
-// texture has a width or height greater than 256.
+// not found.
 //------------------------------------------------------------------------------
 
 static texture *
-find_texture(blockset *blockset_ptr, const char *texture_URL, 
-			 bool unlimited_size)
+find_texture(blockset *blockset_ptr, const char *texture_URL)
 {
 	texture *texture_ptr;
 
 	// Search for the new texture URL in the determined blockset, returning a
-	// pointer to it if found.  If this is not a custom texture, unlimited_size
-	// is FALSE and the texture has a width or height larger than 256 pixels,
-	// then this is an error.
+	// pointer to it if found.
 
 	texture_ptr = blockset_ptr->first_texture_ptr;
 	while (texture_ptr != NULL) {
 		if (!_stricmp(texture_URL, texture_ptr->URL)) {
-			if (blockset_ptr != custom_blockset_ptr && !unlimited_size &&
-				(texture_ptr->width > 256 || texture_ptr->height > 256)) {
-				warning("Texture has width or height greater than 256 pixels");
-				return(NULL);
-			}
 			return(texture_ptr);
 		}
 		texture_ptr = texture_ptr->next_texture_ptr;
@@ -165,13 +156,11 @@ find_texture(blockset *blockset_ptr, const char *texture_URL,
 //------------------------------------------------------------------------------
 // Search for the named texture in the given blockset; if it doesn't exist, load
 // the texture file and add the texture image to the given blockset if
-// add_to_blockset is TRUE.  If unlimited_size is FALSE, then a texture with a
-// width or height larger than 256 will generate an error.
+// add_to_blockset is TRUE.
 //------------------------------------------------------------------------------
 
 texture *
-load_texture(blockset *blockset_ptr, char *texture_URL, bool add_to_blockset,
-			 bool unlimited_size)
+load_texture(blockset *blockset_ptr, char *texture_URL, bool add_to_blockset)
 {
 	string blockset_name, texture_name;
 	texture *texture_ptr;
@@ -214,8 +203,7 @@ load_texture(blockset *blockset_ptr, char *texture_URL, bool add_to_blockset,
 		// If a texture with the given name is already in the blockset,
 		// return a pointer to it.
 
-		if ((texture_ptr = find_texture(blockset_ptr, texture_name, 
-			unlimited_size)) != NULL)
+		if ((texture_ptr = find_texture(blockset_ptr, texture_name)) != NULL)
 			return(texture_ptr);
 
 		// Otherwise create the texture object, and initialise it.
@@ -239,7 +227,7 @@ load_texture(blockset *blockset_ptr, char *texture_URL, bool add_to_blockset,
 
 		new_texture_URL = "textures/";
 		new_texture_URL += texture_name;
-		if (!load_image(NULL, new_texture_URL, texture_ptr, unlimited_size)) {
+		if (!load_image(NULL, new_texture_URL, texture_ptr)) {
 			DEL(texture_ptr, texture);
 			close_zip_archive();
 			return(NULL);
@@ -258,8 +246,7 @@ load_texture(blockset *blockset_ptr, char *texture_URL, bool add_to_blockset,
 		// If a texture with the given URL is already in the given blockset,
 		// return a pointer to it.
 
-		if ((texture_ptr = find_texture(blockset_ptr, texture_URL, 
-			unlimited_size)) != NULL)
+		if ((texture_ptr = find_texture(blockset_ptr, texture_URL)) != NULL)
 			return(texture_ptr);
 
 		// Otherwise create the texture object, and initialise it.
@@ -285,7 +272,7 @@ load_texture(blockset *blockset_ptr, char *texture_URL, bool add_to_blockset,
 			texture_ptr->blockset_ptr = blockset_ptr;
 			new_texture_URL = "textures/";
 			new_texture_URL += texture_URL;
-			if (!load_image(NULL, new_texture_URL, texture_ptr, unlimited_size)) {
+			if (!load_image(NULL, new_texture_URL, texture_ptr)) {
 				DEL(texture_ptr, texture);
 				return(NULL);
 			}
@@ -343,13 +330,8 @@ create_stream_URL(string stream_URL)
 
 	if (!strnicmp(spot_URL_dir, "file:", 5)) {
 		spot_dir = "file://";
-		if (web_browser_ID == INTERNET_EXPLORER) {
-			spot_dir += (const char *)spot_URL_dir + 7;
-			spot_dir[8] = ':';
-		} else {
-			spot_dir += (const char *)spot_URL_dir + 8;
-			spot_dir[8] = ':';
-		}
+		spot_dir += (const char *)spot_URL_dir + 7;
+		spot_dir[8] = ':';
 	} else
 		spot_dir = spot_URL_dir;
 	return(create_URL(spot_dir, stream_URL));
@@ -2878,8 +2860,7 @@ handle_current_download(void)
 		// If the URL was not downloaded successfully or cannot be parsed,
 		// generate a warning.
 
-		if (download_status == 0 || !load_image(curr_URL, curr_file_path, 
-			curr_custom_texture_ptr, true))
+		if (download_status == 0 || !load_image(curr_URL, curr_file_path, curr_custom_texture_ptr))
 			warning("Unable to download custom texture from %s", curr_URL);
 		
 		// Otherwise update all texture dependancies.
