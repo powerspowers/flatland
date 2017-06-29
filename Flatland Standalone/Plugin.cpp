@@ -1446,8 +1446,7 @@ run_app(void *instance_handle, int show_command, char *spot_file_path)
 		return false;
 	}
 
-	// Open the spot at the provided file path or the splash spot if there
-	// is no file path.
+	// Open the spot at the provided file path on the command line, or the splash spot if the command line is empty.
 
 	if (strlen(spot_file_path) > 0) {
 		open_local_file(spot_file_path);
