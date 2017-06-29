@@ -37,7 +37,6 @@
 #include <mmstream.h>
 #include <amstream.h>
 #include <ddstream.h>
-//#include <real.h>
 #endif
 #include "resource.h"
 #include "Classes.h"
@@ -421,18 +420,16 @@ static LPDIRECTSOUND dsound_object_ptr;
 
 #ifdef STREAMING_MEDIA
 
-// Private streaming media data common to RealPlayer and WMP.
+// Private streaming media data.
 
 #define PLAYER_UNAVAILABLE		1
 #define	STREAM_UNAVAILABLE		2
 #define	STREAM_STARTED			3
 
-static int media_player;
 static int unscaled_video_width, unscaled_video_height;
 static int video_pixel_format;
 static event stream_opened;
 static event terminate_streaming_thread;
-static event rp_download_requested;
 static event wmp_download_requested;
 
 // Private streaming media data specific to WMP.
@@ -9562,162 +9559,76 @@ init_video_stream(void)
 //------------------------------------------------------------------------------
 
 static int
-create_stream(const char *file_path, int player)
+create_stream(const char *file_path)
 {
-	// If RealPlayer was requested...
+	IAMMultiMediaStream *local_stream_ptr;
+	WCHAR wPath[MAX_PATH];
 
-	media_player = player;
-	if (media_player == REAL_PLAYER) {
-		char szDllName[_MAX_PATH];
-		DWORD bufSize;
-		HKEY hKey;
-		
-		// Initialize the global variables.
+	// Initialise the COM library.
 
-		exContext = NULL;
-		hDll = NULL;
-		m_fpCreateEngine = NULL;
-		m_fpCloseEngine	= NULL;
-		pEngine = NULL;
-		pPlayer = NULL;
-		pErrorSinkControl = NULL;
-		video_buffer_ptr = NULL;
+	CoInitialize(NULL);
 
-	   // Get location of rmacore DLL from windows registry
+	// Initialise the global variables.
 
-		szDllName[0] = '\0'; 
-		bufSize = sizeof(szDllName) - 1;
-		if(RegOpenKey(HKEY_CLASSES_ROOT, 
-			"Software\\RealNetworks\\Preferences\\DT_Common", &hKey) 
-			== ERROR_SUCCESS) { 
-			RegQueryValue(hKey, "", szDllName, (long *)&bufSize); 
-			RegCloseKey(hKey); 
-		}
-		strcat(szDllName, "pnen3260.dll");
-    
-		// Load the rmacore library.
+	global_stream_ptr = NULL;
+	primary_video_stream_ptr = NULL;
+	ddraw_stream_ptr = NULL;
+	video_sample_ptr = NULL;
+	video_surface_ptr = NULL;
 
-		if ((hDll = LoadLibrary(szDllName)) == NULL)
-			return(PLAYER_UNAVAILABLE);
+	// Create the local multi-media stream object.
 
-		// Retrieve the function addresses from the module that we need to call.
+	if (CoCreateInstance(CLSID_AMMultiMediaStream, NULL, 
+		CLSCTX_INPROC_SERVER, IID_IAMMultiMediaStream, 
+		(void **)&local_stream_ptr) != S_OK)
+		return(PLAYER_UNAVAILABLE);
 
-		m_fpCreateEngine = (FPRMCREATEENGINE)GetProcAddress(hDll, 
-			"CreateEngine");
-		m_fpCloseEngine = (FPRMCLOSEENGINE)GetProcAddress(hDll, "CloseEngine");
-		if (m_fpCreateEngine == NULL || m_fpCloseEngine == NULL)
-			return(PLAYER_UNAVAILABLE);
+	// Initialise the local stream object.
 
-		// Create the client context.
-
-		if ((exContext = new ExampleClientContext()) == NULL)
-			return(PLAYER_UNAVAILABLE);
-		exContext->AddRef();
-
-		// Create client engine.
-		
-		if (m_fpCreateEngine((IRMAClientEngine **)&pEngine) != PNR_OK)
-			return(PLAYER_UNAVAILABLE);
-
-		// Create player.
-
-		if (pEngine->CreatePlayer(pPlayer) != PNR_OK)
-			return(PLAYER_UNAVAILABLE);
-
-		// Initialize the context and error sink control.
-
-		exContext->Init(pPlayer);
-		pPlayer->SetClientContext(exContext);
-		pPlayer->QueryInterface(IID_IRMAErrorSinkControl,
-			(void **)&pErrorSinkControl);
-		if (pErrorSinkControl) {	
-			exContext->QueryInterface(IID_IRMAErrorSink, (void**)&pErrorSink);
-			if (pErrorSink)
-				pErrorSinkControl->AddErrorSink(pErrorSink, PNLOG_EMERG, 
-					PNLOG_INFO);
-		}
-		
-		// Open the streaming media URL.
-
-		if (pPlayer->OpenURL(file_path) != PNR_OK) {
-			diagnose("RealPlayer was unable to open stream URL %s", 
-				file_path);
-			return(STREAM_UNAVAILABLE);
-		}
+	if (local_stream_ptr->Initialize(STREAMTYPE_READ, AMMSF_NOGRAPHTHREAD,
+		NULL) != S_OK) {
+		local_stream_ptr->Release();
+		return(PLAYER_UNAVAILABLE);
 	}
 
-	// If Windows Media Player was requested...
+	// Add a primary video stream to the local stream object.
 
-	else {
-		IAMMultiMediaStream *local_stream_ptr;
-		WCHAR wPath[MAX_PATH];
-
-		// Initialise the COM library.
-
-		CoInitialize(NULL);
-
-		// Initialise the global variables.
-
-		global_stream_ptr = NULL;
-		primary_video_stream_ptr = NULL;
-		ddraw_stream_ptr = NULL;
-		video_sample_ptr = NULL;
-		video_surface_ptr = NULL;
-
-		// Create the local multi-media stream object.
-
-		if (CoCreateInstance(CLSID_AMMultiMediaStream, NULL, 
-			CLSCTX_INPROC_SERVER, IID_IAMMultiMediaStream, 
-			(void **)&local_stream_ptr) != S_OK)
-			return(PLAYER_UNAVAILABLE);
-
-		// Initialise the local stream object.
-
-		if (local_stream_ptr->Initialize(STREAMTYPE_READ, AMMSF_NOGRAPHTHREAD,
-			NULL) != S_OK) {
-			local_stream_ptr->Release();
-			return(PLAYER_UNAVAILABLE);
-		}
-
-		// Add a primary video stream to the local stream object.
-
-		if (local_stream_ptr->AddMediaStream(ddraw_object_ptr, 
-			&MSPID_PrimaryVideo, 0, NULL) != S_OK) {
-			local_stream_ptr->Release();
-			return(PLAYER_UNAVAILABLE);
-		}
-
-		// Add a primary audio stream to the local stream object, using the 
-		// default audio renderer for playback.
-
-		if (local_stream_ptr->AddMediaStream(NULL, &MSPID_PrimaryAudio, 
-			AMMSF_ADDDEFAULTRENDERER, NULL) != S_OK) {
-			local_stream_ptr->Release();
-			return(PLAYER_UNAVAILABLE);
-		}
-
-		// Open the streaming media file.
-
-		MultiByteToWideChar(CP_ACP, 0, file_path, -1, wPath, MAX_PATH);    
-		if (local_stream_ptr->OpenFile(wPath, 0) != S_OK) {
-			local_stream_ptr->Release();
-			diagnose("Windows Media Player was unable to open stream URL %s", 
-				file_path);
-			return(STREAM_UNAVAILABLE);
-		}
-
-		// Convert the local stream object into a global stream object.
-
-		global_stream_ptr = local_stream_ptr;
-
-		// Initialise the primary video stream, if it exists.
-
-		streaming_video_available = init_video_stream();
-
-		// Get the end of stream event handle.
-
-		global_stream_ptr->GetEndOfStreamEventHandle(&end_of_stream_handle);
+	if (local_stream_ptr->AddMediaStream(ddraw_object_ptr, 
+		&MSPID_PrimaryVideo, 0, NULL) != S_OK) {
+		local_stream_ptr->Release();
+		return(PLAYER_UNAVAILABLE);
 	}
+
+	// Add a primary audio stream to the local stream object, using the 
+	// default audio renderer for playback.
+
+	if (local_stream_ptr->AddMediaStream(NULL, &MSPID_PrimaryAudio, 
+		AMMSF_ADDDEFAULTRENDERER, NULL) != S_OK) {
+		local_stream_ptr->Release();
+		return(PLAYER_UNAVAILABLE);
+	}
+
+	// Open the streaming media file.
+
+	MultiByteToWideChar(CP_ACP, 0, file_path, -1, wPath, MAX_PATH);    
+	if (local_stream_ptr->OpenFile(wPath, 0) != S_OK) {
+		local_stream_ptr->Release();
+		diagnose("Windows Media Player was unable to open stream URL %s", 
+			file_path);
+		return(STREAM_UNAVAILABLE);
+	}
+
+	// Convert the local stream object into a global stream object.
+
+	global_stream_ptr = local_stream_ptr;
+
+	// Initialise the primary video stream, if it exists.
+
+	streaming_video_available = init_video_stream();
+
+	// Get the end of stream event handle.
+
+	global_stream_ptr->GetEndOfStreamEventHandle(&end_of_stream_handle);
 
 	// Return a success status.
 
@@ -9775,158 +9686,15 @@ YUV_to_pixel(float *yuv)
 }
 
 //------------------------------------------------------------------------------
-// Draw the current video frame (RealPlayer only).
-//------------------------------------------------------------------------------
-
-void
-draw_frame(byte *fb_ptr)
-{
-	byte *vb_ptr;
-	byte *y_buffer_ptr, *u_buffer_ptr, *v_buffer_ptr;
-	byte *u_row_ptr, *v_row_ptr;
-	float yuv[3];
-	int vb_row_pitch;
-	byte *fb_row_ptr, *pixmap_row_ptr;
-	RGBcolour colour;
-	int row, column;
-	float u, v, start_u, start_v, delta_u, delta_v;
-	video_texture *scaled_video_texture_ptr;
-	texture *texture_ptr;
-	pixmap *pixmap_ptr;
-	int index;
-
-	// If there is an unscaled texture, use it's pixmap image as the target for
-	// the video frame downconversion.  Otherwise use the seperately allocated 
-	// video buffer as the target.
-
-	if (unscaled_video_texture_ptr != NULL) {
-		pixmap_ptr = unscaled_video_texture_ptr->pixmap_list;
-		vb_ptr = pixmap_ptr->image_ptr;
-	} else
-		vb_ptr = video_buffer_ptr;
-
-	// Convert the video frame into texture pixel format.
-
-	switch (video_pixel_format) {
-
-	// If the video format is 24-bit RGB...
-
-	case RGB24:
-		pixmap_row_ptr = vb_ptr;
-		for (row = 0; row < unscaled_video_height; row++) {
-			fb_row_ptr = fb_ptr + (unscaled_video_height - row) *
-				unscaled_video_width * 3;
-			for (column = 0; column < unscaled_video_width; column++) {
-				colour.blue = *fb_row_ptr++;
-				colour.green = *fb_row_ptr++;
-				colour.red = *fb_row_ptr++;
-				*(word *)pixmap_row_ptr = (word)RGB_to_texture_pixel(colour);
-				pixmap_row_ptr += 2;
-			}
-		}
-		break;
-
-	// If the video format is "12-bit" YUV...
-
-	case YUV12:
-
-		// Set pointers to the start of the Y, U and V data.
-
-		y_buffer_ptr = fb_ptr;
-		u_buffer_ptr = fb_ptr + unscaled_video_width * unscaled_video_height;
-		v_buffer_ptr = u_buffer_ptr + 
-			(unscaled_video_width * unscaled_video_height / 4);
-
-		// Convert each 888 YUV pixel to an 555 RGB pixel.
-
-		pixmap_row_ptr = vb_ptr;
-		for (row = 0; row < unscaled_video_height; row++) {
-			u_row_ptr = u_buffer_ptr;
-			v_row_ptr = v_buffer_ptr;
-			for (column = 0; column < unscaled_video_width; column += 2) {
-				yuv[0] = (float)*y_buffer_ptr++ - 16.0f;
-				yuv[1] = (float)*u_row_ptr++ - 128.0f;
-				yuv[2] = (float)*v_row_ptr++ - 128.0f;
-				*(word *)pixmap_row_ptr = YUV_to_pixel(yuv);
-				pixmap_row_ptr += 2;
-				yuv[0] = (float)*y_buffer_ptr++ - 16.0f;
-				*(word *)pixmap_row_ptr = YUV_to_pixel(yuv);
-				pixmap_row_ptr += 2;
-			}
-			if (row & 1) {
-				u_buffer_ptr += unscaled_video_width >> 1;
-				v_buffer_ptr += unscaled_video_width >> 1;
-			}
-		}
-	}
-
-	// If there is an unscaled video texture, indicate it's pixmap has been 
-	// updated.
-
-	if (unscaled_video_texture_ptr != NULL) {
-		raise_semaphore(image_updated_semaphore);
-		for (index = 0; index < BRIGHTNESS_LEVELS; index++)
-			pixmap_ptr->image_updated[index] = true;
-		lower_semaphore(image_updated_semaphore);
-	}
-
-	// If there are scaled video textures, copy the video surface to each
-	// one.
-
-	scaled_video_texture_ptr = scaled_video_texture_list;
-	while (scaled_video_texture_ptr != NULL) {
-
-		// Scale the video texture and convert from video to texture pixels.
-
-		texture_ptr = scaled_video_texture_ptr->texture_ptr;
-		pixmap_ptr = texture_ptr->pixmap_list;
-		start_u = scaled_video_texture_ptr->source_rect.x1;
-		start_v = scaled_video_texture_ptr->source_rect.y1;
-		delta_u = scaled_video_texture_ptr->delta_u;
-		delta_v = scaled_video_texture_ptr->delta_v;
-		v = start_v;
-		pixmap_row_ptr = pixmap_ptr->image_ptr;
-		vb_row_pitch = unscaled_video_width * 2;
-		for (row = 0; row < pixmap_ptr->height; row++) {
-			fb_row_ptr = vb_ptr + (int)v * vb_row_pitch;
-			u = start_u;
-			for (column = 0; column < pixmap_ptr->width; column++) {
-				*(word *)pixmap_row_ptr = *((word *)fb_row_ptr + (int)u);
-				pixmap_row_ptr += 2;
-				u += delta_u;
-			}
-			v += delta_v;
-		}
-
-		// Indicate the pixmap has been updated.
-
-		raise_semaphore(image_updated_semaphore);
-		for (index = 0; index < BRIGHTNESS_LEVELS; index++)
-			pixmap_ptr->image_updated[index] = true;
-		lower_semaphore(image_updated_semaphore);
-
-		// Move onto the next video texture.
-
-		scaled_video_texture_ptr = 
-			scaled_video_texture_ptr->next_video_texture_ptr;
-	}
-}
-
-//------------------------------------------------------------------------------
 // Play the stream.
 //------------------------------------------------------------------------------
 
 static void
 play_stream(void)
 {
-	if (media_player == REAL_PLAYER)
-		pPlayer->Begin();
-	else {
-		global_stream_ptr->SetState(STREAMSTATE_RUN);
-		if (streaming_video_available)
-			video_sample_ptr->Update(0, video_frame_available.event_handle, 
-				NULL, NULL);
-	}
+	global_stream_ptr->SetState(STREAMSTATE_RUN);
+	if (streaming_video_available)
+		video_sample_ptr->Update(0, video_frame_available.event_handle, NULL, NULL);
 }
 
 //------------------------------------------------------------------------------
@@ -9936,12 +9704,8 @@ play_stream(void)
 static void
 stop_stream(void)
 {
-	if (media_player == REAL_PLAYER)
-		pPlayer->Stop();
-	else {
-		global_stream_ptr->SetState(STREAMSTATE_STOP);
-		global_stream_ptr->Seek(0);
-	}
+	global_stream_ptr->SetState(STREAMSTATE_STOP);
+	global_stream_ptr->Seek(0);
 }
 
 //------------------------------------------------------------------------------
@@ -9951,10 +9715,7 @@ stop_stream(void)
 static void
 pause_stream(void)
 {
-	if (media_player == REAL_PLAYER)
-		pPlayer->Pause();
-	else
-		global_stream_ptr->SetState(STREAMSTATE_STOP);
+	global_stream_ptr->SetState(STREAMSTATE_STOP);
 }
 
 //------------------------------------------------------------------------------
@@ -10064,84 +9825,39 @@ update_stream(void)
 static void
 destroy_stream(void)
 {
-	// If RealPlayer was chosen...
+	// Destroy the "video frame available" event.
 
-	if (media_player == REAL_PLAYER) {
+	if (video_frame_available.event_handle)
+		video_frame_available.destroy_event();
 
-		// Release the error sink control.
+	// Release the video sample object.
 
-		if (pErrorSinkControl) {
-			pErrorSinkControl->RemoveErrorSink(pErrorSink);
-			pErrorSinkControl->Release();
-		}
+	if (video_sample_ptr != NULL)
+		video_sample_ptr->Release();
 
-		// Release the context.
+	// Release the video surface object.
 
-		if (exContext)
-			exContext->Release();
+	if (video_surface_ptr != NULL)
+		video_surface_ptr->Release();
 
-		// Close and release the player.
+	// Release the DirectDraw stream object.
 
-		if (pPlayer) {
-			pEngine->ClosePlayer(pPlayer);
-			pPlayer->Release();
-		}
+	if (ddraw_stream_ptr != NULL)
+		ddraw_stream_ptr->Release();
 
-		// Close the engine.
+	// Release the primary video stream object.
 
-		if (pEngine)
-			m_fpCloseEngine(pEngine);
+	if (primary_video_stream_ptr != NULL)
+		primary_video_stream_ptr->Release();
 
-		// Free the RealPlayer library.
+	// Release the global stream object.
 
-		if (hDll)
-			FreeLibrary(hDll);
+	if (global_stream_ptr != NULL)
+		global_stream_ptr->Release();
 
-		// Delete the video buffer.
+	// Shut down the COM library.
 
-		if (video_buffer_ptr != NULL)
-			DELBASEARRAY(video_buffer_ptr, byte, 
-				unscaled_video_width * unscaled_video_height * 2);
-	} 
-	
-	// If Windows Media Player was chosen...
-
-	else {
-
-		// Destroy the "video frame available" event.
-
-		if (video_frame_available.event_handle)
-			video_frame_available.destroy_event();
-
-		// Release the video sample object.
-
-		if (video_sample_ptr != NULL)
-			video_sample_ptr->Release();
-
-		// Release the video surface object.
-
-		if (video_surface_ptr != NULL)
-			video_surface_ptr->Release();
-
-		// Release the DirectDraw stream object.
-
-		if (ddraw_stream_ptr != NULL)
-			ddraw_stream_ptr->Release();
-
-		// Release the primary video stream object.
-
-		if (primary_video_stream_ptr != NULL)
-			primary_video_stream_ptr->Release();
-
-		// Release the global stream object.
-
-		if (global_stream_ptr != NULL)
-			global_stream_ptr->Release();
-
-		// Shut down the COM library.
-
-		CoUninitialize();
-	}
+	CoUninitialize();
 }
 
 //------------------------------------------------------------------------------
@@ -10173,42 +9889,13 @@ unsupported_wmp_format(void)
 }
 
 //------------------------------------------------------------------------------
-// Ask user whether they want to download RealPlayer.
-//------------------------------------------------------------------------------
-
-static void
-download_rp(void)
-{
-	if (query("RealPlayer required", true,
-		"Flatland Rover requires the latest version of RealPlayer\n"
-		"to play back the streaming media in this spot.\n\n"
-		"Do you wish to download RealPlayer now?"))
-		rp_download_requested.send_event(true);
-}
-
-//------------------------------------------------------------------------------
-// Display a message telling the user that RealPlayer does not support the
-// streaming media format.
-//------------------------------------------------------------------------------
-
-static void
-unsupported_rp_format(void)
-{
-	information("Unable to play streaming media",
-		"RealPlayer is unable to play the streaming media in this spot;\n"
-		"either the streaming media URL is invalid, or the streaming media\n"
-		"format is not currently supported by RealPlayer.");
-}
-
-//------------------------------------------------------------------------------
 // Streaming thread.
 //------------------------------------------------------------------------------
 
 static void
 streaming_thread(void *arg_list)
 {
-	int rp_result, wmp_result;
-	MSG msg;
+	int wmp_result;
 
 	// Decrease the priority level on this thread, to ensure that the browser
 	// and the rest of the system remains responsive.
@@ -10219,16 +9906,8 @@ streaming_thread(void *arg_list)
 	// stream.
 
 	if (strlen(wmp_stream_URL) > 0) {
-		wmp_result = create_stream(wmp_stream_URL, WINDOWS_MEDIA_PLAYER);
+		wmp_result = create_stream(wmp_stream_URL);
 		if (wmp_result != STREAM_STARTED)
-			destroy_stream();
-	}
-
-	// If the stream URL for RealPlayer was specified, create that stream.
-
-	if (strlen(wmp_stream_URL) == 0 || wmp_result != STREAM_STARTED) {
-		rp_result = create_stream(rp_stream_URL, REAL_PLAYER);
-		if (rp_result != STREAM_STARTED)
 			destroy_stream();
 	}
 
@@ -10236,24 +9915,11 @@ streaming_thread(void *arg_list)
 	// to start, then either ask the user if they want to download Windows
 	// Media Player, or display an error message.
 
-	if (strlen(wmp_stream_URL) > 0 && wmp_result != STREAM_STARTED &&
-		(strlen(rp_stream_URL) == 0 || rp_result != STREAM_STARTED)) { 
+	if (strlen(wmp_stream_URL) > 0 && wmp_result != STREAM_STARTED) { 
 		if (wmp_result == PLAYER_UNAVAILABLE)
 			download_wmp();
 		else
 			unsupported_wmp_format();
-		return;
-	}
-
-	// If there was no stream URL for Windows Media Player, meaning there
-	// was one for RealPlayer, and it failed to start, then either ask the user
-	// if they want to download RealPlayer, or display an error message.
-
-	if (strlen(wmp_stream_URL) == 0 && rp_result != STREAM_STARTED) {
-		if (rp_result == PLAYER_UNAVAILABLE)
-			download_rp();
-		else
-			unsupported_rp_format();
 		return;
 	}
 
@@ -10264,25 +9930,7 @@ streaming_thread(void *arg_list)
 	// Loop until a request to terminate the thread has been recieved.
 
 	while (!terminate_streaming_thread.event_sent()) {
-
-		// If we are using RealPlayer, dispatch any pending Windows message
-		// and check whether the stream has finished, meaning it needs to be
-		// restarted from the beginning.
-
-		if (media_player == REAL_PLAYER) {
-			if (GetMessage(&msg, NULL, 0, 0))
-				DispatchMessage(&msg);
-			if (pPlayer->IsDone()) {
-				stop_stream();
-				play_stream();
-			}
-		} 
-		
-		// If we are using Windows Media Player, call the update function for
-		// the stream.
-
-		else
-			update_stream();
+		update_stream();
 	}
 
 	// Stop then destroy the stream.
@@ -10299,16 +9947,6 @@ bool
 stream_ready(void)
 {
 	return(stream_opened.event_sent());
-}
-
-//------------------------------------------------------------------------------
-// Determine if download of RealPlayer was requested.
-//------------------------------------------------------------------------------
-
-bool
-download_of_rp_requested(void)
-{
-	return(rp_download_requested.event_sent());
 }
 
 //------------------------------------------------------------------------------
@@ -10332,7 +9970,6 @@ start_streaming_thread(void)
 
 	stream_opened.create_event();
 	terminate_streaming_thread.create_event();
-	rp_download_requested.create_event();
 	wmp_download_requested.create_event();
 
 	// Start the stream thread.
@@ -10359,7 +9996,6 @@ stop_streaming_thread(void)
 
 	stream_opened.destroy_event();
 	terminate_streaming_thread.destroy_event();
-	rp_download_requested.destroy_event();
 	wmp_download_requested.destroy_event();
 }
 

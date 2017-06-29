@@ -4145,11 +4145,9 @@ handle_spot_events(void)
 			}
 		}
 
-		// If a request to download RealPlayer or Windows Media Player
+		// If a request to download Windows Media Player
 		// has been recieved, launch the appropriate download page.
 
-		if (download_of_rp_requested())
-			request_URL(RP_DOWNLOAD_URL, NULL, "_self");
 		if (download_of_wmp_requested())
 			request_URL(WMP_DOWNLOAD_URL, NULL, "_blank");
 	}

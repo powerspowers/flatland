@@ -604,14 +604,8 @@ update_sound(sound *sound_ptr, vertex *translation_ptr);
 void
 init_video_textures(int video_width, int video_height, int pixel_format);
 
-void
-draw_frame(byte *image_ptr);
-
 bool
 stream_ready(void);
-
-bool
-download_of_rp_requested(void);
 
 bool
 download_of_wmp_requested(void);
