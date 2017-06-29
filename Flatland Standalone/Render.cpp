@@ -3037,7 +3037,7 @@ render_frame(void)
 	curr_popup_block_ptr = NULL;
 	curr_popup_square_ptr = NULL;
 
-	// Reset the selection flag and currnt popup.
+	// Reset the selection flag and current popup.
 
 	found_selection = false;
 	curr_popup_ptr = NULL;

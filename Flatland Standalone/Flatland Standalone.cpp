@@ -16,6 +16,8 @@ int APIENTRY WinMain(_In_ HINSTANCE hInstance,
 	int arguments;
 	char file_path[_MAX_PATH];
 
+	// Parse the command line into arguments and extract the first argument as the spot file path.
+
 	argument_list = CommandLineToArgvW(GetCommandLineW(), &arguments);
 	if (arguments > 1) {
 		WideCharToMultiByte(CP_UTF8, WC_ERR_INVALID_CHARS, argument_list[1], -1, file_path, _MAX_PATH, NULL, NULL);
