@@ -6,7 +6,7 @@
 
 // Version string.
 
-#define ROVER_VERSION_NUMBER			0x03060004 // ff at the end usually unless beta
+#define ROVER_VERSION_NUMBER			0x03060005 // ff at the end usually unless beta
 
 // Activation status.
 
