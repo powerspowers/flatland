@@ -1155,6 +1155,38 @@ save_frame_buffer_to_JPEG(int width, int height, const char *file_path)
 // Load an image.
 //==============================================================================
 
+void
+scale_pixmap(pixmap *pixmap_ptr, int new_image_width, int new_image_height, float scale)
+{
+	// Allocate a new image, and copy a scaled version of the old image to it.
+
+	int new_image_size = new_image_width * new_image_height * (pixmap_ptr->image_is_16_bit ? 2 : 1);
+	imagebyte *new_image;
+	NEWARRAY(new_image, imagebyte, new_image_size);
+	imagebyte *old_image_ptr = pixmap_ptr->image_ptr, *new_image_ptr = new_image;
+	float y = 0.0f;
+	for (int row = 0; row < new_image_height; row++, y += scale) {
+		imagebyte *row_ptr = old_image_ptr + (int)y * pixmap_ptr->width * (pixmap_ptr->image_is_16_bit ? 2 : 1);
+		float x = 0.0f;
+		for (int column = 0; column < new_image_width; column++, x += scale) {
+			if (pixmap_ptr->image_is_16_bit) {
+				*((word *)new_image_ptr) = *((word *)row_ptr + (int)x);
+				new_image_ptr += 2;
+			} else {
+				*new_image_ptr++ = *(row_ptr + (int)x);
+			}
+		}
+	}
+
+	// Delete the old image, and store the new image data in the pixmap.
+
+	DELARRAY(pixmap_ptr->image_ptr, imagebyte, pixmap_ptr->image_size);
+	pixmap_ptr->image_ptr = new_image;
+	pixmap_ptr->image_size = new_image_size;
+	pixmap_ptr->width = new_image_width;
+	pixmap_ptr->height = new_image_height;
+}
+
 //------------------------------------------------------------------------------
 // Load an image into an existing texture object from the given URL or local
 // file.  If the load fails, return FALSE.
@@ -1209,6 +1241,27 @@ load_image(const char *URL, const char *file_path, texture *texture_ptr)
 
 	try {
 
+		// If the image exceeds the maximum texture size, scale all of the pixmaps to fit.
+
+		if (image_width > max_texture_size || image_height > max_texture_size) {
+			float scale;
+			int new_image_width, new_image_height;
+			if (image_width >= image_height) {
+				scale = (float)image_width / (float)max_texture_size;
+				new_image_width = max_texture_size;
+				new_image_height = (int)(image_height / scale);
+			} else {
+				scale = (float)image_height / (float)max_texture_size;
+				new_image_width = (int)(image_width / scale);
+				new_image_height = max_texture_size;
+			}
+			for (int i = 0; i < pixmaps ; i++) {
+				scale_pixmap(&pixmap_list[i], new_image_width, new_image_height, scale);
+			}
+			image_width = new_image_width;
+			image_height = new_image_height;
+		}
+
 		// Initialise the texture object.
 
 		texture_ptr->width = image_width;
@@ -1232,8 +1285,7 @@ load_image(const char *URL, const char *file_path, texture *texture_ptr)
 			texture_ptr->pixmap_list[index] = pixmap_list[index];
 			pixmap_list[index].image_ptr = NULL;
 		}
-		if (image_width <= 256 && image_height <= 256)
-			set_size_indices(texture_ptr);
+		set_size_indices(texture_ptr);
 
 		// If this is an 8-bit texture, create the RGB palette, and one of 
 		// either the texture palette or display palette.
@@ -1316,8 +1368,7 @@ load_GIF_image(void)
 			texture_ptr->pixmap_list[index] = pixmap_list[index];
 			pixmap_list[index].image_ptr = NULL;
 		}
-		if (image_width <= 256 && image_height <= 256)
-			set_size_indices(texture_ptr);
+		set_size_indices(texture_ptr);
 
 		// Create the RGB palette.
 

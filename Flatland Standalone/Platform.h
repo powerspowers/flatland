@@ -131,6 +131,10 @@ extern string app_dir;
 extern pixel_format display_pixel_format;
 extern pixel_format texture_pixel_format;
 
+// Largest texture size permitted.
+
+extern int max_texture_size;
+
 // Display properties.
 
 extern int display_width, display_height, display_depth;

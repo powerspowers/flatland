@@ -146,6 +146,10 @@ string app_dir;
 pixel_format display_pixel_format;
 pixel_format texture_pixel_format;
 
+// Largest texture size permitted.
+
+int max_texture_size;
+
 // Display properties.
 
 int display_width, display_height, display_depth;
@@ -1833,6 +1837,14 @@ create_d3d_device(bool recreate)
 		return(false);
 	}
 
+	// Determine the maximum texture size supported, and if it's less than the maximum we would like to support, use the smaller size.
+
+	D3DCAPS8 device_caps;
+	d3d_device_ptr->GetDeviceCaps(&device_caps);
+	int max_texture_width = MIN(device_caps.MaxTextureWidth, MAX_TEXTURE_SIZE);
+	int max_texture_height = MIN(device_caps.MaxTextureHeight, MAX_TEXTURE_SIZE);
+	max_texture_size = MIN(max_texture_width, max_texture_height);
+
 	// Set the viewport.
 
 	d3d_viewport.X = 0;
@@ -3028,6 +3040,7 @@ create_main_window(void (*key_callback)(byte key_code, bool key_down),
 	resize_callback_ptr = NULL;
 	display_callback_ptr = NULL;
 	title_texture_ptr = NULL;
+	max_texture_size = MAX_TEXTURE_SIZE;
 
 	// Initialise the dither table pointers.
 

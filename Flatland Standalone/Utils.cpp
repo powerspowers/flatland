@@ -2669,20 +2669,12 @@ update_texture_dependancies(texture *custom_texture_ptr)
 	polygon *polygon_ptr;
 	polygon_def *polygon_def_ptr;
 	part *part_ptr;
-	bool oversized;
 
  	// Initialise all popups that depend on the given texture.
 
 	update_textures_in_popup_list(global_popup_list, custom_texture_ptr);
 	update_textures_in_blockset(custom_blockset_ptr, custom_texture_ptr);
 
-	// If the custom texture has a width or height larger than 256 texels, then
-	// it is oversized.
-
-	if (custom_texture_ptr->width > 256 || custom_texture_ptr->height > 256)
-		oversized = true;
-	else
-		oversized = false;
 
 	// Step through the custom block definitions, and update all parts that
 	// use the custom texture.
@@ -2692,12 +2684,7 @@ update_texture_dependancies(texture *custom_texture_ptr)
 		for (int part_no = 0; part_no < block_def_ptr->parts; part_no++) {
 			part_ptr = &block_def_ptr->part_list[part_no];
 			if (part_ptr->custom_texture_ptr == custom_texture_ptr) {
-				if (oversized)
-					oversized_texture_warning(custom_texture_ptr->URL,
-						"in part \"%s\" of block \"%s\"", part_ptr->name,
-							block_def_ptr->get_symbol());
-				else
-					part_ptr->texture_ptr = custom_texture_ptr;
+				part_ptr->texture_ptr = custom_texture_ptr;
 			}
 		}
 		block_def_ptr = block_def_ptr->next_block_def_ptr;
@@ -2710,13 +2697,8 @@ update_texture_dependancies(texture *custom_texture_ptr)
 		polygon_def_ptr = polygon_ptr->polygon_def_ptr;
 		part_ptr = polygon_def_ptr->part_ptr;
 		if (part_ptr->texture_ptr == custom_texture_ptr) {
-			if (oversized)
-				oversized_texture_warning(custom_texture_ptr->URL,
-					"in part \"%s\" of player block", part_ptr->name);
-			else {
-				init_sprite_polygon(player_block_ptr, polygon_ptr, part_ptr);
-				init_player_collision_box();
-			}
+			init_sprite_polygon(player_block_ptr, polygon_ptr, part_ptr);
+			init_player_collision_box();
 		}
 	}
 
@@ -2733,16 +2715,8 @@ update_texture_dependancies(texture *custom_texture_ptr)
 						polygon_ptr = block_ptr->polygon_list;
 						polygon_def_ptr = polygon_ptr->polygon_def_ptr;
 						part_ptr = polygon_def_ptr->part_ptr;
-						if (part_ptr->custom_texture_ptr == 
-							custom_texture_ptr) {
-							if (oversized)
-								oversized_texture_warning(
-									custom_texture_ptr->URL,
-									"in sprite block at location (%d,%d,%d)",
-									column + 1, row + 1, level + 1);
-							else
-								init_sprite_polygon(block_ptr, polygon_ptr, 
-									part_ptr);
+						if (part_ptr->custom_texture_ptr == custom_texture_ptr) {
+							init_sprite_polygon(block_ptr, polygon_ptr, part_ptr);
 						}
 					}
 				}
@@ -2751,10 +2725,7 @@ update_texture_dependancies(texture *custom_texture_ptr)
 	// Reinitialise the sky if it uses the custom texture.
 
 	if (custom_sky_texture_ptr == custom_texture_ptr) {
-		if (oversized)
-			oversized_texture_warning(custom_texture_ptr->URL, "for the sky");
-		else
-			sky_texture_ptr = custom_texture_ptr;
+		sky_texture_ptr = custom_texture_ptr;
 	}
 
 	// Reinitialise the ground part if it exists and it uses the custom texture.
@@ -2762,21 +2733,14 @@ update_texture_dependancies(texture *custom_texture_ptr)
 	if (ground_block_def_ptr != NULL) {
 		part_ptr = ground_block_def_ptr->part_list;
 		if (part_ptr->custom_texture_ptr == custom_texture_ptr) {
-			if (oversized)
-				oversized_texture_warning(custom_texture_ptr->URL, 
-					"for the ground");
-			else
-				part_ptr->texture_ptr = custom_texture_ptr;
+			part_ptr->texture_ptr = custom_texture_ptr;
 		}
 	}
 
 	// Reinitialise the orb if it exists and uses the custom texture.
 
 	if (custom_orb_texture_ptr == custom_texture_ptr) {
-		if (oversized)
-			oversized_texture_warning(custom_texture_ptr->URL, "for the orb");
-		else
-			orb_texture_ptr = custom_texture_ptr;
+		orb_texture_ptr = custom_texture_ptr;
 	}
 }
 
