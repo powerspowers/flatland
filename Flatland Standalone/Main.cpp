@@ -1784,7 +1784,9 @@ adjust_trajectory(vector &trajectory, float elapsed_time, bool &player_falling)
 			
 			else {
 				player_falling = true;
-				new_position.y -= player_fall_delta;
+				if (FGT(elapsed_time, 0.0f)) {
+					new_position.y -= player_fall_delta;
+				}
 				if (FLE(new_position.y, floor_y)) {
 					new_position.y = floor_y;
 					player_fall_delta = 0.0f;
