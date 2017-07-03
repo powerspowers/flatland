@@ -408,6 +408,8 @@ IDXGISwapChain *d3d_swap_chain_ptr;
 ID3D11Device *d3d_device_ptr;
 ID3D11DeviceContext *d3d_device_context_ptr;
 ID3D11RenderTargetView *d3d_render_target_view_ptr;
+ID3D11Texture2D *d3d_depth_stencil_texture_ptr;
+ID3D11DepthStencilView *d3d_depth_stencil_view_ptr;
 ID3D11VertexShader *d3d_vertex_shader_ptr;
 ID3D11PixelShader *d3d_pixel_shader_ptr;
 
@@ -2573,19 +2575,19 @@ start_up_hardware_renderer(void)
 {
 	// Initialize the swap chain description.
 
-	DXGI_SWAP_CHAIN_DESC sd;
-	ZeroMemory(&sd, sizeof(sd));
-	sd.BufferCount = 2;
-	sd.BufferDesc.Width = window_width;
-	sd.BufferDesc.Height = window_height;
-	sd.BufferDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
-	sd.BufferDesc.RefreshRate.Numerator = 60;
-	sd.BufferDesc.RefreshRate.Denominator = 1;
-	sd.BufferUsage = DXGI_USAGE_RENDER_TARGET_OUTPUT;
-	sd.OutputWindow = main_window_handle;
-	sd.SampleDesc.Count = 1;
-	sd.SampleDesc.Quality = 0;
-	sd.Windowed = TRUE;
+	DXGI_SWAP_CHAIN_DESC swap_chain_desc;
+	ZeroMemory(&swap_chain_desc, sizeof(swap_chain_desc));
+	swap_chain_desc.BufferCount = 2;
+	swap_chain_desc.BufferDesc.Width = window_width;
+	swap_chain_desc.BufferDesc.Height = window_height;
+	swap_chain_desc.BufferDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
+	swap_chain_desc.BufferDesc.RefreshRate.Numerator = 60;
+	swap_chain_desc.BufferDesc.RefreshRate.Denominator = 1;
+	swap_chain_desc.BufferUsage = DXGI_USAGE_RENDER_TARGET_OUTPUT;
+	swap_chain_desc.OutputWindow = main_window_handle;
+	swap_chain_desc.SampleDesc.Count = 1;
+	swap_chain_desc.SampleDesc.Quality = 0;
+	swap_chain_desc.Windowed = TRUE;
 
 	// Create the device and swap chain.
 
@@ -2598,7 +2600,7 @@ start_up_hardware_renderer(void)
 		&feature_levels_requested, 
 		1,
 		D3D11_SDK_VERSION, 
-		&sd, 
+		&swap_chain_desc, 
 		&d3d_swap_chain_ptr, 
 		&d3d_device_ptr, 
 		NULL,
@@ -2613,23 +2615,56 @@ start_up_hardware_renderer(void)
 		return false;
 	}
 
-	// Create a render-target view, and bind it.
+	// Create a render target view.
 
 	if (FAILED(d3d_device_ptr->CreateRenderTargetView(back_buffer_ptr, NULL, &d3d_render_target_view_ptr))) {
 		return false;
 	}
-	d3d_device_context_ptr->OMSetRenderTargets(1, &d3d_render_target_view_ptr, NULL);
+
+	// Create a depth stencil texture.
+
+	D3D11_TEXTURE2D_DESC depth_stencil_texture_desc;
+	ZeroMemory( &depth_stencil_texture_desc, sizeof(depth_stencil_texture_desc) );
+	depth_stencil_texture_desc.Width = window_width;
+	depth_stencil_texture_desc.Height = window_height;
+	depth_stencil_texture_desc.MipLevels = 1;
+	depth_stencil_texture_desc.ArraySize = 1;
+	depth_stencil_texture_desc.Format = DXGI_FORMAT_D24_UNORM_S8_UINT;
+	depth_stencil_texture_desc.SampleDesc.Count = 1;
+	depth_stencil_texture_desc.SampleDesc.Quality = 0;
+	depth_stencil_texture_desc.Usage = D3D11_USAGE_DEFAULT;
+	depth_stencil_texture_desc.BindFlags = D3D11_BIND_DEPTH_STENCIL;
+	depth_stencil_texture_desc.CPUAccessFlags = 0;
+	depth_stencil_texture_desc.MiscFlags = 0;
+	if (FAILED(d3d_device_ptr->CreateTexture2D(&depth_stencil_texture_desc, NULL, &d3d_depth_stencil_texture_ptr))) {
+		return false;
+	}
+
+	// Create the depth stencil view.
+
+	D3D11_DEPTH_STENCIL_VIEW_DESC depth_stencil_view_desc;
+	ZeroMemory(&depth_stencil_view_desc, sizeof(depth_stencil_view_desc));
+	depth_stencil_view_desc.Format = depth_stencil_texture_desc.Format;
+	depth_stencil_view_desc.ViewDimension = D3D11_DSV_DIMENSION_TEXTURE2D;
+	depth_stencil_view_desc.Texture2D.MipSlice = 0;
+	if (FAILED(d3d_device_ptr->CreateDepthStencilView(d3d_depth_stencil_texture_ptr, &depth_stencil_view_desc, &d3d_depth_stencil_view_ptr))) {
+		return false;
+	}
+
+	// Set the render target and depth stencil view.
+
+	d3d_device_context_ptr->OMSetRenderTargets(1, &d3d_render_target_view_ptr, d3d_depth_stencil_view_ptr);
 
 	// Set up the viewport.
 
-	D3D11_VIEWPORT vp;
-	vp.Width = (FLOAT)window_width;
-	vp.Height = (FLOAT)window_height;
-	vp.MinDepth = 0.0f;
-	vp.MaxDepth = 1.0f;
-	vp.TopLeftX = 0;
-	vp.TopLeftY = 0;
-	d3d_device_context_ptr->RSSetViewports(1, &vp);
+	D3D11_VIEWPORT viewport;
+	viewport.Width = (FLOAT)window_width;
+	viewport.Height = (FLOAT)window_height;
+	viewport.MinDepth = 0.0f;
+	viewport.MaxDepth = 1.0f;
+	viewport.TopLeftX = 0;
+	viewport.TopLeftY = 0;
+	d3d_device_context_ptr->RSSetViewports(1, &viewport);
 
 	// Load and create the vertex shader.
 
@@ -2637,7 +2672,8 @@ start_up_hardware_renderer(void)
 	if (FAILED(D3DReadFileToBlob(L"Shader_VS.cso", &vertex_shader_blob_ptr))) {
 		return false;
 	}
-	if (FAILED(d3d_device_ptr->CreateVertexShader(vertex_shader_blob_ptr->GetBufferPointer(), vertex_shader_blob_ptr->GetBufferSize(), NULL, &d3d_vertex_shader_ptr))) {	
+	if (FAILED(d3d_device_ptr->CreateVertexShader(vertex_shader_blob_ptr->GetBufferPointer(), vertex_shader_blob_ptr->GetBufferSize(), NULL,
+		&d3d_vertex_shader_ptr))) {
 		vertex_shader_blob_ptr->Release();
 		return false;
 	}
@@ -2649,7 +2685,8 @@ start_up_hardware_renderer(void)
 	if (FAILED(D3DReadFileToBlob(L"Shader_PS.cso", &pixel_shader_blob_ptr))) {
 		return false;
 	}
-	if (FAILED(d3d_device_ptr->CreatePixelShader(pixel_shader_blob_ptr->GetBufferPointer(), pixel_shader_blob_ptr->GetBufferSize(), NULL, &d3d_pixel_shader_ptr))) {	
+	if (FAILED(d3d_device_ptr->CreatePixelShader(pixel_shader_blob_ptr->GetBufferPointer(), pixel_shader_blob_ptr->GetBufferSize(), NULL,
+		&d3d_pixel_shader_ptr))) {
 		pixel_shader_blob_ptr->Release();
 		return false;
 	}
@@ -2680,6 +2717,14 @@ shut_down_hardware_renderer(void)
 	if (d3d_vertex_shader_ptr) {
 		d3d_vertex_shader_ptr->Release();
 		d3d_vertex_shader_ptr = NULL;
+	}
+	if (d3d_depth_stencil_view_ptr) {
+		d3d_depth_stencil_view_ptr->Release();
+		d3d_depth_stencil_view_ptr = NULL;
+	}
+	if (d3d_depth_stencil_texture_ptr) {
+		d3d_depth_stencil_texture_ptr->Release();
+		d3d_depth_stencil_texture_ptr = NULL;
 	}
 	if (d3d_render_target_view_ptr) {
 		d3d_render_target_view_ptr->Release();
@@ -3019,6 +3064,8 @@ create_main_window(void (*key_callback)(byte key_code, bool key_down),
 	d3d_swap_chain_ptr = NULL;
 	d3d_device_context_ptr = NULL;
 	d3d_render_target_view_ptr = NULL;
+	d3d_depth_stencil_texture_ptr = NULL;
+	d3d_depth_stencil_view_ptr = NULL;
 	d3d_vertex_shader_ptr = NULL;
 	d3d_pixel_shader_ptr = NULL;
 	framebuffer_ptr = NULL;
@@ -4945,7 +4992,7 @@ lock_frame_buffer(byte *&fb_ptr, int &row_pitch)
 void
 unlock_frame_buffer(void)
 {
-	// If hardware acceleration is active, end the 3D scene.
+	// If hardware acceleration is active, unlock the frame buffer rectangle.
 
 	if (hardware_acceleration) {
 		//d3d_framebuffer_surface_ptr->UnlockRect();
