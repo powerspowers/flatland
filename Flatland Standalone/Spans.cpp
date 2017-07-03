@@ -22,7 +22,7 @@ static cache *image_cache_list[IMAGE_SIZES];
 // Dimensions of each image size.
 
 int image_dimensions_list[IMAGE_SIZES] = { 
-	256, 128, 64, 32, 16, 8, 4, 2
+	1024, 512, 256, 128, 64, 32, 16, 8, 4, 2
 };
 
 #ifdef STREAMING_MEDIA
@@ -215,7 +215,7 @@ get_cache_entry(pixmap *pixmap_ptr, int brightness_index)
 	cache_entry_ptr = get_free_cache_entry(size_index);
 	image_dimensions = image_dimensions_list[size_index];
 	cache_entry_ptr->lit_image_mask = (image_dimensions - 1) << FRAC_BITS;
-	cache_entry_ptr->lit_image_shift = FRAC_BITS - (8 - size_index);
+	cache_entry_ptr->lit_image_shift = FRAC_BITS - (IMAGE_SIZES - size_index);
 	cache_entry_ptr->pixmap_ptr = pixmap_ptr;
 	cache_entry_ptr->brightness_index = brightness_index;
 	cache_entry_ptr->frame_no = frames_rendered;

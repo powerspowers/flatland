@@ -88,13 +88,22 @@ static float half_texel_v;
 // Texture coordinate scaling list.
 
 static float uv_scale_list[IMAGE_SIZES] = {
-	1.0f, 2.0f, 4.0f, 8.0f, 16.0f, 32.0f, 64.0f, 128.0f
+	1.0f, 2.0f, 4.0f, 8.0f, 16.0f, 32.0f, 64.0f, 128.0f, 256.0f, 512.0f
 };
 
 // One over texture dimensions list.
 
-float one_on_dimensions_list[IMAGE_SIZES] = {
-	3.90625e-3f, 7.8125e-3f, 1.5625e-2f, 0.03125f, 0.0625f, 0.125f, 0.25f, 0.5f
+static float one_on_dimensions_list[IMAGE_SIZES] = {
+	1.0f / 1024.0f, 
+	1.0f / 512.0f, 
+	1.0f / 256.0f, 
+	1.0f / 128.0f, 
+	1.0f / 64.0f, 
+	1.0f / 32.0f, 
+	1.0f / 16.0f, 
+	1.0f / 8.0f,
+	1.0f / 4.0f,
+	1.0f / 2.0f
 };
 
 // View bounding box.
@@ -1851,7 +1860,7 @@ render_block(square *square_ptr, block *block_ptr, bool movable)
 	// If the block is not a sprite...
 	
 	else {
-		
+
 		// Transform the vertices by the block's position, then the player's
 		// position, turn angle and look angle, storing them in a global list.
 

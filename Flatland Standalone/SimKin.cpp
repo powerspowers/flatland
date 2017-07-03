@@ -80,7 +80,7 @@ static unsigned int curr_script_def_ID;
 static void
 load_custom_texture(texture *&texture_ptr, const char *URL)
 {	
-	texture_ptr = load_texture(custom_blockset_ptr, (char *)URL, true, false);
+	texture_ptr = load_texture(custom_blockset_ptr, (char *)URL, true);
 	if (texture_ptr != NULL) {
 		if (texture_ptr->pixmap_list == NULL) {
 			if (curr_custom_texture_ptr == NULL)
@@ -119,20 +119,15 @@ public:
 	int vertices;
 	vertex *vertex_list;
 
-	bool getValueAt(const skRValue& array_index, const skString& attribute,
-		skRValue& value);
-	bool setValueAt(const skRValue& array_index, const skString& attribute,
-		const skRValue& value);
-	bool method(const skString& method, skRValueArray& arguments,
-		skRValue& returnValue);
+	bool getValueAt(const skRValue& array_index, const skString& attribute, skRValue& value);
+	bool setValueAt(const skRValue& array_index, const skString& attribute, const skRValue& value);
+	bool method(const skString& method, skRValueArray& arguments, skRValue& returnValue, skExecutableContext& ctxt);
 };
 
 // Get the value of a vertex array element's attribute.
 
 bool 
-vertex_simkin_object::getValueAt(const skRValue& array_index,
-								 const skString& attribute,
-								 skRValue& value)
+vertex_simkin_object::getValueAt(const skRValue& array_index, const skString& attribute, skRValue& value)
 {
 	int vertex_index;
 	vertex *vertex_ptr;
@@ -174,9 +169,7 @@ vertex_simkin_object::getValueAt(const skRValue& array_index,
 // Set the value of a vertex array element's attribute.
 
 bool 
-vertex_simkin_object::setValueAt(const skRValue& array_index,
-								 const skString& attribute,
-								 const skRValue& value)
+vertex_simkin_object::setValueAt(const skRValue& array_index, const skString& attribute, const skRValue& value)
 {
 	block_def *block_def_ptr;
 	int vertex_index;
@@ -235,8 +228,7 @@ vertex_simkin_object::setValueAt(const skRValue& array_index,
 // Execute a method.
 
 bool 
-vertex_simkin_object::method(const skString& method, skRValueArray& arguments,
-							 skRValue& returnValue)
+vertex_simkin_object::method(const skString& method, skRValueArray& arguments, skRValue& returnValue, skExecutableContext& ctxt)
 {
 	block_def *block_def_ptr;
 	int vertices_to_change, vertex_index, vertex_no;
@@ -843,21 +835,16 @@ class array_simkin_object : public skExecutable
 public:
 	skRValueArray array;
 
-	bool getValue(const skString& field, const skString& attribute,
-		skRValue& value);
-	bool getValueAt(const skRValue& array_index, const skString& attribute,
-		skRValue& value);
-	bool setValueAt(const skRValue& array_index, const skString& attribute,
-		const skRValue& value);
-	bool method(const skString& method, skRValueArray& arguments,
-		skRValue& returnValue);
+	bool getValue(const skString& field, const skString& attribute, skRValue& value);
+	bool getValueAt(const skRValue& array_index, const skString& attribute, skRValue& value);
+	bool setValueAt(const skRValue& array_index, const skString& attribute, const skRValue& value);
+	bool method(const skString& method, skRValueArray& arguments, skRValue& returnValue, skExecutableContext& ctxt);
 };
 
 // Get the value of a global variable.
 
 bool 
-array_simkin_object::getValue(const skString& field, const skString& attribute,
-							  skRValue& value)
+array_simkin_object::getValue(const skString& field, const skString& attribute, skRValue& value)
 {
 	// If the field is "elements", return the number of elements in the array.
 
@@ -871,9 +858,7 @@ array_simkin_object::getValue(const skString& field, const skString& attribute,
 // Get the value of an array element.
 
 bool 
-array_simkin_object::getValueAt(const skRValue& array_index,
-								const skString& attribute,
-								skRValue& value)
+array_simkin_object::getValueAt(const skRValue& array_index, const skString& attribute, skRValue& value)
 {
 	int index;
 
@@ -892,9 +877,7 @@ array_simkin_object::getValueAt(const skRValue& array_index,
 // Set the value of an array element.
 
 bool 
-array_simkin_object::setValueAt(const skRValue& array_index,
-								const skString& attribute,
-								const skRValue& value)
+array_simkin_object::setValueAt(const skRValue& array_index, const skString& attribute, const skRValue& value)
 {
 	int index;
 
@@ -913,8 +896,7 @@ array_simkin_object::setValueAt(const skRValue& array_index,
 // Execute an array method.
 
 bool
-array_simkin_object::method(const skString& method, skRValueArray& arguments,
-							skRValue& returnValue)
+array_simkin_object::method(const skString& method, skRValueArray& arguments, skRValue& returnValue, skExecutableContext& ctxt)
 {	
 	// If the method is "insert", insert the value in the second argument
 	// before the index in the first argument.
@@ -972,19 +954,15 @@ public:
 	spot_simkin_object(const skString& scriptLocation, skInputSource& in, skExecutableContext& context) :
 	  skElementExecutable(scriptLocation, in, context) {};
 
-	bool getValue(const skString& field, const skString& attribute,
-		skRValue& value);
-	bool setValue(const skString& field, const skString& attribute,
-		const skRValue& value); 
-	bool method(const skString& method, skRValueArray& arguments,
-		skRValue& returnValue);
+	bool getValue(const skString& field, const skString& attribute, skRValue& value);
+	bool setValue(const skString& field, const skString& attribute, const skRValue& value); 
+	bool method(const skString& method, skRValueArray& arguments, skRValue& returnValue, skExecutableContext& ctxt);
 };
 
 // Get the value of a global variable.
 
 bool 
-spot_simkin_object::getValue(const skString& field, const skString& attribute,
-							 skRValue& value)
+spot_simkin_object::getValue(const skString& field, const skString& attribute, skRValue& value)
 {
 	// If the field is "title", return the current title string.
 
@@ -1037,8 +1015,7 @@ spot_simkin_object::getValue(const skString& field, const skString& attribute,
 // Set the value of a global variable.
 
 bool 
-spot_simkin_object::setValue(const skString& field, const skString& attribute,
-							 const skRValue& value)
+spot_simkin_object::setValue(const skString& field, const skString& attribute, const skRValue& value)
 {
 	// If the field is "title", set the current title.
 
@@ -1067,9 +1044,7 @@ spot_simkin_object::setValue(const skString& field, const skString& attribute,
 // Execute a global method.
 
 bool
-spot_simkin_object::method(const skString& method,
-						   skRValueArray& arguments,
-						   skRValue& returnValue)
+spot_simkin_object::method(const skString& method, skRValueArray& arguments, skRValue& returnValue, skExecutableContext& ctxt)
 {
 	// If the method is "log", write a message to the log file.
 
@@ -1077,7 +1052,7 @@ spot_simkin_object::method(const skString& method,
 		if (arguments.entries() != 1)
 			return(false);
 		skString message = arguments[0].str();
-		diagnose("%s", (char *)(const char *)message);
+		debug_message("%s\n", (char *)(const char *)message);
 	}
 
 	// If the method is "new_array", create a new array SimKin object and
@@ -1129,17 +1104,14 @@ spot_simkin_object::method(const skString& method,
 class math_simkin_object : public skExecutable
 {
 public:
-	bool getValue(const skString& field, const skString& attribute,
-		skRValue& value);
-	bool method(const skString& method, skRValueArray& arguments,
-		skRValue& returnValue);
+	bool getValue(const skString& field, const skString& attribute, skRValue& value);
+	bool method(const skString& method, skRValueArray& arguments, skRValue& returnValue, skExecutableContext& ctxt);
 };
 
 // Get the value of a math variable.
 
 bool 
-math_simkin_object::getValue(const skString& field, const skString& attribute,
-							 skRValue& value)
+math_simkin_object::getValue(const skString& field, const skString& attribute, skRValue& value)
 {
 	// If the field is "pi", return the value of Pi.
 
@@ -1157,8 +1129,7 @@ math_simkin_object::getValue(const skString& field, const skString& attribute,
 }
 
 bool
-math_simkin_object::method(const skString& method, skRValueArray& arguments,
-						   skRValue& returnValue)
+math_simkin_object::method(const skString& method, skRValueArray& arguments, skRValue& returnValue, skExecutableContext& ctxt)
 {
 	// If the method is "random", return a random number between the first
 	// and second argument.
@@ -1270,17 +1241,14 @@ math_simkin_object::method(const skString& method, skRValueArray& arguments,
 class sky_simkin_object : public skExecutable
 {
 public:
-	bool getValue(const skString& field, const skString& attribute,
-		skRValue& value);
-	bool setValue(const skString& field, const skString& attribute,
-		const skRValue& value); 
+	bool getValue(const skString& field, const skString& attribute, skRValue& value);
+	bool setValue(const skString& field, const skString& attribute, const skRValue& value); 
 };
 
 // Get the value of a sky variable.
 
 bool 
-sky_simkin_object::getValue(const skString& field, const skString& attribute,
-							skRValue& value)
+sky_simkin_object::getValue(const skString& field, const skString& attribute, skRValue& value)
 {
 	// If the field is "brightness", return the sky brightness value as a
 	// percentage.
@@ -1325,8 +1293,7 @@ sky_simkin_object::getValue(const skString& field, const skString& attribute,
 // Set the value of a sky variable.
 
 bool 
-sky_simkin_object::setValue(const skString& field, const skString& attribute,
-							const skRValue& value)
+sky_simkin_object::setValue(const skString& field, const skString& attribute, const skRValue& value)
 {
 	// If the field is "brightness", set the sky brightness from a percentage,
 	// clamping it to a value between 0 and 1.
@@ -1381,10 +1348,8 @@ sky_simkin_object::setValue(const skString& field, const skString& attribute,
 class ambient_light_simkin_object : public skExecutable
 {
 public:
-	bool getValue(const skString& field, const skString& attribute,
-		skRValue& value);
-	bool setValue(const skString& field, const skString& attribute,
-		const skRValue& value); 
+	bool getValue(const skString& field, const skString& attribute, skRValue& value);
+	bool setValue(const skString& field, const skString& attribute, const skRValue& value); 
 };
 
 // Get the value of an ambient light variable.
@@ -1434,9 +1399,7 @@ ambient_light_simkin_object::getValue(const skString& field,
 // Set the value of an ambient light variable.
 
 bool 
-ambient_light_simkin_object::setValue(const skString& field,
-									  const skString& attribute,
-									  const skRValue& value)
+ambient_light_simkin_object::setValue(const skString& field, const skString& attribute, const skRValue& value)
 {
 	float brightness;
 	RGBcolour colour;
@@ -1489,18 +1452,14 @@ ambient_light_simkin_object::setValue(const skString& field,
 class ambient_sound_simkin_object : public skExecutable
 {
 public:
-	bool getValue(const skString& field, const skString& attribute,
-		skRValue& value);
-	bool setValue(const skString& field, const skString& attribute,
-		const skRValue& value); 
+	bool getValue(const skString& field, const skString& attribute, skRValue& value);
+	bool setValue(const skString& field, const skString& attribute, const skRValue& value); 
 };
 
 // Get the value of an ambient sound variable.
 
 bool 
-ambient_sound_simkin_object::getValue(const skString& field, 
-									  const skString& attribute,
-									  skRValue& value)
+ambient_sound_simkin_object::getValue(const skString& field, const skString& attribute, skRValue& value)
 {	
 	// If the ambient sound does not exist, then none of the fields or
 	// field attributes are accessible.
@@ -1559,9 +1518,7 @@ ambient_sound_simkin_object::getValue(const skString& field,
 // Set the value of an ambient sound variable.
 
 bool 
-ambient_sound_simkin_object::setValue(const skString& field,
-									  const skString& attribute,
-									  const skRValue& value)
+ambient_sound_simkin_object::setValue(const skString& field, const skString& attribute, const skRValue& value)
 {
 	float volume;
 	skString value_str;
@@ -1645,17 +1602,14 @@ ambient_sound_simkin_object::setValue(const skString& field,
 class orb_simkin_object : public skExecutable
 {
 public:
-	bool getValue(const skString& field, const skString& attribute,
-		skRValue& value);
-	bool setValue(const skString& field, const skString& attribute,
-		const skRValue& value); 
+	bool getValue(const skString& field, const skString& attribute, skRValue& value);
+	bool setValue(const skString& field, const skString& attribute, const skRValue& value); 
 };
 
 // Get the value of an orb variable.
 
 bool 
-orb_simkin_object::getValue(const skString& field, const skString& attribute,
-							skRValue& value)
+orb_simkin_object::getValue(const skString& field, const skString& attribute, skRValue& value)
 {
 	// If the orb does not exist, then none of the fields or field attributes
 	// are accessible.
@@ -1760,8 +1714,7 @@ orb_simkin_object::getValue(const skString& field, const skString& attribute,
 // Set the value of an orb variable.
 
 bool 
-orb_simkin_object::setValue(const skString& field, const skString& attribute,
-							const skRValue& value)
+orb_simkin_object::setValue(const skString& field, const skString& attribute, const skRValue& value)
 {
 	direction orb_light_direction;
 
@@ -1878,17 +1831,14 @@ orb_simkin_object::setValue(const skString& field, const skString& attribute,
 class fog_simkin_object : public skExecutable
 {
 public:
-	bool getValue(const skString& field, const skString& attribute,
-		skRValue& value);
-	bool setValue(const skString& field, const skString& attribute,
-		const skRValue& value); 
+	bool getValue(const skString& field, const skString& attribute, skRValue& value);
+	bool setValue(const skString& field, const skString& attribute, const skRValue& value); 
 };
 
 // Get the value of an fog variable.
 
 bool 
-fog_simkin_object::getValue(const skString& field, const skString& attribute,
-							skRValue& value)
+fog_simkin_object::getValue(const skString& field, const skString& attribute, skRValue& value)
 {
 	// If the fog does not exist, then none of the fields or field attributes
 	// are accessible.
@@ -1945,8 +1895,7 @@ fog_simkin_object::getValue(const skString& field, const skString& attribute,
 // Set the value of an fog variable.
 
 bool 
-fog_simkin_object::setValue(const skString& field, const skString& attribute,
-							const skRValue& value)
+fog_simkin_object::setValue(const skString& field, const skString& attribute, const skRValue& value)
 {
 
 	// If the fog does not exist, then none of the fields or field attributes
@@ -2020,17 +1969,14 @@ fog_simkin_object::setValue(const skString& field, const skString& attribute,
 class map_simkin_object : public skExecutable
 {
 public:
-	bool getValue(const skString& field, const skString& attribute,
-		skRValue& value);
-	bool method(const skString& method, skRValueArray& arguments,
-		skRValue& returnValue);
+	bool getValue(const skString& field, const skString& attribute, skRValue& value);
+	bool method(const skString& method_name, skRValueArray& arguments, skRValue& return_value, skExecutableContext& ctxt);
 };
 
 // Get the value of an map variable.
 
 bool 
-map_simkin_object::getValue(const skString& field, const skString& attribute,
-							skRValue& value)
+map_simkin_object::getValue(const skString& field, const skString& attribute, skRValue& value)
 {
 	// If the field is "dimensions" and the attribute is "column", "row" or
 	// "level", return the appropiate map dimension.
@@ -2058,8 +2004,7 @@ map_simkin_object::getValue(const skString& field, const skString& attribute,
 // Execute a map method.
 
 bool
-map_simkin_object::method(const skString& method, skRValueArray& arguments,
-						  skRValue& returnValue)
+map_simkin_object::method(const skString& method, skRValueArray& arguments, skRValue& returnValue, skExecutableContext& ctxt)
 {
 	// If the method is "get_block", return a pointer to the SimKin object
 	// associated with the block with the given symbol or at the given 
@@ -2450,23 +2395,18 @@ public:
 	block *block_ptr;
 
 	scripted_block_simkin_object() : skElementExecutable() {};
-	scripted_block_simkin_object(const skString& scriptLocation, 
-		skInputSource& in, skExecutableContext& context) : skElementExecutable(scriptLocation, in, context) {};
+	scripted_block_simkin_object(const skString& scriptLocation, skInputSource& in, skExecutableContext& context) :
+		skElementExecutable(scriptLocation, in, context) {};
 
-	bool getValue(const skString& field, const skString& attribute,
-		skRValue& value);
-	bool setValue(const skString& field, const skString& attribute,
-		const skRValue& value); 
-	bool method(const skString& method, skRValueArray& arguments,
-		skRValue& returnValue);
+	bool getValue(const skString& field, const skString& attribute, skRValue& value);
+	bool setValue(const skString& field, const skString& attribute, const skRValue& value); 
+	bool method(const skString& method, skRValueArray& arguments, skRValue& returnValue, skExecutableContext& ctxt);
 };
 
 // Get the value of a block variable.
 
 bool 
-scripted_block_simkin_object::getValue(const skString& field, 
-									   const skString& attribute,
-									   skRValue& value)
+scripted_block_simkin_object::getValue(const skString& field, const skString& attribute, skRValue& value)
 {
 	// Check whether a pre-defined field/attribute has been requested.
 	// If not, call the default getValue function.
@@ -2482,9 +2422,7 @@ scripted_block_simkin_object::getValue(const skString& field,
 // Set the value of a block variable.
 
 bool 
-scripted_block_simkin_object::setValue(const skString& field,
-									   const skString& attribute,
-									   const skRValue& value)
+scripted_block_simkin_object::setValue(const skString& field, const skString& attribute, const skRValue& value)
 {
 	// Check whether a pre-defined field/attribute has been requested.
 	// All other fields are passed to the default setValue function for
@@ -2501,9 +2439,7 @@ scripted_block_simkin_object::setValue(const skString& field,
 // Call a method on a block.
 
 bool 
-scripted_block_simkin_object::method(const skString& method, 
-									 skRValueArray& arguments, 
-									 skRValue& returnValue)
+scripted_block_simkin_object::method(const skString& method, skRValueArray& arguments, skRValue& returnValue, skExecutableContext& ctxt)
 {
 	// Check whether a pre-defined method has been requested.  All other methods
 	// are passed to the default method function for processing.
@@ -2525,20 +2461,15 @@ class unscripted_block_simkin_object : public skExecutable
 public:
 	block *block_ptr;
 
-	bool getValue(const skString& field, const skString& attribute,
-		skRValue& value);
-	bool setValue(const skString& field, const skString& attribute,
-		const skRValue& value); 
-	bool method(const skString& method, skRValueArray& arguments,
-		skRValue& returnValue);
+	bool getValue(const skString& field, const skString& attribute, skRValue& value);
+	bool setValue(const skString& field, const skString& attribute, const skRValue& value); 
+	bool method(const skString& method, skRValueArray& arguments, skRValue& returnValue, skExecutableContext& ctxt);
 };
 
 // Get the value of a block variable.
 
 bool 
-unscripted_block_simkin_object::getValue(const skString& field,
-										 const skString& attribute,
-										 skRValue& value)
+unscripted_block_simkin_object::getValue(const skString& field, const skString& attribute, skRValue& value)
 {	
 	return(get_block_value(block_ptr, field, attribute, value));
 }
@@ -2546,9 +2477,7 @@ unscripted_block_simkin_object::getValue(const skString& field,
 // Set the value of a block variable.
 
 bool 
-unscripted_block_simkin_object::setValue(const skString& field,
-										 const skString& attribute,
-										 const skRValue& value)
+unscripted_block_simkin_object::setValue(const skString& field, const skString& attribute, const skRValue& value)
 {
 	return(set_block_value(block_ptr, field, attribute, value));
 }
@@ -2556,9 +2485,7 @@ unscripted_block_simkin_object::setValue(const skString& field,
 // Call a method on a block.
 
 bool 
-unscripted_block_simkin_object::method(const skString& method,
-									   skRValueArray& arguments, 
-									   skRValue& returnValue)
+unscripted_block_simkin_object::method(const skString& method, skRValueArray& arguments, skRValue& returnValue, skExecutableContext& ctxt)
 {
 	return(call_block_method(block_ptr, method, arguments, returnValue));
 }
@@ -2570,18 +2497,14 @@ unscripted_block_simkin_object::method(const skString& method,
 class player_simkin_object : public skExecutable
 {
 public:
-	bool getValue(const skString& field, const skString& attribute,
-		skRValue& value);
-	bool setValue(const skString& field, const skString& attribute,
-		const skRValue& value); 
+	bool getValue(const skString& field, const skString& attribute, skRValue& value);
+	bool setValue(const skString& field, const skString& attribute, const skRValue& value); 
 };
 
 // Get the value of a block variable.
 
 bool 
-player_simkin_object::getValue(const skString& field,
-							   const skString& attribute,
-							   skRValue& value)
+player_simkin_object::getValue(const skString& field, const skString& attribute, skRValue& value)
 {
 	int key_code_list[2];
 
@@ -2729,9 +2652,7 @@ player_simkin_object::getValue(const skString& field,
 // Set the value of a block variable.
 
 bool 
-player_simkin_object::setValue(const skString& field,
-							   const skString& attribute,
-							   const skRValue& value)
+player_simkin_object::setValue(const skString& field, const skString& attribute, const skRValue& value)
 {
 	int key_code_list[2];
 
@@ -2939,7 +2860,8 @@ statement_stepper::compoundStatementExecuted(const skStackFrame &stack_frame)
 bool
 statement_stepper::exceptionEncountered(const skStackFrame *stack_frame, const skException &e)
 {
-	return true;
+	debug_message("Simkin exception: %s\n", (const char *)e.toString());
+	return false;
 }
 
 void
@@ -3036,7 +2958,7 @@ perform_method_call(void)
 	skRValue return_value;
 
 	try {
-		spot_simkin_object_ptr->method(simkin_method_name, args, return_value);
+		spot_simkin_object_ptr->method(simkin_method_name, args, return_value, *simkin_context_ptr);
 	}
 	catch (skRuntimeException e) {
 		diagnose("%s", (const char *)e.toString());

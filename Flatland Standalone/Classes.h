@@ -245,15 +245,15 @@ enum audiostyle { PASS_AUDIO, OCCLUDE_AUDIO };
 #define RECT_SHAPE		0
 #define CIRCLE_SHAPE	1
 
-
 // Number of brightness levels.
 
 #define BRIGHTNESS_LEVELS		8
 #define	MAX_BRIGHTNESS_INDEX	(BRIGHTNESS_LEVELS - 1)
 
-// Number of image sizes.
+// Number of image sizes, and maximum texture size supported.
 
-#define IMAGE_SIZES			8
+#define IMAGE_SIZES				10
+#define MAX_TEXTURE_SIZE		1024
 
 // Rate changes.
 

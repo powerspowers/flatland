@@ -132,29 +132,20 @@ get_block_def(const char *block_identifier)
 
 //------------------------------------------------------------------------------
 // Find a texture in the given blockset, and return a pointer to it, or NULL if
-// not found.  If unlimited_size is FALSE, then a warning is generating if the
-// texture has a width or height greater than 256.
+// not found.
 //------------------------------------------------------------------------------
 
 static texture *
-find_texture(blockset *blockset_ptr, const char *texture_URL, 
-			 bool unlimited_size)
+find_texture(blockset *blockset_ptr, const char *texture_URL)
 {
 	texture *texture_ptr;
 
 	// Search for the new texture URL in the determined blockset, returning a
-	// pointer to it if found.  If this is not a custom texture, unlimited_size
-	// is FALSE and the texture has a width or height larger than 256 pixels,
-	// then this is an error.
+	// pointer to it if found.
 
 	texture_ptr = blockset_ptr->first_texture_ptr;
 	while (texture_ptr != NULL) {
 		if (!_stricmp(texture_URL, texture_ptr->URL)) {
-			if (blockset_ptr != custom_blockset_ptr && !unlimited_size &&
-				(texture_ptr->width > 256 || texture_ptr->height > 256)) {
-				warning("Texture has width or height greater than 256 pixels");
-				return(NULL);
-			}
 			return(texture_ptr);
 		}
 		texture_ptr = texture_ptr->next_texture_ptr;
@@ -165,13 +156,11 @@ find_texture(blockset *blockset_ptr, const char *texture_URL,
 //------------------------------------------------------------------------------
 // Search for the named texture in the given blockset; if it doesn't exist, load
 // the texture file and add the texture image to the given blockset if
-// add_to_blockset is TRUE.  If unlimited_size is FALSE, then a texture with a
-// width or height larger than 256 will generate an error.
+// add_to_blockset is TRUE.
 //------------------------------------------------------------------------------
 
 texture *
-load_texture(blockset *blockset_ptr, char *texture_URL, bool add_to_blockset,
-			 bool unlimited_size)
+load_texture(blockset *blockset_ptr, char *texture_URL, bool add_to_blockset)
 {
 	string blockset_name, texture_name;
 	texture *texture_ptr;
@@ -214,8 +203,7 @@ load_texture(blockset *blockset_ptr, char *texture_URL, bool add_to_blockset,
 		// If a texture with the given name is already in the blockset,
 		// return a pointer to it.
 
-		if ((texture_ptr = find_texture(blockset_ptr, texture_name, 
-			unlimited_size)) != NULL)
+		if ((texture_ptr = find_texture(blockset_ptr, texture_name)) != NULL)
 			return(texture_ptr);
 
 		// Otherwise create the texture object, and initialise it.
@@ -239,7 +227,7 @@ load_texture(blockset *blockset_ptr, char *texture_URL, bool add_to_blockset,
 
 		new_texture_URL = "textures/";
 		new_texture_URL += texture_name;
-		if (!load_image(NULL, new_texture_URL, texture_ptr, unlimited_size)) {
+		if (!load_image(NULL, new_texture_URL, texture_ptr)) {
 			DEL(texture_ptr, texture);
 			close_zip_archive();
 			return(NULL);
@@ -258,8 +246,7 @@ load_texture(blockset *blockset_ptr, char *texture_URL, bool add_to_blockset,
 		// If a texture with the given URL is already in the given blockset,
 		// return a pointer to it.
 
-		if ((texture_ptr = find_texture(blockset_ptr, texture_URL, 
-			unlimited_size)) != NULL)
+		if ((texture_ptr = find_texture(blockset_ptr, texture_URL)) != NULL)
 			return(texture_ptr);
 
 		// Otherwise create the texture object, and initialise it.
@@ -285,7 +272,7 @@ load_texture(blockset *blockset_ptr, char *texture_URL, bool add_to_blockset,
 			texture_ptr->blockset_ptr = blockset_ptr;
 			new_texture_URL = "textures/";
 			new_texture_URL += texture_URL;
-			if (!load_image(NULL, new_texture_URL, texture_ptr, unlimited_size)) {
+			if (!load_image(NULL, new_texture_URL, texture_ptr)) {
 				DEL(texture_ptr, texture);
 				return(NULL);
 			}
@@ -343,13 +330,8 @@ create_stream_URL(string stream_URL)
 
 	if (!strnicmp(spot_URL_dir, "file:", 5)) {
 		spot_dir = "file://";
-		if (web_browser_ID == INTERNET_EXPLORER) {
-			spot_dir += (const char *)spot_URL_dir + 7;
-			spot_dir[8] = ':';
-		} else {
-			spot_dir += (const char *)spot_URL_dir + 8;
-			spot_dir[8] = ':';
-		}
+		spot_dir += (const char *)spot_URL_dir + 7;
+		spot_dir[8] = ':';
 	} else
 		spot_dir = spot_URL_dir;
 	return(create_URL(spot_dir, stream_URL));
@@ -2687,20 +2669,12 @@ update_texture_dependancies(texture *custom_texture_ptr)
 	polygon *polygon_ptr;
 	polygon_def *polygon_def_ptr;
 	part *part_ptr;
-	bool oversized;
 
  	// Initialise all popups that depend on the given texture.
 
 	update_textures_in_popup_list(global_popup_list, custom_texture_ptr);
 	update_textures_in_blockset(custom_blockset_ptr, custom_texture_ptr);
 
-	// If the custom texture has a width or height larger than 256 texels, then
-	// it is oversized.
-
-	if (custom_texture_ptr->width > 256 || custom_texture_ptr->height > 256)
-		oversized = true;
-	else
-		oversized = false;
 
 	// Step through the custom block definitions, and update all parts that
 	// use the custom texture.
@@ -2710,12 +2684,7 @@ update_texture_dependancies(texture *custom_texture_ptr)
 		for (int part_no = 0; part_no < block_def_ptr->parts; part_no++) {
 			part_ptr = &block_def_ptr->part_list[part_no];
 			if (part_ptr->custom_texture_ptr == custom_texture_ptr) {
-				if (oversized)
-					oversized_texture_warning(custom_texture_ptr->URL,
-						"in part \"%s\" of block \"%s\"", part_ptr->name,
-							block_def_ptr->get_symbol());
-				else
-					part_ptr->texture_ptr = custom_texture_ptr;
+				part_ptr->texture_ptr = custom_texture_ptr;
 			}
 		}
 		block_def_ptr = block_def_ptr->next_block_def_ptr;
@@ -2728,13 +2697,8 @@ update_texture_dependancies(texture *custom_texture_ptr)
 		polygon_def_ptr = polygon_ptr->polygon_def_ptr;
 		part_ptr = polygon_def_ptr->part_ptr;
 		if (part_ptr->texture_ptr == custom_texture_ptr) {
-			if (oversized)
-				oversized_texture_warning(custom_texture_ptr->URL,
-					"in part \"%s\" of player block", part_ptr->name);
-			else {
-				init_sprite_polygon(player_block_ptr, polygon_ptr, part_ptr);
-				init_player_collision_box();
-			}
+			init_sprite_polygon(player_block_ptr, polygon_ptr, part_ptr);
+			init_player_collision_box();
 		}
 	}
 
@@ -2751,16 +2715,8 @@ update_texture_dependancies(texture *custom_texture_ptr)
 						polygon_ptr = block_ptr->polygon_list;
 						polygon_def_ptr = polygon_ptr->polygon_def_ptr;
 						part_ptr = polygon_def_ptr->part_ptr;
-						if (part_ptr->custom_texture_ptr == 
-							custom_texture_ptr) {
-							if (oversized)
-								oversized_texture_warning(
-									custom_texture_ptr->URL,
-									"in sprite block at location (%d,%d,%d)",
-									column + 1, row + 1, level + 1);
-							else
-								init_sprite_polygon(block_ptr, polygon_ptr, 
-									part_ptr);
+						if (part_ptr->custom_texture_ptr == custom_texture_ptr) {
+							init_sprite_polygon(block_ptr, polygon_ptr, part_ptr);
 						}
 					}
 				}
@@ -2769,10 +2725,7 @@ update_texture_dependancies(texture *custom_texture_ptr)
 	// Reinitialise the sky if it uses the custom texture.
 
 	if (custom_sky_texture_ptr == custom_texture_ptr) {
-		if (oversized)
-			oversized_texture_warning(custom_texture_ptr->URL, "for the sky");
-		else
-			sky_texture_ptr = custom_texture_ptr;
+		sky_texture_ptr = custom_texture_ptr;
 	}
 
 	// Reinitialise the ground part if it exists and it uses the custom texture.
@@ -2780,21 +2733,14 @@ update_texture_dependancies(texture *custom_texture_ptr)
 	if (ground_block_def_ptr != NULL) {
 		part_ptr = ground_block_def_ptr->part_list;
 		if (part_ptr->custom_texture_ptr == custom_texture_ptr) {
-			if (oversized)
-				oversized_texture_warning(custom_texture_ptr->URL, 
-					"for the ground");
-			else
-				part_ptr->texture_ptr = custom_texture_ptr;
+			part_ptr->texture_ptr = custom_texture_ptr;
 		}
 	}
 
 	// Reinitialise the orb if it exists and uses the custom texture.
 
 	if (custom_orb_texture_ptr == custom_texture_ptr) {
-		if (oversized)
-			oversized_texture_warning(custom_texture_ptr->URL, "for the orb");
-		else
-			orb_texture_ptr = custom_texture_ptr;
+		orb_texture_ptr = custom_texture_ptr;
 	}
 }
 
@@ -2878,8 +2824,7 @@ handle_current_download(void)
 		// If the URL was not downloaded successfully or cannot be parsed,
 		// generate a warning.
 
-		if (download_status == 0 || !load_image(curr_URL, curr_file_path, 
-			curr_custom_texture_ptr, true))
+		if (download_status == 0 || !load_image(curr_URL, curr_file_path, curr_custom_texture_ptr))
 			warning("Unable to download custom texture from %s", curr_URL);
 		
 		// Otherwise update all texture dependancies.

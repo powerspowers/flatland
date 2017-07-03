@@ -4,8 +4,6 @@
 // All Rights Reserved. 
 //******************************************************************************
 
-extern float one_on_dimensions_list[IMAGE_SIZES];
-
 // Externally visible functions.
 
 void 

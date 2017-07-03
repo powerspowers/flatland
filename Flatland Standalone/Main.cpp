@@ -1784,7 +1784,9 @@ adjust_trajectory(vector &trajectory, float elapsed_time, bool &player_falling)
 			
 			else {
 				player_falling = true;
-				new_position.y -= player_fall_delta;
+				if (FGT(elapsed_time, 0.0f)) {
+					new_position.y -= player_fall_delta;
+				}
 				if (FLE(new_position.y, floor_y)) {
 					new_position.y = floor_y;
 					player_fall_delta = 0.0f;
@@ -4145,11 +4147,9 @@ handle_spot_events(void)
 			}
 		}
 
-		// If a request to download RealPlayer or Windows Media Player
+		// If a request to download Windows Media Player
 		// has been recieved, launch the appropriate download page.
 
-		if (download_of_rp_requested())
-			request_URL(RP_DOWNLOAD_URL, NULL, "_self");
 		if (download_of_wmp_requested())
 			request_URL(WMP_DOWNLOAD_URL, NULL, "_blank");
 	}

@@ -6,7 +6,7 @@
 
 // Version string.
 
-#define ROVER_VERSION_NUMBER			0x03060003 // ff at the end usually unless beta
+#define ROVER_VERSION_NUMBER			0x03060006 // ff at the end usually unless beta
 
 // Activation status.
 
@@ -130,6 +130,10 @@ extern string app_dir;
 
 extern pixel_format display_pixel_format;
 extern pixel_format texture_pixel_format;
+
+// Largest texture size permitted.
+
+extern int max_texture_size;
 
 // Display properties.
 
@@ -603,14 +607,8 @@ update_sound(sound *sound_ptr, vertex *translation_ptr);
 void
 init_video_textures(int video_width, int video_height, int pixel_format);
 
-void
-draw_frame(byte *image_ptr);
-
 bool
 stream_ready(void);
-
-bool
-download_of_rp_requested(void);
 
 bool
 download_of_wmp_requested(void);
