@@ -32,6 +32,7 @@
 
 #include <d3d11.h>
 #include <DirectXMath.h>
+#include <d3dcompiler.h>
 #include <ddraw.h>
 #include <dsound.h>
 
@@ -277,39 +278,32 @@ icon::~icon()
 // Miscellaneous classes.
 //------------------------------------------------------------------------------
 
-/*
 // Hardware texture class.
 
 struct hardware_texture {
 	int image_size_index;
-	LPDIRECT3DTEXTURE8 d3d_texture_ptr;
+	ID3D11Texture2D *d3d_texture_ptr;
 };
 
 // Hardware vertex class.
 
 struct hardware_vertex {
-	D3DVECTOR position;
+	XMFLOAT3 position;
 	float rhw;
-	D3DCOLOR diffuse_colour;
+	XMFLOAT4 diffuse_colour;
 	float tu, tv;
 
 	void set(float new_sx, float new_sy, float new_sz, float new_rhw,
 		RGBcolour *diffuse_colour_ptr, byte diffuse_alpha,
 		float new_tu, float new_tv)
 	{
-		position.x = new_sx;
-		position.y = new_sy;
-		position.z = new_sz;
+		position = XMFLOAT3(new_sx, new_sy, new_sz);
 		rhw = new_rhw;
-		diffuse_colour = 
-			D3DCOLOR_RGBA((byte)(diffuse_colour_ptr->red * 255.0f), 
-			(byte)(diffuse_colour_ptr->green * 255.0f), 
-			(byte)(diffuse_colour_ptr->blue * 255.0f), diffuse_alpha);
+		diffuse_colour = XMFLOAT4(diffuse_colour_ptr->red, diffuse_colour_ptr->green, diffuse_colour_ptr->blue, (float)diffuse_alpha / 255.0f);
 		tu = new_tu;
 		tv = new_tv;
 	}
 };
-*/
 
 // Structure to hold the colour palette.
 
@@ -414,11 +408,13 @@ IDXGISwapChain *d3d_swap_chain_ptr;
 ID3D11Device *d3d_device_ptr;
 ID3D11DeviceContext *d3d_device_context_ptr;
 ID3D11RenderTargetView *d3d_render_target_view_ptr;
+ID3D11VertexShader *d3d_vertex_shader_ptr;
+ID3D11PixelShader *d3d_pixel_shader_ptr;
 
 static byte *framebuffer_ptr;
 static int framebuffer_width;
 //static hardware_texture *curr_hardware_texture_ptr;
-//static hardware_vertex *d3d_vertex_list;
+static ID3D11Buffer *d3d_vertex_buffer_ptr;
 
 // Private sound data.
 
@@ -2579,7 +2575,7 @@ start_up_hardware_renderer(void)
 
 	DXGI_SWAP_CHAIN_DESC sd;
 	ZeroMemory(&sd, sizeof(sd));
-	sd.BufferCount = 1;
+	sd.BufferCount = 2;
 	sd.BufferDesc.Width = window_width;
 	sd.BufferDesc.Height = window_height;
 	sd.BufferDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
@@ -2635,6 +2631,30 @@ start_up_hardware_renderer(void)
 	vp.TopLeftY = 0;
 	d3d_device_context_ptr->RSSetViewports(1, &vp);
 
+	// Load and create the vertex shader.
+
+	ID3DBlob *vertex_shader_blob_ptr;
+	if (FAILED(D3DReadFileToBlob(L"Shader_VS.cso", &vertex_shader_blob_ptr))) {
+		return false;
+	}
+	if (FAILED(d3d_device_ptr->CreateVertexShader(vertex_shader_blob_ptr->GetBufferPointer(), vertex_shader_blob_ptr->GetBufferSize(), NULL, &d3d_vertex_shader_ptr))) {	
+		vertex_shader_blob_ptr->Release();
+		return false;
+	}
+	vertex_shader_blob_ptr->Release();
+
+	// Load and create the pixel shader.
+
+	ID3DBlob *pixel_shader_blob_ptr = nullptr;
+	if (FAILED(D3DReadFileToBlob(L"Shader_PS.cso", &pixel_shader_blob_ptr))) {
+		return false;
+	}
+	if (FAILED(d3d_device_ptr->CreatePixelShader(pixel_shader_blob_ptr->GetBufferPointer(), pixel_shader_blob_ptr->GetBufferSize(), NULL, &d3d_pixel_shader_ptr))) {	
+		pixel_shader_blob_ptr->Release();
+		return false;
+	}
+	pixel_shader_blob_ptr->Release();
+
 	// Set the colour component masks.
 
 	red_comp_mask = 0xff0000;
@@ -2653,6 +2673,14 @@ start_up_hardware_renderer(void)
 static void
 shut_down_hardware_renderer(void)
 {
+	if (d3d_pixel_shader_ptr) {
+		d3d_pixel_shader_ptr->Release();
+		d3d_pixel_shader_ptr = NULL;
+	}
+	if (d3d_vertex_shader_ptr) {
+		d3d_vertex_shader_ptr->Release();
+		d3d_vertex_shader_ptr = NULL;
+	}
 	if (d3d_render_target_view_ptr) {
 		d3d_render_target_view_ptr->Release();
 		d3d_render_target_view_ptr = NULL;
@@ -2991,6 +3019,8 @@ create_main_window(void (*key_callback)(byte key_code, bool key_down),
 	d3d_swap_chain_ptr = NULL;
 	d3d_device_context_ptr = NULL;
 	d3d_render_target_view_ptr = NULL;
+	d3d_vertex_shader_ptr = NULL;
+	d3d_pixel_shader_ptr = NULL;
 	framebuffer_ptr = NULL;
 	//curr_hardware_texture_ptr = NULL;
 	dsound_object_ptr = NULL;
@@ -5029,6 +5059,9 @@ clear_frame_buffer(int x, int y, int width, int height)
 	byte *fb_ptr;
 	int row_pitch;
 	int bytes_per_pixel;
+
+	if (hardware_acceleration)
+		return;
 
 	// Lock the frame buffer surface.
 
@@ -7616,7 +7649,7 @@ render_popup_span32(span *span_ptr)
 void
 hardware_init_vertex_list(void)
 {
-	//d3d_vertex_list = NULL;
+	d3d_vertex_buffer_ptr = NULL;
 }
 
 //------------------------------------------------------------------------------
@@ -7626,11 +7659,21 @@ hardware_init_vertex_list(void)
 bool
 hardware_create_vertex_list(int max_vertices)
 {
-	/*
-	NEWARRAY(d3d_vertex_list, hardware_vertex, max_vertices);
-	return(d3d_vertex_list != NULL);
-	*/
-	return false;
+	// Fill in a buffer description.
+
+	D3D11_BUFFER_DESC bufferDesc;
+	bufferDesc.Usage = D3D11_USAGE_DYNAMIC;
+	bufferDesc.ByteWidth = sizeof(hardware_vertex) * max_vertices;
+	bufferDesc.BindFlags = D3D11_BIND_VERTEX_BUFFER;
+	bufferDesc.CPUAccessFlags = D3D11_CPU_ACCESS_WRITE;
+	bufferDesc.MiscFlags = 0;
+
+	// Create the vertex buffer.
+
+	if (FAILED(d3d_device_ptr->CreateBuffer(&bufferDesc, NULL, &d3d_vertex_buffer_ptr))) {
+		return false;
+	}
+	return true;
 }
 
 //------------------------------------------------------------------------------
@@ -7640,12 +7683,10 @@ hardware_create_vertex_list(int max_vertices)
 void
 hardware_destroy_vertex_list(int max_vertices)
 {
-	/*
-	if (d3d_vertex_list != NULL) {
-		DELBASEARRAY(d3d_vertex_list, hardware_vertex, max_vertices);
-		d3d_vertex_list = NULL;
+	if (d3d_vertex_buffer_ptr != NULL) {
+		d3d_vertex_buffer_ptr->Release();
+		d3d_vertex_buffer_ptr = NULL;
 	}
-	*/
 }
 
 //------------------------------------------------------------------------------
@@ -7742,16 +7783,24 @@ hardware_disable_fog(void)
 void *
 hardware_create_texture(int image_size_index)
 {
-	/*
 	int image_dimensions;
-	LPDIRECT3DTEXTURE8 d3d_texture_ptr;
+	ID3D11Texture2D *d3d_texture_ptr;
 	hardware_texture *hardware_texture_ptr;
 
 	// Create the Direct3D texture object.
 
 	image_dimensions = image_dimensions_list[image_size_index];
-	if (FAILED(d3d_device_ptr->CreateTexture(image_dimensions, image_dimensions,
-		0, 0, D3DFMT_A1R5G5B5, D3DPOOL_MANAGED, &d3d_texture_ptr)))
+	D3D11_TEXTURE2D_DESC desc;
+	desc.Width = image_dimensions;
+	desc.Height = image_dimensions;
+	desc.MipLevels = desc.ArraySize = 1;
+	desc.Format = DXGI_FORMAT_B5G5R5A1_UNORM;
+	desc.SampleDesc.Count = 1;
+	desc.Usage = D3D11_USAGE_DYNAMIC;
+	desc.BindFlags = D3D11_BIND_SHADER_RESOURCE;
+	desc.CPUAccessFlags = D3D11_CPU_ACCESS_WRITE;
+	desc.MiscFlags = 0;
+	if (FAILED(d3d_device_ptr->CreateTexture2D(&desc, NULL, &d3d_texture_ptr)))
 		return(NULL);
 
 	// Create the hardware texture object, initialise it, and return a pointer
@@ -7764,8 +7813,6 @@ hardware_create_texture(int image_size_index)
 	hardware_texture_ptr->image_size_index = image_size_index;
 	hardware_texture_ptr->d3d_texture_ptr = d3d_texture_ptr;
 	return(hardware_texture_ptr);
-	*/
-	return NULL;
 }
 
 //------------------------------------------------------------------------------
@@ -7775,14 +7822,11 @@ hardware_create_texture(int image_size_index)
 void
 hardware_destroy_texture(void *hardware_texture_ptr)
 {
-	/*
 	if (hardware_texture_ptr != NULL) {
-		hardware_texture *cast_hardware_texture_ptr = 
-			(hardware_texture *)hardware_texture_ptr;
+		hardware_texture *cast_hardware_texture_ptr = (hardware_texture *)hardware_texture_ptr;
 		cast_hardware_texture_ptr->d3d_texture_ptr->Release();
 		delete cast_hardware_texture_ptr;
 	}
-	*/
 }
 
 //------------------------------------------------------------------------------
@@ -7792,10 +7836,9 @@ hardware_destroy_texture(void *hardware_texture_ptr)
 void
 hardware_set_texture(cache_entry *cache_entry_ptr)
 {
-	/*
 	hardware_texture *hardware_texture_ptr;
-	D3DLOCKED_RECT locked_rect;
-	LPDIRECT3DTEXTURE8 d3d_texture_ptr;
+	ID3D11Texture2D *d3d_texture_ptr;
+	D3D11_MAPPED_SUBRESOURCE d3d_mapped_subresource;
 	byte *surface_ptr;
 	int row_pitch, row_gap;
 	int image_size_index, image_dimensions;
@@ -7810,8 +7853,7 @@ hardware_set_texture(cache_entry *cache_entry_ptr)
 
 	// Get a pointer to the hardware texture object.
 
-	hardware_texture_ptr = 
-		(hardware_texture *)cache_entry_ptr->hardware_texture_ptr;
+	hardware_texture_ptr =  (hardware_texture *)cache_entry_ptr->hardware_texture_ptr;
 
 	// Get the image size index and dimensions.
 
@@ -7824,13 +7866,12 @@ hardware_set_texture(cache_entry *cache_entry_ptr)
 
 	// Lock the texture surface.
 
-	if (FAILED(d3d_texture_ptr->LockRect(0, &locked_rect, NULL, 
-		D3DLOCK_NOSYSLOCK))) {
+	if (FAILED(d3d_device_context_ptr->Map(d3d_texture_ptr, 0, D3D11_MAP_WRITE_DISCARD, 0, &d3d_mapped_subresource))) {
 		diagnose("Failed to lock texture");
 		return;
 	}
-	surface_ptr = (byte *)locked_rect.pBits;
-	row_pitch = locked_rect.Pitch;
+	surface_ptr = (byte *)d3d_mapped_subresource.pData;
+	row_pitch = d3d_mapped_subresource.RowPitch;
 	row_gap = row_pitch - image_dimensions * 2;
 
 	// Get the unlit image pointer and it's dimensions, and set a pointer to
@@ -8022,9 +8063,7 @@ hardware_set_texture(cache_entry *cache_entry_ptr)
 
 	// Unlock the texture surface.
 
-	if (FAILED(d3d_texture_ptr->UnlockRect(0)))
-		diagnose("Failed to unlock texture");
-	*/
+	d3d_device_context_ptr->Unmap(d3d_texture_ptr, 0);
 }
 
 //------------------------------------------------------------------------------
@@ -8192,143 +8231,6 @@ hardware_render_polygon(spolygon *spolygon_ptr)
 //==============================================================================
 
 //------------------------------------------------------------------------------
-// Function to draw a bitmap onto the frame buffer surface at the given (x,y)
-// coordinates.  Drawing onto an 8-bit frame buffer is not supported by this
-// function.
-//------------------------------------------------------------------------------
-
-static void
-draw_bitmap(bitmap *bitmap_ptr, int x, int y)
-{
-	int clipped_x, clipped_y;
-	int clipped_width, clipped_height;
-	byte *surface_ptr;
-	byte *image_ptr, *fb_ptr;
-	pixel *palette_ptr;
-	int transparent_index;
-	int fb_bytes_per_row, bytes_per_pixel;
-	int row;
-	int image_width, span_width;
-	fixed u, v;
-
-	// If the image is completely off screen then return without having drawn
-	// anything.
-
-	if (x >= display_width || y >= display_height ||
-		x + bitmap_ptr->width <= 0 || y + bitmap_ptr->height <= 0) 
-		return;
-
-	// If the frame buffer x or y coordinates are negative, then we clamp them
-	// at zero and adjust the image coordinates and size to match.
-
-	if (x < 0) {
-		clipped_x = -x;
-		clipped_width = bitmap_ptr->width - clipped_x;
-		x = 0;
-	} else {
-		clipped_x = 0;
-		clipped_width = bitmap_ptr->width;
-	}	
-	if (y < 0) {
-		clipped_y = -y;
-		clipped_height = bitmap_ptr->height - clipped_y;
-		y = 0;
-	} else {
-		clipped_y = 0;
-		clipped_height = bitmap_ptr->height;
-	}
-
-	// If the image crosses the right or bottom edge of the display, we must
-	// adjust the size of the area we are going to draw even further.
-
-	if (x + clipped_width > display_width)
-		clipped_width = display_width - x;
-	if (y + clipped_height > display_height)
-		clipped_height = display_height - y;
-
-	// Lock the frame buffer surface.
-
-	if (hardware_acceleration) {
-		/*
-		D3DLOCKED_RECT locked_rect;
-
-		if (FAILED(d3d_framebuffer_surface_ptr->LockRect(&locked_rect, NULL,
-			D3DLOCK_NOSYSLOCK)))
-			return;
-		surface_ptr = (byte *)locked_rect.pBits;
-		fb_bytes_per_row = locked_rect.Pitch;
-		*/
-	} else {
-		DDSURFACEDESC ddraw_surface_desc;
-
-		ddraw_surface_desc.dwSize = sizeof(ddraw_surface_desc);
-		if (ddraw_framebuffer_surface_ptr->Lock(NULL, &ddraw_surface_desc,
-			DDLOCK_SURFACEMEMORYPTR | DDLOCK_WAIT, NULL) != DD_OK)
-			return;
-		surface_ptr = (byte *)ddraw_surface_desc.lpSurface;
-		fb_bytes_per_row = ddraw_surface_desc.lPitch;
-	}
-
-	// Calculate the bytes per pixel.
-
-	bytes_per_pixel = display_depth / 8;
-
-	// Determine the transparent index, and the palette pointer.
-
-	palette_ptr = bitmap_ptr->palette;
-	transparent_index = bitmap_ptr->transparent_index;
-	image_width = bitmap_ptr->width;
-	u = clipped_x % bitmap_ptr->width;
-	v = clipped_y % bitmap_ptr->height;
-
-	// Compute the starting frame buffer and image pointers.
-
-	fb_ptr = surface_ptr + (y * fb_bytes_per_row) + (x * bytes_per_pixel);
-	image_ptr = bitmap_ptr->pixels + v * image_width;
-	
-	// The span width is the same as the clipped width.
-
-	span_width = clipped_width;
-
-	// Now render the bitmap.  Note that rendering to an 8-bit frame buffer is
-	// not supported.
-
-	switch (bytes_per_pixel) {
-	case 2:
-		for (row = 0; row < clipped_height; row++) {
-			render_linear_span16(false, image_ptr, fb_ptr, palette_ptr,
-				transparent_index, 0, image_width, span_width, u);
-			fb_ptr += fb_bytes_per_row;
-			image_ptr += image_width;
-		}
-		break;
-	case 3:
-		for (row = 0; row < clipped_height; row++) {
-			render_linear_span24(false, image_ptr, fb_ptr, palette_ptr,
-				transparent_index, 0, image_width, span_width, u);
-			fb_ptr += fb_bytes_per_row;
-			image_ptr += image_width;
-		}
-		break;
-	case 4:
-		for (row = 0; row < clipped_height; row++) {
-			render_linear_span32(false, image_ptr, fb_ptr, palette_ptr,
-				transparent_index, 0, image_width, span_width, u);
-			fb_ptr += fb_bytes_per_row;
-			image_ptr += image_width;
-		}
-		break;
-	}
-
-	// Unlock the frame buffer surface.
-
-	if (hardware_acceleration) {
-		//d3d_framebuffer_surface_ptr->UnlockRect();
-	} else
-		ddraw_framebuffer_surface_ptr->Unlock(surface_ptr);
-}
-
-//------------------------------------------------------------------------------
 // Function to draw a pixmap at the given brightness index onto the frame buffer
 // surface at the given (x,y) coordinates.
 //------------------------------------------------------------------------------
@@ -8350,6 +8252,9 @@ draw_pixmap(pixmap *pixmap_ptr, int brightness_index, int x, int y, int width,
 	pixel transparency_mask32 = 0;
 	int image_width, span_width;
 	fixed u, v;
+
+	if (hardware_acceleration)
+		return;
 
 	// If the pixmap is completely off screen then return without having drawn
 	// anything.
@@ -8389,15 +8294,6 @@ draw_pixmap(pixmap *pixmap_ptr, int brightness_index, int x, int y, int width,
 	// Lock the frame buffer surface.
 
 	if (hardware_acceleration) {
-		/*
-		D3DLOCKED_RECT locked_rect;
-
-		if (FAILED(d3d_framebuffer_surface_ptr->LockRect(&locked_rect, NULL,
-			D3DLOCK_NOSYSLOCK)))
-			return;
-		surface_ptr = (byte *)locked_rect.pBits;
-		fb_bytes_per_row = locked_rect.Pitch;
-		*/
 	} else {
 		DDSURFACEDESC ddraw_surface_desc;
 

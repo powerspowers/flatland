@@ -798,4 +798,9 @@
       <Filter>Header Files\Simkin</Filter>
     </None>
   </ItemGroup>
+  <ItemGroup>
+    <FxCompile Include="Shaders.fx" />
+    <FxCompile Include="Shader_PS.hlsl" />
+    <FxCompile Include="Shader_VS.hlsl" />
+  </ItemGroup>
 </Project>
