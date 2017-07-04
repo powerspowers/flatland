@@ -31,6 +31,7 @@
 #include <Urlmon.h>
 
 #include <d3d11.h>
+#include <DirectXColors.h>
 #include <DirectXMath.h>
 #include <d3dcompiler.h>
 #include <ddraw.h>
@@ -283,6 +284,7 @@ icon::~icon()
 struct hardware_texture {
 	int image_size_index;
 	ID3D11Texture2D *d3d_texture_ptr;
+	ID3D11ShaderResourceView *d3d_shader_resource_view_ptr;
 };
 
 // Hardware vertex class.
@@ -292,6 +294,11 @@ struct hardware_vertex {
 	XMFLOAT2 texture_coords;
 	//float rhw;
 	//XMFLOAT4 diffuse_colour;
+
+	hardware_vertex(float sx, float sy, float sz, float tu, float tv) {
+		position = XMFLOAT3(sx, sy, sz);
+		texture_coords = XMFLOAT2(tu, tv);
+	}
 
 	/*
 	void set(float new_sx, float new_sy, float new_sz, float new_rhw,
@@ -5161,7 +5168,7 @@ display_frame_buffer(bool show_splash_graphic)
 	// blit the frame buffer onto the primary surface.
 
 	if (hardware_acceleration) {
-		//d3d_device_ptr->Present(NULL, NULL, NULL, NULL);
+		d3d_swap_chain_ptr->Present(0, 0);
 	} else
 		blit_frame_buffer();
 	return(true);
@@ -7898,12 +7905,14 @@ hardware_create_texture(int image_size_index)
 {
 	int image_dimensions;
 	ID3D11Texture2D *d3d_texture_ptr;
+	ID3D11ShaderResourceView *d3d_shader_resource_view_ptr;
 	hardware_texture *hardware_texture_ptr;
 
 	// Create the Direct3D texture object.
 
 	image_dimensions = image_dimensions_list[image_size_index];
 	D3D11_TEXTURE2D_DESC desc;
+	ZeroMemory(&desc, sizeof(desc));
 	desc.Width = image_dimensions;
 	desc.Height = image_dimensions;
 	desc.MipLevels = desc.ArraySize = 1;
@@ -7913,7 +7922,14 @@ hardware_create_texture(int image_size_index)
 	desc.BindFlags = D3D11_BIND_SHADER_RESOURCE;
 	desc.CPUAccessFlags = D3D11_CPU_ACCESS_WRITE;
 	desc.MiscFlags = 0;
-	if (FAILED(d3d_device_ptr->CreateTexture2D(&desc, NULL, &d3d_texture_ptr)))
+	HRESULT result = d3d_device_ptr->CreateTexture2D(&desc, NULL, &d3d_texture_ptr);
+	if (FAILED(result))
+		return(NULL);
+
+	// Create the shader resource view object.
+
+	result = d3d_device_ptr->CreateShaderResourceView(d3d_texture_ptr, NULL, &d3d_shader_resource_view_ptr);
+	if (FAILED(result))
 		return(NULL);
 
 	// Create the hardware texture object, initialise it, and return a pointer
@@ -7925,6 +7941,7 @@ hardware_create_texture(int image_size_index)
 	}
 	hardware_texture_ptr->image_size_index = image_size_index;
 	hardware_texture_ptr->d3d_texture_ptr = d3d_texture_ptr;
+	hardware_texture_ptr->d3d_shader_resource_view_ptr = d3d_shader_resource_view_ptr;
 	return(hardware_texture_ptr);
 }
 
@@ -7937,6 +7954,7 @@ hardware_destroy_texture(void *hardware_texture_ptr)
 {
 	if (hardware_texture_ptr != NULL) {
 		hardware_texture *cast_hardware_texture_ptr = (hardware_texture *)hardware_texture_ptr;
+		cast_hardware_texture_ptr->d3d_shader_resource_view_ptr->Release();
 		cast_hardware_texture_ptr->d3d_texture_ptr->Release();
 		delete cast_hardware_texture_ptr;
 	}
@@ -8184,24 +8202,9 @@ hardware_set_texture(cache_entry *cache_entry_ptr)
 //------------------------------------------------------------------------------
 
 static void
-hardware_enable_texture(void *hardware_texture_ptr)
+hardware_enable_texture(hardware_texture *hardware_texture_ptr)
 {
-	/*
-	if (hardware_texture_ptr != NULL) {
-		hardware_texture *cast_hardware_texture_ptr =
-			(hardware_texture *)hardware_texture_ptr;
-
-		// Only enable the DirectDraw texture if it's different to the
-		// currently enabled DirectDraw texture.
-
-		if (cast_hardware_texture_ptr != curr_hardware_texture_ptr) {
-			curr_hardware_texture_ptr = cast_hardware_texture_ptr;
-			if (FAILED(d3d_device_ptr->SetTexture(0, 
-				curr_hardware_texture_ptr->d3d_texture_ptr)))
-				diagnose("Failed to set texture");
-		}
-	}
-	*/
+	d3d_device_context_ptr->PSSetShaderResources(0, 1, &hardware_texture_ptr->d3d_shader_resource_view_ptr);
 }
 
 //------------------------------------------------------------------------------
@@ -8211,13 +8214,6 @@ hardware_enable_texture(void *hardware_texture_ptr)
 static void
 hardware_disable_texture(void)
 {
-	/*
-	if (curr_hardware_texture_ptr != NULL) {
-		if (FAILED(d3d_device_ptr->SetTexture(0, NULL)))
-			diagnose("Failed to unset texture");
-		curr_hardware_texture_ptr = NULL;
-	}
-	*/
 }
 
 //------------------------------------------------------------------------------
@@ -8303,11 +8299,23 @@ hardware_render_2D_polygon(pixmap *pixmap_ptr, RGBcolour colour,
 //------------------------------------------------------------------------------
 
 void
+add_vertex_to_buffer(hardware_vertex *&vertex_buffer_ptr, spoint *spoint_list, int index)
+{
+	spoint *spoint_ptr = &spoint_list[index];
+	float tz = 1.0f / spoint_ptr->one_on_tz;
+	float sx = (spoint_ptr->sx - half_window_width) / half_window_width;
+	float sy = (half_window_height - spoint_ptr->sy) / half_window_height;
+	debug_message("Vertex %d: sx = %f, sy = %f, tu = %f, tv = %f\n", index, sx, sy, spoint_ptr->u_on_tz * tz, spoint_ptr->v_on_tz * tz);
+	*vertex_buffer_ptr++ = hardware_vertex(sx, sy, 1.0f - spoint_ptr->one_on_tz, spoint_ptr->u_on_tz * tz, spoint_ptr->v_on_tz * tz);
+}
+
+void
 hardware_render_polygon(spolygon *spolygon_ptr)
 {
-	/*
 	pixmap *pixmap_ptr;
 	int index;
+	D3D11_MAPPED_SUBRESOURCE d3d_mapped_subresource;
+	hardware_vertex *vertex_buffer_ptr;
 
 	// If the polygon has a pixmap, get the cache entry and enable the texture,
 	// otherwise disable the texture.
@@ -8315,28 +8323,57 @@ hardware_render_polygon(spolygon *spolygon_ptr)
 	pixmap_ptr = spolygon_ptr->pixmap_ptr;
 	if (pixmap_ptr != NULL) {
 		cache_entry *cache_entry_ptr = get_cache_entry(pixmap_ptr, 0);
-		hardware_enable_texture(cache_entry_ptr->hardware_texture_ptr);
+		hardware_enable_texture((hardware_texture *)cache_entry_ptr->hardware_texture_ptr);
 	} else
 		hardware_disable_texture();
 
-	// Construct the Direct3D vertex list for this polygon.
+	// Map the vertex buffer.
 
-	for (index = 0; index < spolygon_ptr->spoints; index++) {
-		spoint *spoint_ptr = &spolygon_ptr->spoint_list[index];
-		float tz = 1.0f / spoint_ptr->one_on_tz;
-		d3d_vertex_list[index].set(spoint_ptr->sx, spoint_ptr->sy, 
-			1.0f - spoint_ptr->one_on_tz, spoint_ptr->one_on_tz, 
-			&spoint_ptr->colour, (byte)(spolygon_ptr->alpha * 255.0f),
-			spoint_ptr->u_on_tz * tz, spoint_ptr->v_on_tz * tz);
+	if (FAILED(d3d_device_context_ptr->Map(d3d_vertex_buffer_ptr, 0, D3D11_MAP_WRITE_DISCARD, 0, &d3d_mapped_subresource))) {
+		diagnose("Failed to map vertex buffer");
+		return;
 	}
-	
-	// Render the polygon as a triangle fan.
+	vertex_buffer_ptr = (hardware_vertex *)d3d_mapped_subresource.pData;
 
-	if (FAILED(d3d_device_ptr->DrawPrimitiveUP(D3DPT_TRIANGLEFAN, 
-		spolygon_ptr->spoints - 2, 
-		d3d_vertex_list, sizeof(hardware_vertex))))
-		diagnose("Failed to render polygon");
-	*/
+	// Fill the vertex buffer for this polygon by alternating between vertices taken from stepping forward and backward through the vertex list.
+	// This ensures we end up with a triangle strip suitable for rendering.
+
+	debug_message("Drawing polygon with %d vertices:\n", spolygon_ptr->spoints);
+	int i = 1;
+	int j = spolygon_ptr->spoints - 1;
+	bool left = true;	
+	add_vertex_to_buffer(vertex_buffer_ptr, spolygon_ptr->spoint_list, 0);
+	while (i <= j)
+	{
+		if (left)
+		{
+			add_vertex_to_buffer(vertex_buffer_ptr, spolygon_ptr->spoint_list, i);
+			i++;
+		}
+		else
+		{
+			add_vertex_to_buffer(vertex_buffer_ptr, spolygon_ptr->spoint_list, j);
+			j--;
+		}
+		left = !left;
+	}
+
+	// Unmap the vertex buffer.
+
+	d3d_device_context_ptr->Unmap(d3d_vertex_buffer_ptr, 0);
+
+	// Clear the back buffer and the depth stencil.
+
+	d3d_device_context_ptr->ClearRenderTargetView(d3d_render_target_view_ptr, Colors::MidnightBlue);
+	d3d_device_context_ptr->ClearDepthStencilView(d3d_depth_stencil_view_ptr, D3D11_CLEAR_DEPTH, 1.0f, 0);
+
+	// Set up the context for the draw, then render the polygon.
+
+	d3d_device_context_ptr->VSSetShader(d3d_vertex_shader_ptr, NULL, 0);
+	d3d_device_context_ptr->VSSetConstantBuffers(0, 1, &d3d_constant_buffer_ptr);
+	d3d_device_context_ptr->PSSetShader(d3d_pixel_shader_ptr, NULL, 0);
+	d3d_device_context_ptr->PSSetSamplers(0, 1, &d3d_sampler_state_ptr);
+	d3d_device_context_ptr->Draw(4 /*spolygon_ptr->spoints*/, 0);
 }
 
 //==============================================================================

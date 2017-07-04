@@ -36,7 +36,7 @@ struct PS_INPUT
 PS_INPUT VS(VS_INPUT input)
 {
 	PS_INPUT output = (PS_INPUT)0;
-    output.Pos = mul(input.Pos, Projection);
+    output.Pos = input.Pos; //mul(input.Pos, Projection);
 	output.Tex = input.Tex;
     return output;
 }
