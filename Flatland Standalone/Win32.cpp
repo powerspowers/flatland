@@ -458,6 +458,7 @@ static ID3D11VertexShader *d3d_vertex_shader_ptr;
 static ID3D11InputLayout *d3d_vertex_layout_ptr;
 static ID3D11Buffer *d3d_vertex_buffer_ptr;
 static ID3D11PixelShader *d3d_pixel_shader_ptr;
+static ID3D11RasterizerState *d3d_rasterizer_state_ptr;
 static ID3D11SamplerState *d3d_sampler_state_ptr;
 static ID3D11Buffer *d3d_constant_buffer_ptr;
 static XMMATRIX d3d_projection_matrix;
@@ -2761,6 +2762,24 @@ start_up_hardware_renderer(void)
 		return false;
 	}
 
+	// Create the rasterizer state.
+
+	D3D11_RASTERIZER_DESC rasterizer_desc;
+	ZeroMemory(&rasterizer_desc, sizeof(rasterizer_desc));
+	rasterizer_desc.FillMode = D3D11_FILL_SOLID;
+	rasterizer_desc.CullMode = D3D11_CULL_NONE;
+	rasterizer_desc.FrontCounterClockwise = FALSE;
+	rasterizer_desc.DepthBias = 0;
+	rasterizer_desc.DepthBiasClamp = 0.0f;
+	rasterizer_desc.SlopeScaledDepthBias = 0.0f;
+	rasterizer_desc.DepthClipEnable = TRUE;
+	rasterizer_desc.ScissorEnable = FALSE;
+	rasterizer_desc.MultisampleEnable = FALSE;
+	rasterizer_desc.AntialiasedLineEnable = FALSE;
+	if (FAILED(d3d_device_ptr->CreateRasterizerState(&rasterizer_desc, &d3d_rasterizer_state_ptr))) {
+		return false;
+	}
+
 	// Create the sampler state.
 
 	D3D11_SAMPLER_DESC sampler_state_desc;
@@ -2813,6 +2832,10 @@ shut_down_hardware_renderer(void)
 	if (d3d_sampler_state_ptr) {
 		d3d_sampler_state_ptr->Release();
 		d3d_sampler_state_ptr = NULL;
+	}
+	if (d3d_rasterizer_state_ptr) {
+		d3d_rasterizer_state_ptr->Release();
+		d3d_rasterizer_state_ptr = NULL;
 	}
 	if (d3d_pixel_shader_ptr) {
 		d3d_pixel_shader_ptr->Release();
@@ -3177,6 +3200,7 @@ create_main_window(void (*key_callback)(byte key_code, bool key_down),
 	d3d_vertex_shader_ptr = NULL;
 	d3d_vertex_layout_ptr = NULL;
 	d3d_pixel_shader_ptr = NULL;
+	d3d_rasterizer_state_ptr = NULL;
 	d3d_sampler_state_ptr = NULL;
 	d3d_constant_buffer_ptr = NULL;
 	framebuffer_ptr = NULL;
@@ -8338,8 +8362,11 @@ add_vertex_to_buffer(hardware_vertex *&vertex_buffer_ptr, spoint *spoint_list, i
 	float tz = 1.0f / spoint_ptr->one_on_tz;
 	float sx = (spoint_ptr->sx - half_window_width) / half_window_width;
 	float sy = (half_window_height - spoint_ptr->sy) / half_window_height;
-	debug_message("Vertex %d: sx = %f, sy = %f, tu = %f, tv = %f\n", index, sx, sy, spoint_ptr->u_on_tz * tz, spoint_ptr->v_on_tz * tz);
-	*vertex_buffer_ptr++ = hardware_vertex(sx, sy, 1.0f - spoint_ptr->one_on_tz, spoint_ptr->u_on_tz * tz, spoint_ptr->v_on_tz * tz);
+	float sz = 1.0f - spoint_ptr->one_on_tz;
+	float tu = spoint_ptr->u_on_tz * tz;
+	float tv = spoint_ptr->v_on_tz * tz;
+	debug_message("Vertex %d: sx = %f, sy = %f, sz = %f, tu = %f, tv = %f\n", index, sx, sy, sz, tu, tv);
+	*vertex_buffer_ptr++ = hardware_vertex(sx, sy, sz, tu, tv);
 }
 
 void
@@ -8396,7 +8423,7 @@ hardware_render_polygon(spolygon *spolygon_ptr)
 
 	// Clear the back buffer and the depth stencil.
 
-	d3d_device_context_ptr->ClearRenderTargetView(d3d_render_target_view_ptr, Colors::MidnightBlue);
+	d3d_device_context_ptr->ClearRenderTargetView(d3d_render_target_view_ptr, Colors::Black);
 	d3d_device_context_ptr->ClearDepthStencilView(d3d_depth_stencil_view_ptr, D3D11_CLEAR_DEPTH, 1.0f, 0);
 
 	// Set up the context for the draw, then render the polygon.
@@ -8405,7 +8432,8 @@ hardware_render_polygon(spolygon *spolygon_ptr)
 	d3d_device_context_ptr->VSSetConstantBuffers(0, 1, &d3d_constant_buffer_ptr);
 	d3d_device_context_ptr->PSSetShader(d3d_pixel_shader_ptr, NULL, 0);
 	d3d_device_context_ptr->PSSetSamplers(0, 1, &d3d_sampler_state_ptr);
-	d3d_device_context_ptr->Draw(4 /*spolygon_ptr->spoints*/, 0);
+	d3d_device_context_ptr->RSSetState(d3d_rasterizer_state_ptr);
+	d3d_device_context_ptr->Draw(spolygon_ptr->spoints, 0);
 }
 
 //==============================================================================
