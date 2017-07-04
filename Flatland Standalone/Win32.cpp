@@ -289,10 +289,11 @@ struct hardware_texture {
 
 struct hardware_vertex {
 	XMFLOAT3 position;
-	float rhw;
-	XMFLOAT4 diffuse_colour;
-	float tu, tv;
+	XMFLOAT2 texture_coords;
+	//float rhw;
+	//XMFLOAT4 diffuse_colour;
 
+	/*
 	void set(float new_sx, float new_sy, float new_sz, float new_rhw,
 		RGBcolour *diffuse_colour_ptr, byte diffuse_alpha,
 		float new_tu, float new_tv)
@@ -303,6 +304,7 @@ struct hardware_vertex {
 		tu = new_tu;
 		tv = new_tv;
 	}
+	*/
 };
 
 // Structure to hold the colour palette.
@@ -411,6 +413,7 @@ ID3D11RenderTargetView *d3d_render_target_view_ptr;
 ID3D11Texture2D *d3d_depth_stencil_texture_ptr;
 ID3D11DepthStencilView *d3d_depth_stencil_view_ptr;
 ID3D11VertexShader *d3d_vertex_shader_ptr;
+ID3D11InputLayout *d3d_vertex_layout_ptr;
 ID3D11PixelShader *d3d_pixel_shader_ptr;
 
 static byte *framebuffer_ptr;
@@ -2677,7 +2680,21 @@ start_up_hardware_renderer(void)
 		vertex_shader_blob_ptr->Release();
 		return false;
 	}
+
+	// Define and create the vertex layout.
+
+	D3D11_INPUT_ELEMENT_DESC vertex_layout[] = {
+		{"POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 0, D3D11_INPUT_PER_VERTEX_DATA, 0},
+		{"TEXCOORD", 0, DXGI_FORMAT_R32G32_FLOAT, 0, 12, D3D11_INPUT_PER_VERTEX_DATA, 0},
+	};
+	UINT num_elements = ARRAYSIZE(vertex_layout);
+	HRESULT result = d3d_device_ptr->CreateInputLayout(vertex_layout, num_elements, vertex_shader_blob_ptr->GetBufferPointer(),
+		vertex_shader_blob_ptr->GetBufferSize(), &d3d_vertex_layout_ptr);
 	vertex_shader_blob_ptr->Release();
+	if (FAILED(result)) {
+		return false;
+	}
+	d3d_device_context_ptr->IASetInputLayout(d3d_vertex_layout_ptr);
 
 	// Load and create the pixel shader.
 
@@ -2685,12 +2702,12 @@ start_up_hardware_renderer(void)
 	if (FAILED(D3DReadFileToBlob(L"Shader_PS.cso", &pixel_shader_blob_ptr))) {
 		return false;
 	}
-	if (FAILED(d3d_device_ptr->CreatePixelShader(pixel_shader_blob_ptr->GetBufferPointer(), pixel_shader_blob_ptr->GetBufferSize(), NULL,
-		&d3d_pixel_shader_ptr))) {
-		pixel_shader_blob_ptr->Release();
+	result = d3d_device_ptr->CreatePixelShader(pixel_shader_blob_ptr->GetBufferPointer(), pixel_shader_blob_ptr->GetBufferSize(), NULL,
+		&d3d_pixel_shader_ptr);
+	pixel_shader_blob_ptr->Release();
+	if (FAILED(result)) {
 		return false;
 	}
-	pixel_shader_blob_ptr->Release();
 
 	// Set the colour component masks.
 
@@ -2713,6 +2730,10 @@ shut_down_hardware_renderer(void)
 	if (d3d_pixel_shader_ptr) {
 		d3d_pixel_shader_ptr->Release();
 		d3d_pixel_shader_ptr = NULL;
+	}
+	if (d3d_vertex_layout_ptr) {
+		d3d_vertex_layout_ptr->Release();
+		d3d_vertex_layout_ptr = NULL;
 	}
 	if (d3d_vertex_shader_ptr) {
 		d3d_vertex_shader_ptr->Release();
@@ -3067,6 +3088,7 @@ create_main_window(void (*key_callback)(byte key_code, bool key_down),
 	d3d_depth_stencil_texture_ptr = NULL;
 	d3d_depth_stencil_view_ptr = NULL;
 	d3d_vertex_shader_ptr = NULL;
+	d3d_vertex_layout_ptr = NULL;
 	d3d_pixel_shader_ptr = NULL;
 	framebuffer_ptr = NULL;
 	//curr_hardware_texture_ptr = NULL;
