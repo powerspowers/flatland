@@ -5043,7 +5043,10 @@ destroy_frame_buffer(void)
 void
 begin_3D_scene(void)
 {
-	//d3d_device_ptr->BeginScene();
+	// Clear the back buffer and the depth stencil.
+
+	d3d_device_context_ptr->ClearRenderTargetView(d3d_render_target_view_ptr, Colors::Black);
+	d3d_device_context_ptr->ClearDepthStencilView(d3d_depth_stencil_view_ptr, D3D11_CLEAR_DEPTH, 1.0f, 0);
 }
 
 //------------------------------------------------------------------------------
@@ -8365,7 +8368,7 @@ add_vertex_to_buffer(hardware_vertex *&vertex_buffer_ptr, spoint *spoint_list, i
 	float sz = 1.0f - spoint_ptr->one_on_tz;
 	float tu = spoint_ptr->u_on_tz * tz;
 	float tv = spoint_ptr->v_on_tz * tz;
-	debug_message("Vertex %d: sx = %f, sy = %f, sz = %f, tu = %f, tv = %f\n", index, sx, sy, sz, tu, tv);
+	//debug_message("Vertex %d: sx = %f, sy = %f, sz = %f, tu = %f, tv = %f\n", index, sx, sy, sz, tu, tv);
 	*vertex_buffer_ptr++ = hardware_vertex(sx, sy, sz, tu, tv);
 }
 
@@ -8397,7 +8400,7 @@ hardware_render_polygon(spolygon *spolygon_ptr)
 	// Fill the vertex buffer for this polygon by alternating between vertices taken from stepping forward and backward through the vertex list.
 	// This ensures we end up with a triangle strip suitable for rendering.
 
-	debug_message("Drawing polygon with %d vertices:\n", spolygon_ptr->spoints);
+	//debug_message("Drawing polygon with %d vertices:\n", spolygon_ptr->spoints);
 	int i = 1;
 	int j = spolygon_ptr->spoints - 1;
 	bool left = true;	
@@ -8420,11 +8423,6 @@ hardware_render_polygon(spolygon *spolygon_ptr)
 	// Unmap the vertex buffer.
 
 	d3d_device_context_ptr->Unmap(d3d_vertex_buffer_ptr, 0);
-
-	// Clear the back buffer and the depth stencil.
-
-	d3d_device_context_ptr->ClearRenderTargetView(d3d_render_target_view_ptr, Colors::Black);
-	d3d_device_context_ptr->ClearDepthStencilView(d3d_depth_stencil_view_ptr, D3D11_CLEAR_DEPTH, 1.0f, 0);
 
 	// Set up the context for the draw, then render the polygon.
 
