@@ -334,6 +334,37 @@ struct MYBITMAPINFO {
 };
 
 //------------------------------------------------------------------------------
+// Vertex and pixel shaders.
+//------------------------------------------------------------------------------
+
+char *vertex_shader_source =
+	"struct VS_INPUT {\n"
+	"	float4 Pos : POSITION;\n"
+	"	float2 Tex : TEXCOORD0;\n"
+	"};\n"
+	"struct PS_INPUT {\n"
+	"	float4 Pos : SV_POSITION;\n"
+	"	float2 Tex : TEXCOORD0;\n"
+	"};\n"
+	"PS_INPUT VS(VS_INPUT input) {\n"
+	"	PS_INPUT output = (PS_INPUT)0;\n"
+	"	output.Pos = input.Pos;\n"
+	"	output.Tex = input.Tex;\n"
+	"	return output;\n"
+	"}\n";
+
+char *pixel_shader_source =
+	"Texture2D txDiffuse : register(t0);\n"
+	"SamplerState samLinear : register(s0);\n"
+	"struct PS_INPUT {\n"
+	"	float4 Pos : SV_POSITION;\n"
+	"	float2 Tex : TEXCOORD0;\n"
+	"};\n"
+	"float4 PS(PS_INPUT input) : SV_Target {\n"
+	"	return txDiffuse.Sample(samLinear, input.Tex);\n"
+	"}\n";
+
+//------------------------------------------------------------------------------
 // Local variables.
 //------------------------------------------------------------------------------
 
@@ -2684,10 +2715,11 @@ start_up_hardware_renderer(void)
 	viewport.TopLeftY = 0;
 	d3d_device_context_ptr->RSSetViewports(1, &viewport);
 
-	// Load and create the vertex shader.
+	// Compile and create the vertex shader.
 
 	ID3DBlob *vertex_shader_blob_ptr;
-	if (FAILED(D3DReadFileToBlob(L"Shader_VS.cso", &vertex_shader_blob_ptr))) {
+	if (FAILED(D3DCompile(vertex_shader_source, strlen(vertex_shader_source), "vertex shader", NULL, NULL, "VS", "vs_4_0", 0, 0,
+		&vertex_shader_blob_ptr, NULL))) {
 		return false;
 	}
 	if (FAILED(d3d_device_ptr->CreateVertexShader(vertex_shader_blob_ptr->GetBufferPointer(), vertex_shader_blob_ptr->GetBufferSize(), NULL,
@@ -2715,10 +2747,11 @@ start_up_hardware_renderer(void)
 
 	d3d_device_context_ptr->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP);
 
-	// Load and create the pixel shader.
+	// Compile and create the pixel shader.
 
 	ID3DBlob *pixel_shader_blob_ptr = nullptr;
-	if (FAILED(D3DReadFileToBlob(L"Shader_PS.cso", &pixel_shader_blob_ptr))) {
+	if (FAILED(D3DCompile(pixel_shader_source, strlen(pixel_shader_source), "pixel shader", NULL, NULL, "PS", "ps_4_0", 0, 0,
+		&pixel_shader_blob_ptr, NULL))) {
 		return false;
 	}
 	result = d3d_device_ptr->CreatePixelShader(pixel_shader_blob_ptr->GetBufferPointer(), pixel_shader_blob_ptr->GetBufferSize(), NULL,
@@ -8313,7 +8346,6 @@ void
 hardware_render_polygon(spolygon *spolygon_ptr)
 {
 	pixmap *pixmap_ptr;
-	int index;
 	D3D11_MAPPED_SUBRESOURCE d3d_mapped_subresource;
 	hardware_vertex *vertex_buffer_ptr;
 
