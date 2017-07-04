@@ -307,6 +307,10 @@ struct hardware_vertex {
 	*/
 };
 
+struct hardware_constant_buffer {
+	XMMATRIX projection_matrix;
+};
+
 // Structure to hold the colour palette.
 
 struct MYLOGPALETTE {
@@ -406,20 +410,24 @@ static LPDIRECTDRAWCLIPPER ddraw_clipper_ptr;
 
 // Direct3D data.
 
-IDXGISwapChain *d3d_swap_chain_ptr;
-ID3D11Device *d3d_device_ptr;
-ID3D11DeviceContext *d3d_device_context_ptr;
-ID3D11RenderTargetView *d3d_render_target_view_ptr;
-ID3D11Texture2D *d3d_depth_stencil_texture_ptr;
-ID3D11DepthStencilView *d3d_depth_stencil_view_ptr;
-ID3D11VertexShader *d3d_vertex_shader_ptr;
-ID3D11InputLayout *d3d_vertex_layout_ptr;
-ID3D11PixelShader *d3d_pixel_shader_ptr;
+static IDXGISwapChain *d3d_swap_chain_ptr;
+static ID3D11Device *d3d_device_ptr;
+static ID3D11DeviceContext *d3d_device_context_ptr;
+static ID3D11RenderTargetView *d3d_render_target_view_ptr;
+static ID3D11Texture2D *d3d_depth_stencil_texture_ptr;
+static ID3D11DepthStencilView *d3d_depth_stencil_view_ptr;
+static ID3D11VertexShader *d3d_vertex_shader_ptr;
+static ID3D11InputLayout *d3d_vertex_layout_ptr;
+static ID3D11Buffer *d3d_vertex_buffer_ptr;
+static ID3D11PixelShader *d3d_pixel_shader_ptr;
+static ID3D11SamplerState *d3d_sampler_state_ptr;
+static ID3D11Buffer *d3d_constant_buffer_ptr;
+static XMMATRIX d3d_projection_matrix;
 
 static byte *framebuffer_ptr;
 static int framebuffer_width;
 //static hardware_texture *curr_hardware_texture_ptr;
-static ID3D11Buffer *d3d_vertex_buffer_ptr;
+
 
 // Private sound data.
 
@@ -2696,6 +2704,10 @@ start_up_hardware_renderer(void)
 	}
 	d3d_device_context_ptr->IASetInputLayout(d3d_vertex_layout_ptr);
 
+	// Set the primative topology.
+
+	d3d_device_context_ptr->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP);
+
 	// Load and create the pixel shader.
 
 	ID3DBlob *pixel_shader_blob_ptr = nullptr;
@@ -2706,6 +2718,33 @@ start_up_hardware_renderer(void)
 		&d3d_pixel_shader_ptr);
 	pixel_shader_blob_ptr->Release();
 	if (FAILED(result)) {
+		return false;
+	}
+
+	// Create the sampler state.
+
+	D3D11_SAMPLER_DESC sampler_state_desc;
+	ZeroMemory(&sampler_state_desc, sizeof(sampler_state_desc));
+	sampler_state_desc.Filter = D3D11_FILTER_MIN_MAG_MIP_LINEAR;
+	sampler_state_desc.AddressU = D3D11_TEXTURE_ADDRESS_WRAP;
+	sampler_state_desc.AddressV = D3D11_TEXTURE_ADDRESS_WRAP;
+	sampler_state_desc.AddressW = D3D11_TEXTURE_ADDRESS_WRAP;
+	sampler_state_desc.ComparisonFunc = D3D11_COMPARISON_NEVER;
+	sampler_state_desc.MinLOD = 0;
+	sampler_state_desc.MaxLOD = D3D11_FLOAT32_MAX;
+	if (FAILED(d3d_device_ptr->CreateSamplerState(&sampler_state_desc, &d3d_sampler_state_ptr))) {
+		return false;
+	}
+
+	// Create the constant buffer.
+
+	D3D11_BUFFER_DESC constant_buffer_desc;
+	ZeroMemory(&constant_buffer_desc, sizeof(constant_buffer_desc));
+	constant_buffer_desc.Usage = D3D11_USAGE_DEFAULT;
+	constant_buffer_desc.ByteWidth = sizeof(hardware_constant_buffer);
+	constant_buffer_desc.BindFlags = D3D11_BIND_CONSTANT_BUFFER;
+	constant_buffer_desc.CPUAccessFlags = 0;
+	if (FAILED(d3d_device_ptr->CreateBuffer(&constant_buffer_desc, NULL, &d3d_constant_buffer_ptr))) {
 		return false;
 	}
 
@@ -2727,6 +2766,14 @@ start_up_hardware_renderer(void)
 static void
 shut_down_hardware_renderer(void)
 {
+	if (d3d_constant_buffer_ptr) {
+		d3d_constant_buffer_ptr->Release();
+		d3d_constant_buffer_ptr = NULL;
+	}
+	if (d3d_sampler_state_ptr) {
+		d3d_sampler_state_ptr->Release();
+		d3d_sampler_state_ptr = NULL;
+	}
 	if (d3d_pixel_shader_ptr) {
 		d3d_pixel_shader_ptr->Release();
 		d3d_pixel_shader_ptr = NULL;
@@ -3090,6 +3137,8 @@ create_main_window(void (*key_callback)(byte key_code, bool key_down),
 	d3d_vertex_shader_ptr = NULL;
 	d3d_vertex_layout_ptr = NULL;
 	d3d_pixel_shader_ptr = NULL;
+	d3d_sampler_state_ptr = NULL;
+	d3d_constant_buffer_ptr = NULL;
 	framebuffer_ptr = NULL;
 	//curr_hardware_texture_ptr = NULL;
 	dsound_object_ptr = NULL;
@@ -7742,6 +7791,9 @@ hardware_create_vertex_list(int max_vertices)
 	if (FAILED(d3d_device_ptr->CreateBuffer(&bufferDesc, NULL, &d3d_vertex_buffer_ptr))) {
 		return false;
 	}
+	UINT stride = sizeof(hardware_vertex);
+	UINT offset = 0;
+	d3d_device_context_ptr->IASetVertexBuffers(0, 1, &d3d_vertex_buffer_ptr, &stride, &offset);
 	return true;
 }
 
@@ -7767,23 +7819,15 @@ hardware_set_projection_transform(float horz_field_of_view,
 								  float vert_field_of_view,
 								  float near_z, float far_z)
 {
-	/*
-	D3DXMATRIX perspective_matrix;
-    float h, w, Q;
- 
-    w = (float)(1.0 / tan(horz_field_of_view * 0.5));
-    h = (float)(1.0 / tan(vert_field_of_view * 0.5));
-    Q = far_z / (far_z - near_z);
- 
-    ZeroMemory(&perspective_matrix, sizeof(D3DMATRIX));
-    perspective_matrix(0, 0) = w;
-    perspective_matrix(1, 1) = h;
-    perspective_matrix(2, 2) = Q;
-    perspective_matrix(3, 2) = -Q * near_z;
-    perspective_matrix(2, 3) = 1;
+	// Initialize the projection matrix.
 
-	d3d_device_ptr->SetTransform(D3DTS_PROJECTION, &perspective_matrix);
-	*/
+	float width = (float)(1.0 / tan(horz_field_of_view * 0.5));
+	float height = (float)(1.0 / tan(vert_field_of_view * 0.5));
+	float Q = far_z / (far_z - near_z);
+	d3d_projection_matrix = XMMATRIX(width, 0, 0, 0, 0, height, 0, 0, 0, 0, Q, 1, 0, 0, -Q * near_z, 0); 
+	hardware_constant_buffer constant_buffer;
+	constant_buffer.projection_matrix = XMMatrixTranspose(d3d_projection_matrix);
+	d3d_device_context_ptr->UpdateSubresource(d3d_constant_buffer_ptr, 0, nullptr, &constant_buffer, 0, 0);
 }
 
 //------------------------------------------------------------------------------
