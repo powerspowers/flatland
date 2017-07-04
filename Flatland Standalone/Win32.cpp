@@ -292,26 +292,13 @@ struct hardware_texture {
 struct hardware_vertex {
 	XMFLOAT3 position;
 	XMFLOAT2 texture_coords;
-	//float rhw;
-	//XMFLOAT4 diffuse_colour;
+	XMFLOAT4 diffuse_colour;
 
-	hardware_vertex(float sx, float sy, float sz, float tu, float tv) {
+	hardware_vertex(float sx, float sy, float sz, float tu, float tv, RGBcolour *diffuse_colour_ptr, float diffuse_alpha) {
 		position = XMFLOAT3(sx, sy, sz);
 		texture_coords = XMFLOAT2(tu, tv);
+		diffuse_colour = XMFLOAT4(diffuse_colour_ptr->red, diffuse_colour_ptr->green, diffuse_colour_ptr->blue, diffuse_alpha);
 	}
-
-	/*
-	void set(float new_sx, float new_sy, float new_sz, float new_rhw,
-		RGBcolour *diffuse_colour_ptr, byte diffuse_alpha,
-		float new_tu, float new_tv)
-	{
-		position = XMFLOAT3(new_sx, new_sy, new_sz);
-		rhw = new_rhw;
-		diffuse_colour = XMFLOAT4(diffuse_colour_ptr->red, diffuse_colour_ptr->green, diffuse_colour_ptr->blue, (float)diffuse_alpha / 255.0f);
-		tu = new_tu;
-		tv = new_tv;
-	}
-	*/
 };
 
 struct hardware_constant_buffer {
@@ -337,31 +324,67 @@ struct MYBITMAPINFO {
 // Vertex and pixel shaders.
 //------------------------------------------------------------------------------
 
-char *vertex_shader_source =
+char *colour_vertex_shader_source =
+"cbuffer constant_buffer : register(b0) {\n"
+"	matrix Projection;\n"
+"};\n"
+"struct VS_INPUT {\n"
+"	float4 Pos : POSITION;\n"
+"	float2 Tex : TEXCOORD0;\n"
+"   float4 Colour : COLOUR;\n"
+"};\n"
+"struct PS_INPUT {\n"
+"	float4 Pos : SV_POSITION;\n"
+"   float4 Colour : COLOUR;\n"
+"};\n"
+"PS_INPUT VS(VS_INPUT input) {\n"
+"	PS_INPUT output = (PS_INPUT)0;\n"
+"	output.Pos = input.Pos;\n"
+"   output.Colour = input.Colour;\n"
+"	return output;\n"
+"}\n";
+
+char *colour_pixel_shader_source =
+"struct PS_INPUT {\n"
+"	float4 Pos : SV_POSITION;\n"
+"   float4 Colour : COLOUR;\n"
+"};\n"
+"float4 PS(PS_INPUT input) : SV_Target {\n"
+"	return input.Colour;\n"
+"}\n";
+
+char *texture_vertex_shader_source =
+	"cbuffer constant_buffer : register(b0) {\n"
+	"	matrix Projection;\n"
+	"};\n"
 	"struct VS_INPUT {\n"
 	"	float4 Pos : POSITION;\n"
 	"	float2 Tex : TEXCOORD0;\n"
+	"   float4 Colour : COLOUR;\n"
 	"};\n"
 	"struct PS_INPUT {\n"
 	"	float4 Pos : SV_POSITION;\n"
 	"	float2 Tex : TEXCOORD0;\n"
+	"   float4 Colour : COLOUR;\n"
 	"};\n"
 	"PS_INPUT VS(VS_INPUT input) {\n"
 	"	PS_INPUT output = (PS_INPUT)0;\n"
 	"	output.Pos = input.Pos;\n"
 	"	output.Tex = input.Tex;\n"
+	"   output.Colour = input.Colour;\n"
 	"	return output;\n"
 	"}\n";
 
-char *pixel_shader_source =
+char *texture_pixel_shader_source =
 	"Texture2D txDiffuse : register(t0);\n"
 	"SamplerState samLinear : register(s0);\n"
 	"struct PS_INPUT {\n"
 	"	float4 Pos : SV_POSITION;\n"
 	"	float2 Tex : TEXCOORD0;\n"
+	"   float4 Colour : COLOUR;\n"
 	"};\n"
 	"float4 PS(PS_INPUT input) : SV_Target {\n"
-	"	return txDiffuse.Sample(samLinear, input.Tex);\n"
+	"	return txDiffuse.Sample(samLinear, input.Tex) * input.Colour;\n"
 	"}\n";
 
 //------------------------------------------------------------------------------
@@ -454,10 +477,14 @@ static ID3D11DeviceContext *d3d_device_context_ptr;
 static ID3D11RenderTargetView *d3d_render_target_view_ptr;
 static ID3D11Texture2D *d3d_depth_stencil_texture_ptr;
 static ID3D11DepthStencilView *d3d_depth_stencil_view_ptr;
-static ID3D11VertexShader *d3d_vertex_shader_ptr;
+static ID3D11DepthStencilState *d3d_depth_stencil_state_ptr;
+static ID3D11VertexShader *d3d_colour_vertex_shader_ptr;
+static ID3D11VertexShader *d3d_texture_vertex_shader_ptr;
 static ID3D11InputLayout *d3d_vertex_layout_ptr;
 static ID3D11Buffer *d3d_vertex_buffer_ptr;
-static ID3D11PixelShader *d3d_pixel_shader_ptr;
+static ID3D11PixelShader *d3d_colour_pixel_shader_ptr;
+static ID3D11PixelShader *d3d_texture_pixel_shader_ptr;
+static ID3D11BlendState *d3d_blend_state_ptr;
 static ID3D11RasterizerState *d3d_rasterizer_state_ptr;
 static ID3D11SamplerState *d3d_sampler_state_ptr;
 static ID3D11Buffer *d3d_constant_buffer_ptr;
@@ -2705,6 +2732,18 @@ start_up_hardware_renderer(void)
 
 	d3d_device_context_ptr->OMSetRenderTargets(1, &d3d_render_target_view_ptr, d3d_depth_stencil_view_ptr);
 
+	// Create the depth stencil state.
+
+	D3D11_DEPTH_STENCIL_DESC depth_stencil_desc;
+	ZeroMemory(&depth_stencil_desc, sizeof(depth_stencil_desc));
+	depth_stencil_desc.DepthEnable = TRUE;
+	depth_stencil_desc.DepthWriteMask = D3D11_DEPTH_WRITE_MASK_ALL;
+	depth_stencil_desc.DepthFunc = D3D11_COMPARISON_LESS_EQUAL;
+	depth_stencil_desc.StencilEnable = FALSE;
+	if (FAILED(d3d_device_ptr->CreateDepthStencilState(&depth_stencil_desc, &d3d_depth_stencil_state_ptr))) {
+		return false;
+	}
+
 	// Set up the viewport.
 
 	D3D11_VIEWPORT viewport;
@@ -2716,16 +2755,29 @@ start_up_hardware_renderer(void)
 	viewport.TopLeftY = 0;
 	d3d_device_context_ptr->RSSetViewports(1, &viewport);
 
-	// Compile and create the vertex shader.
+	// Compile and create the colour vertex shader.
 
-	ID3DBlob *vertex_shader_blob_ptr;
-	if (FAILED(D3DCompile(vertex_shader_source, strlen(vertex_shader_source), "vertex shader", NULL, NULL, "VS", "vs_4_0", 0, 0,
-		&vertex_shader_blob_ptr, NULL))) {
+	ID3DBlob *shader_blob_ptr;
+	if (FAILED(D3DCompile(colour_vertex_shader_source, strlen(colour_vertex_shader_source), "colour vertex shader", NULL, NULL, "VS", "vs_4_0",
+		0, 0, &shader_blob_ptr, NULL))) {
 		return false;
 	}
-	if (FAILED(d3d_device_ptr->CreateVertexShader(vertex_shader_blob_ptr->GetBufferPointer(), vertex_shader_blob_ptr->GetBufferSize(), NULL,
-		&d3d_vertex_shader_ptr))) {
-		vertex_shader_blob_ptr->Release();
+	HRESULT result = d3d_device_ptr->CreateVertexShader(shader_blob_ptr->GetBufferPointer(), shader_blob_ptr->GetBufferSize(), NULL,
+		&d3d_colour_vertex_shader_ptr);
+	shader_blob_ptr->Release();
+	if (FAILED(result)) {	
+		return false;
+	}
+
+	// Compile and create the texture vertex shader.
+
+	if (FAILED(D3DCompile(texture_vertex_shader_source, strlen(texture_vertex_shader_source), "texture vertex shader", NULL, NULL, "VS", "vs_4_0",
+		0, 0, &shader_blob_ptr, NULL))) {
+		return false;
+	}
+	if (FAILED(d3d_device_ptr->CreateVertexShader(shader_blob_ptr->GetBufferPointer(), shader_blob_ptr->GetBufferSize(), NULL,
+		&d3d_texture_vertex_shader_ptr))) {
+		shader_blob_ptr->Release();
 		return false;
 	}
 
@@ -2733,32 +2785,58 @@ start_up_hardware_renderer(void)
 
 	D3D11_INPUT_ELEMENT_DESC vertex_layout[] = {
 		{"POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 0, D3D11_INPUT_PER_VERTEX_DATA, 0},
-		{"TEXCOORD", 0, DXGI_FORMAT_R32G32_FLOAT, 0, 12, D3D11_INPUT_PER_VERTEX_DATA, 0},
+		{"TEXCOORD", 0, DXGI_FORMAT_R32G32_FLOAT, 0, D3D11_APPEND_ALIGNED_ELEMENT, D3D11_INPUT_PER_VERTEX_DATA, 0},
+		{"COLOUR", 0, DXGI_FORMAT_R32G32B32A32_FLOAT, 0, D3D11_APPEND_ALIGNED_ELEMENT, D3D11_INPUT_PER_VERTEX_DATA, 0},
 	};
 	UINT num_elements = ARRAYSIZE(vertex_layout);
-	HRESULT result = d3d_device_ptr->CreateInputLayout(vertex_layout, num_elements, vertex_shader_blob_ptr->GetBufferPointer(),
-		vertex_shader_blob_ptr->GetBufferSize(), &d3d_vertex_layout_ptr);
-	vertex_shader_blob_ptr->Release();
+	result = d3d_device_ptr->CreateInputLayout(vertex_layout, num_elements, shader_blob_ptr->GetBufferPointer(),
+		shader_blob_ptr->GetBufferSize(), &d3d_vertex_layout_ptr);
+	shader_blob_ptr->Release();
 	if (FAILED(result)) {
 		return false;
 	}
-	d3d_device_context_ptr->IASetInputLayout(d3d_vertex_layout_ptr);
 
-	// Set the primative topology.
+	// Compile and create the colour pixel shader.
 
-	d3d_device_context_ptr->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP);
-
-	// Compile and create the pixel shader.
-
-	ID3DBlob *pixel_shader_blob_ptr = nullptr;
-	if (FAILED(D3DCompile(pixel_shader_source, strlen(pixel_shader_source), "pixel shader", NULL, NULL, "PS", "ps_4_0", 0, 0,
-		&pixel_shader_blob_ptr, NULL))) {
+	if (FAILED(D3DCompile(colour_pixel_shader_source, strlen(colour_pixel_shader_source), "colour pixel shader", NULL, NULL, "PS", "ps_4_0",
+		0, 0, &shader_blob_ptr, NULL))) {
 		return false;
 	}
-	result = d3d_device_ptr->CreatePixelShader(pixel_shader_blob_ptr->GetBufferPointer(), pixel_shader_blob_ptr->GetBufferSize(), NULL,
-		&d3d_pixel_shader_ptr);
-	pixel_shader_blob_ptr->Release();
+	result = d3d_device_ptr->CreatePixelShader(shader_blob_ptr->GetBufferPointer(), shader_blob_ptr->GetBufferSize(), NULL,
+		&d3d_colour_pixel_shader_ptr);
+	shader_blob_ptr->Release();
 	if (FAILED(result)) {
+		return false;
+	}
+
+	// Compile and create the texture pixel shader.
+
+	if (FAILED(D3DCompile(texture_pixel_shader_source, strlen(texture_pixel_shader_source), "texture pixel shader", NULL, NULL, "PS", "ps_4_0",
+		0, 0, &shader_blob_ptr, NULL))) {
+		return false;
+	}
+	result = d3d_device_ptr->CreatePixelShader(shader_blob_ptr->GetBufferPointer(), shader_blob_ptr->GetBufferSize(), NULL,
+		&d3d_texture_pixel_shader_ptr);
+	shader_blob_ptr->Release();
+	if (FAILED(result)) {
+		return false;
+	}
+
+	// Create the blend state.
+
+	D3D11_BLEND_DESC blend_desc;
+	ZeroMemory(&blend_desc, sizeof(blend_desc));
+	blend_desc.AlphaToCoverageEnable = FALSE;
+	blend_desc.IndependentBlendEnable = FALSE;
+	blend_desc.RenderTarget[0].BlendEnable = TRUE;
+	blend_desc.RenderTarget[0].SrcBlend = D3D11_BLEND_SRC_ALPHA;
+	blend_desc.RenderTarget[0].DestBlend = D3D11_BLEND_INV_SRC_ALPHA;
+	blend_desc.RenderTarget[0].BlendOp = D3D11_BLEND_OP_ADD;
+	blend_desc.RenderTarget[0].SrcBlendAlpha = D3D11_BLEND_ZERO;
+	blend_desc.RenderTarget[0].DestBlendAlpha = D3D11_BLEND_ZERO;
+	blend_desc.RenderTarget[0].BlendOpAlpha = D3D11_BLEND_OP_ADD;
+	blend_desc.RenderTarget[0].RenderTargetWriteMask = D3D11_COLOR_WRITE_ENABLE_ALL;
+	if (FAILED(d3d_device_ptr->CreateBlendState(&blend_desc, &d3d_blend_state_ptr))) {
 		return false;
 	}
 
@@ -2837,17 +2915,33 @@ shut_down_hardware_renderer(void)
 		d3d_rasterizer_state_ptr->Release();
 		d3d_rasterizer_state_ptr = NULL;
 	}
-	if (d3d_pixel_shader_ptr) {
-		d3d_pixel_shader_ptr->Release();
-		d3d_pixel_shader_ptr = NULL;
+	if (d3d_blend_state_ptr) {
+		d3d_blend_state_ptr->Release();
+		d3d_blend_state_ptr = NULL;
+	}
+	if (d3d_texture_pixel_shader_ptr) {
+		d3d_texture_pixel_shader_ptr->Release();
+		d3d_texture_pixel_shader_ptr = NULL;
+	}
+	if (d3d_colour_pixel_shader_ptr) {
+		d3d_colour_pixel_shader_ptr->Release();
+		d3d_colour_pixel_shader_ptr = NULL;
 	}
 	if (d3d_vertex_layout_ptr) {
 		d3d_vertex_layout_ptr->Release();
 		d3d_vertex_layout_ptr = NULL;
 	}
-	if (d3d_vertex_shader_ptr) {
-		d3d_vertex_shader_ptr->Release();
-		d3d_vertex_shader_ptr = NULL;
+	if (d3d_texture_vertex_shader_ptr) {
+		d3d_texture_vertex_shader_ptr->Release();
+		d3d_texture_vertex_shader_ptr = NULL;
+	}
+	if (d3d_colour_vertex_shader_ptr) {
+		d3d_colour_vertex_shader_ptr->Release();
+		d3d_colour_vertex_shader_ptr = NULL;
+	}
+	if (d3d_depth_stencil_state_ptr) {
+		d3d_depth_stencil_state_ptr->Release();
+		d3d_depth_stencil_state_ptr = NULL;
 	}
 	if (d3d_depth_stencil_view_ptr) {
 		d3d_depth_stencil_view_ptr->Release();
@@ -3197,9 +3291,13 @@ create_main_window(void (*key_callback)(byte key_code, bool key_down),
 	d3d_render_target_view_ptr = NULL;
 	d3d_depth_stencil_texture_ptr = NULL;
 	d3d_depth_stencil_view_ptr = NULL;
-	d3d_vertex_shader_ptr = NULL;
+	d3d_depth_stencil_state_ptr = NULL;
+	d3d_colour_vertex_shader_ptr = NULL;
+	d3d_texture_vertex_shader_ptr = NULL;
 	d3d_vertex_layout_ptr = NULL;
-	d3d_pixel_shader_ptr = NULL;
+	d3d_colour_pixel_shader_ptr = NULL;
+	d3d_texture_pixel_shader_ptr = NULL;
+	d3d_blend_state_ptr = NULL;
 	d3d_rasterizer_state_ptr = NULL;
 	d3d_sampler_state_ptr = NULL;
 	d3d_constant_buffer_ptr = NULL;
@@ -7888,12 +7986,12 @@ hardware_set_projection_transform(float horz_field_of_view,
 {
 	// Initialize the projection matrix.
 
-	float width = (float)(1.0 / tan(horz_field_of_view * 0.5));
-	float height = (float)(1.0 / tan(vert_field_of_view * 0.5));
+	float w = (float)(1.0 / tan(horz_field_of_view * 0.5));
+	float h = (float)(1.0 / tan(vert_field_of_view * 0.5));
 	float Q = far_z / (far_z - near_z);
-	d3d_projection_matrix = XMMATRIX(width, 0, 0, 0, 0, height, 0, 0, 0, 0, Q, 1, 0, 0, -Q * near_z, 0); 
+	d3d_projection_matrix = XMMATRIX(w, 0, 0, 0, 0, h, 0, 0, 0, 0, Q, 1, 0, 0, -Q * near_z, 0); 
 	hardware_constant_buffer constant_buffer;
-	constant_buffer.projection_matrix = XMMatrixTranspose(d3d_projection_matrix);
+	constant_buffer.projection_matrix = d3d_projection_matrix;
 	d3d_device_context_ptr->UpdateSubresource(d3d_constant_buffer_ptr, 0, nullptr, &constant_buffer, 0, 0);
 }
 
@@ -8258,29 +8356,28 @@ hardware_set_texture(cache_entry *cache_entry_ptr)
 }
 
 //------------------------------------------------------------------------------
-// Enable a texture for rendering.
+// Add a vertex to the vertex buffer.
 //------------------------------------------------------------------------------
 
 static void
-hardware_enable_texture(hardware_texture *hardware_texture_ptr)
+add_vertex_to_buffer(hardware_vertex *&vertex_buffer_ptr, float sx, float sy, float sz, float tu, float tv, RGBcolour *colour_ptr, float alpha)
 {
-	d3d_device_context_ptr->PSSetShaderResources(0, 1, &hardware_texture_ptr->d3d_shader_resource_view_ptr);
+	*vertex_buffer_ptr++ = hardware_vertex((sx - half_window_width) / half_window_width, (half_window_height - sy) / half_window_height, sz,
+		tu, tv, colour_ptr, alpha);
 }
 
-//------------------------------------------------------------------------------
-// Disable texture rendering.
-//------------------------------------------------------------------------------
-
 static void
-hardware_disable_texture(void)
+add_spoint_to_buffer(hardware_vertex *&vertex_buffer_ptr, spolygon *spolygon_ptr, int index)
 {
+	spoint *spoint_ptr = &spolygon_ptr->spoint_list[index];
+	float tz = 1.0f / spoint_ptr->one_on_tz;
+	add_vertex_to_buffer(vertex_buffer_ptr, spoint_ptr->sx, spoint_ptr->sy, 1.0f - spoint_ptr->one_on_tz, 
+		spoint_ptr->u_on_tz * tz, spoint_ptr->v_on_tz * tz, &spoint_ptr->colour, spolygon_ptr->alpha);
 }
 
 //------------------------------------------------------------------------------
 // Render a 2D polygon onto the Direct3D viewport.
 //------------------------------------------------------------------------------
-
-#define FAR_PLANE	0.0025f
 
 void
 hardware_render_2D_polygon(pixmap *pixmap_ptr, RGBcolour colour,
@@ -8288,25 +8385,18 @@ hardware_render_2D_polygon(pixmap *pixmap_ptr, RGBcolour colour,
 						   float height, float start_u, float start_v,
 						   float end_u, float end_v, bool disable_transparency)
 {
-	/*
-	// If transparency is disabled, turn off alpha blending.
-
-	if (disable_transparency) {
-		if (!set_render_state(D3DRS_ALPHABLENDENABLE, FALSE))
-			diagnose("Failed to disable alpha blending");
-	}
-	
-	// Turn off the Z buffer test.
-
-	if (!set_render_state(D3DRS_ZFUNC, D3DCMP_ALWAYS))
-		diagnose("Failed to set Z buffer function to always");
+	D3D11_MAPPED_SUBRESOURCE d3d_mapped_subresource;
+	hardware_vertex *vertex_buffer_ptr;
 
 	// If the polygon has a pixmap, get the cache entry and enable the texture,
 	// and use a grayscale colour for lighting.
 	
 	if (pixmap_ptr != NULL) {
+		d3d_device_context_ptr->VSSetShader(d3d_texture_vertex_shader_ptr, NULL, 0);
+		d3d_device_context_ptr->PSSetShader(d3d_texture_pixel_shader_ptr, NULL, 0);
 		cache_entry *cache_entry_ptr = get_cache_entry(pixmap_ptr, 0);
-		hardware_enable_texture(cache_entry_ptr->hardware_texture_ptr);
+		hardware_texture *hardware_texture_ptr = (hardware_texture *)cache_entry_ptr->hardware_texture_ptr;
+		d3d_device_context_ptr->PSSetShaderResources(0, 1, &hardware_texture_ptr->d3d_shader_resource_view_ptr);
 		colour.red = brightness;
 		colour.green = colour.red;
 		colour.blue = colour.red;
@@ -8316,61 +8406,48 @@ hardware_render_2D_polygon(pixmap *pixmap_ptr, RGBcolour colour,
 	// lighting.
 	
 	else {
-		hardware_disable_texture();
+		d3d_device_context_ptr->VSSetShader(d3d_colour_vertex_shader_ptr, NULL, 0);
+		d3d_device_context_ptr->PSSetShader(d3d_colour_pixel_shader_ptr, NULL, 0);	
 		colour.red /= 255.0f;
 		colour.green /= 255.0f;
 		colour.blue /= 255.0f;
 	}
 
+	// Map the vertex buffer.
+
+	if (FAILED(d3d_device_context_ptr->Map(d3d_vertex_buffer_ptr, 0, D3D11_MAP_WRITE_DISCARD, 0, &d3d_mapped_subresource))) {
+		diagnose("Failed to map vertex buffer");
+		return;
+	}
+	vertex_buffer_ptr = (hardware_vertex *)d3d_mapped_subresource.pData;
+
 	// Construct the Direct3D vertex list for the sky polygon.  The polygon is
 	// placed in the far distance so it will appear behind everything else.
 
-	d3d_vertex_list[0].set(x, y, 0.99999f, FAR_PLANE, &colour, 255,
-		start_u, start_v);
-	d3d_vertex_list[1].set(x + width, y, 0.99999f, FAR_PLANE, &colour, 255,
-		end_u, start_v);
-	d3d_vertex_list[2].set(x + width, y + height, 0.99999f, FAR_PLANE, &colour, 
-		255, end_u, end_v);
-	d3d_vertex_list[3].set(x, y + height, 0.99999f, FAR_PLANE, &colour, 255,
-		start_u, end_v);
+	add_vertex_to_buffer(vertex_buffer_ptr, x, y, 1.0f, start_u, start_v, &colour, 1.0f);
+	add_vertex_to_buffer(vertex_buffer_ptr, x + width, y, 1.0f, end_u, start_v, &colour, 1.0f);
+	add_vertex_to_buffer(vertex_buffer_ptr, x, y + height, 1.0f, start_u, end_v, &colour, 1.0f);
+	add_vertex_to_buffer(vertex_buffer_ptr, x + width, y + height, 1.0f, end_u, end_v, &colour, 1.0f);
 
-	// Render the polygon as a triangle fan.
+	// Unmap the vertex buffer.
 
-	if (FAILED(d3d_device_ptr->DrawPrimitiveUP(D3DPT_TRIANGLEFAN, 2, 
-		d3d_vertex_list, sizeof(hardware_vertex))))
-		diagnose("Failed to render 2D polygon");
+	d3d_device_context_ptr->Unmap(d3d_vertex_buffer_ptr, 0);
 
-	// Turn the Z buffer test back on.
+	// Set up the context for the draw, then render the polygon.
 
-	if (!set_render_state(D3DRS_ZFUNC, D3DCMP_LESSEQUAL))
-		diagnose("Failed to set Z buffer function to <=");
-
-	// If transparency was disabled, re-enable alpha blending.
-
-	if (disable_transparency) {
-		if (!set_render_state(D3DRS_ALPHABLENDENABLE, TRUE))
-			diagnose("Failed to re-enable alpha blending");
-	}
-	*/
+	d3d_device_context_ptr->IASetInputLayout(d3d_vertex_layout_ptr);
+	d3d_device_context_ptr->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP);
+	d3d_device_context_ptr->VSSetConstantBuffers(0, 1, &d3d_constant_buffer_ptr);
+	d3d_device_context_ptr->PSSetSamplers(0, 1, &d3d_sampler_state_ptr);
+	d3d_device_context_ptr->OMSetDepthStencilState(d3d_depth_stencil_state_ptr, 1);
+	d3d_device_context_ptr->OMSetBlendState(d3d_blend_state_ptr, NULL, 0xFFFFFFFF);
+	d3d_device_context_ptr->RSSetState(d3d_rasterizer_state_ptr);
+	d3d_device_context_ptr->Draw(4, 0);
 }
 
 //------------------------------------------------------------------------------
 // Render a polygon onto the Direct3D viewport.
 //------------------------------------------------------------------------------
-
-void
-add_vertex_to_buffer(hardware_vertex *&vertex_buffer_ptr, spoint *spoint_list, int index)
-{
-	spoint *spoint_ptr = &spoint_list[index];
-	float tz = 1.0f / spoint_ptr->one_on_tz;
-	float sx = (spoint_ptr->sx - half_window_width) / half_window_width;
-	float sy = (half_window_height - spoint_ptr->sy) / half_window_height;
-	float sz = 1.0f - spoint_ptr->one_on_tz;
-	float tu = spoint_ptr->u_on_tz * tz;
-	float tv = spoint_ptr->v_on_tz * tz;
-	//debug_message("Vertex %d: sx = %f, sy = %f, sz = %f, tu = %f, tv = %f\n", index, sx, sy, sz, tu, tv);
-	*vertex_buffer_ptr++ = hardware_vertex(sx, sy, sz, tu, tv);
-}
 
 void
 hardware_render_polygon(spolygon *spolygon_ptr)
@@ -8384,10 +8461,15 @@ hardware_render_polygon(spolygon *spolygon_ptr)
 
 	pixmap_ptr = spolygon_ptr->pixmap_ptr;
 	if (pixmap_ptr != NULL) {
+		d3d_device_context_ptr->VSSetShader(d3d_texture_vertex_shader_ptr, NULL, 0);
+		d3d_device_context_ptr->PSSetShader(d3d_texture_pixel_shader_ptr, NULL, 0);
 		cache_entry *cache_entry_ptr = get_cache_entry(pixmap_ptr, 0);
-		hardware_enable_texture((hardware_texture *)cache_entry_ptr->hardware_texture_ptr);
-	} else
-		hardware_disable_texture();
+		hardware_texture *hardware_texture_ptr = (hardware_texture *)cache_entry_ptr->hardware_texture_ptr;
+		d3d_device_context_ptr->PSSetShaderResources(0, 1, &hardware_texture_ptr->d3d_shader_resource_view_ptr);
+	} else {
+		d3d_device_context_ptr->VSSetShader(d3d_colour_vertex_shader_ptr, NULL, 0);
+		d3d_device_context_ptr->PSSetShader(d3d_colour_pixel_shader_ptr, NULL, 0);	
+	}
 
 	// Map the vertex buffer.
 
@@ -8400,21 +8482,20 @@ hardware_render_polygon(spolygon *spolygon_ptr)
 	// Fill the vertex buffer for this polygon by alternating between vertices taken from stepping forward and backward through the vertex list.
 	// This ensures we end up with a triangle strip suitable for rendering.
 
-	//debug_message("Drawing polygon with %d vertices:\n", spolygon_ptr->spoints);
 	int i = 1;
 	int j = spolygon_ptr->spoints - 1;
 	bool left = true;	
-	add_vertex_to_buffer(vertex_buffer_ptr, spolygon_ptr->spoint_list, 0);
+	add_spoint_to_buffer(vertex_buffer_ptr, spolygon_ptr, 0);
 	while (i <= j)
 	{
 		if (left)
 		{
-			add_vertex_to_buffer(vertex_buffer_ptr, spolygon_ptr->spoint_list, i);
+			add_spoint_to_buffer(vertex_buffer_ptr, spolygon_ptr, i);
 			i++;
 		}
 		else
 		{
-			add_vertex_to_buffer(vertex_buffer_ptr, spolygon_ptr->spoint_list, j);
+			add_spoint_to_buffer(vertex_buffer_ptr, spolygon_ptr, j);
 			j--;
 		}
 		left = !left;
@@ -8426,10 +8507,12 @@ hardware_render_polygon(spolygon *spolygon_ptr)
 
 	// Set up the context for the draw, then render the polygon.
 
-	d3d_device_context_ptr->VSSetShader(d3d_vertex_shader_ptr, NULL, 0);
+	d3d_device_context_ptr->IASetInputLayout(d3d_vertex_layout_ptr);
+	d3d_device_context_ptr->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP);
 	d3d_device_context_ptr->VSSetConstantBuffers(0, 1, &d3d_constant_buffer_ptr);
-	d3d_device_context_ptr->PSSetShader(d3d_pixel_shader_ptr, NULL, 0);
 	d3d_device_context_ptr->PSSetSamplers(0, 1, &d3d_sampler_state_ptr);
+	d3d_device_context_ptr->OMSetDepthStencilState(d3d_depth_stencil_state_ptr, 1);
+	d3d_device_context_ptr->OMSetBlendState(d3d_blend_state_ptr, NULL, 0xFFFFFFFF);
 	d3d_device_context_ptr->RSSetState(d3d_rasterizer_state_ptr);
 	d3d_device_context_ptr->Draw(spolygon_ptr->spoints, 0);
 }

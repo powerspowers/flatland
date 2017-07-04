@@ -2816,7 +2816,7 @@ render_colour_polygons_or_spans(void)
 	if (hardware_acceleration) {
 		spolygon *spolygon_ptr = colour_spolygon_list;
 		while (spolygon_ptr != NULL) {
-			//hardware_render_polygon(spolygon_ptr);
+			hardware_render_polygon(spolygon_ptr);
 			spolygon_ptr = spolygon_ptr->next_spolygon_ptr2;
 		}
 	}
@@ -2863,7 +2863,7 @@ render_transparent_polygons_or_spans(void)
 	if (hardware_acceleration) {
 		spolygon_ptr = transparent_spolygon_list;
 		while (spolygon_ptr != NULL) {
-			//hardware_render_polygon(spolygon_ptr);
+			hardware_render_polygon(spolygon_ptr);
 			spolygon_ptr = spolygon_ptr->next_spolygon_ptr2;
 		}
 	}
