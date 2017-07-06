@@ -2253,7 +2253,9 @@ LRESULT CALLBACK app_window_proc(HWND hWnd, UINT message, WPARAM wParam, LPARAM 
 	case WM_SIZE:
 		{
 			SendMessage(status_bar_handle, WM_SIZE, wParam, lParam);
-			resize_main_window();
+			if (wParam == SIZE_MAXIMIZED || wParam == SIZE_RESTORED) {
+				resize_main_window();
+			}
 		}
 		break;
 	case WM_DESTROY:
@@ -3484,7 +3486,8 @@ destroy_main_window(void)
 bool
 app_window_is_minimised(void)
 {
-	return(app_window_handle != NULL && IsIconic(app_window_handle));
+	bool minimised = app_window_handle != NULL && IsIconic(app_window_handle);
+	return(minimised);
 }
 
 //==============================================================================
