@@ -796,51 +796,61 @@ clip_and_project_3D_polygon(polygon_def *polygon_def_ptr, pixmap *pixmap_ptr)
 //------------------------------------------------------------------------------
 
 static void
-scale_texture_interpolants(pixmap *pixmap_ptr, int texture_style)
+scale_tvertex_texture_interpolants(pixmap *pixmap_ptr, tvertex *tvertex_list, int texture_style)
 {
 	float u_scale, v_scale;
-	float one_on_dimensions;
-	int index;
 
-	// If hardware acceleration is active, scale u/tz and v/tz in each screen
-	// point by the ratio of the pixmap size to the cached image size.  If
-	// the pixmap is tiled, then scale by the ratio of the maximum pixmap size
+	// Scale u and v in each screen point by the ratio of the pixmap size to the cached image size.
+	// If the pixmap is tiled, then scale by the ratio of the maximum pixmap size
 	// to the cached image size; if there is no pixmap, don't scale at all.
 
-	if (hardware_acceleration) {
-		if (pixmap_ptr == NULL) {
-			u_scale = 1.0f;
-			v_scale = 1.0f;
-		} else {
-			if (texture_style == TILED_TEXTURE) {
-				u_scale = uv_scale_list[pixmap_ptr->size_index];
-				v_scale = u_scale;
-			} else {
-				one_on_dimensions = 
-					one_on_dimensions_list[pixmap_ptr->size_index];
-				u_scale = (float)pixmap_ptr->width * one_on_dimensions;
-				v_scale = (float)pixmap_ptr->height * one_on_dimensions;
-			}
-		}
-	}
-	
-	// If hardware acceleration is not active, scale u/tz and v/tz in each
-	// screen point by the size of the pixmap.  If there is no pixmap or
-	// it is tiled, then use the maximum pixmap size.
-
-	else {
-		if (pixmap_ptr == NULL || texture_style == TILED_TEXTURE) {
-			u_scale = 256.0f;
+	if (pixmap_ptr == NULL) {
+		u_scale = 1.0f;
+		v_scale = 1.0f;
+	} else {
+		if (texture_style == TILED_TEXTURE) {
+			u_scale = uv_scale_list[pixmap_ptr->size_index];
 			v_scale = u_scale;
 		} else {
-			u_scale = (float)pixmap_ptr->width;
-			v_scale = (float)pixmap_ptr->height;
+			float one_on_dimensions = one_on_dimensions_list[pixmap_ptr->size_index];
+			u_scale = (float)pixmap_ptr->width * one_on_dimensions;
+			v_scale = (float)pixmap_ptr->height * one_on_dimensions;
 		}
 	}
 
 	// Perform the actual scaling.
 
-	for (index = 0; index < spoints; index++) {
+	tvertex *tvertex_ptr = tvertex_list;
+	while (tvertex_ptr) {
+		tvertex_ptr->u *= u_scale;
+		tvertex_ptr->v *= v_scale;
+		tvertex_ptr = tvertex_ptr->next_tvertex_ptr;
+	}
+}
+
+//------------------------------------------------------------------------------
+// Scale u/tz and v/tz for all screen points.
+//------------------------------------------------------------------------------
+
+static void
+scale_spoint_texture_interpolants(pixmap *pixmap_ptr, int texture_style)
+{
+	float u_scale, v_scale;
+	
+	// Scale u/tz and v/tz in each screen point by the size of the pixmap.
+	// If there is no pixmap or it is tiled, then use the maximum pixmap size.
+
+	if (pixmap_ptr == NULL || texture_style == TILED_TEXTURE) {
+		u_scale = max_texture_size;
+		v_scale = u_scale;
+	} else {
+		u_scale = (float)pixmap_ptr->width;
+		v_scale = (float)pixmap_ptr->height;
+	}
+
+	// Perform the actual scaling.
+
+	for (int index = 0; index < spoints; index++) {
 		spoint *spoint_ptr = &main_spoint_list[index];
 		spoint_ptr->u_on_tz *= u_scale;
 		spoint_ptr->v_on_tz *= v_scale;
@@ -1268,7 +1278,7 @@ add_tvertex_to_tpolygon(tpolygon *tpolygon_ptr, int tvertex_index, polygon_def *
 	new_tvertex_ptr->v = vertex_def_ptr->v;
 	new_tvertex_ptr->colour = vertex_colour_list[tvertex_index];
 	new_tvertex_ptr->next_tvertex_ptr = NULL;
-	debug_message("Transformed vertex %d is (%f, %f, %f)\n", tvertex_index, new_tvertex_ptr->x, new_tvertex_ptr->y, new_tvertex_ptr->z);
+	//debug_message("Transformed vertex %d is (%f, %f, %f)\n", tvertex_index, new_tvertex_ptr->x, new_tvertex_ptr->y, new_tvertex_ptr->z);
 	if (last_tvertex_ptr) {
 		last_tvertex_ptr->next_tvertex_ptr = new_tvertex_ptr;
 	} else {
@@ -1424,9 +1434,11 @@ render_polygon(polygon *polygon_ptr, float turn_angle)
 
 		// Create the transformed polygon.
 
-		if (pixmap_ptr != NULL) {
-			tpolygon_ptr = create_transformed_polygon(polygon_def_ptr, pixmap_ptr, part_ptr);
-		}
+		tpolygon_ptr = create_transformed_polygon(polygon_def_ptr, pixmap_ptr, part_ptr);
+
+		// Scale the texture interpolants in the main screen point list.
+
+		scale_tvertex_texture_interpolants(pixmap_ptr, tpolygon_ptr->tvertex_list, part_ptr->texture_style);
 
 		// Add the transformed polygon to a list in the pixmap if it has a texture, a special transparent list if it's
 		// translucent or transparent, or a special colour list if it has no texture.
@@ -1440,8 +1452,8 @@ render_polygon(polygon *polygon_ptr, float turn_angle)
 				pixmap_ptr->tpolygon_list = tpolygon_ptr;
 			}
 		} else {
-			//tpolygon_ptr->next_tpolygon_ptr = colour_tpolygon_list;
-			//colour_tpolygon_list = tpolygon_ptr;
+			tpolygon_ptr->next_tpolygon_ptr = colour_tpolygon_list;
+			colour_tpolygon_list = tpolygon_ptr;
 		}
 	} 
 	
@@ -1491,7 +1503,7 @@ render_polygon(polygon *polygon_ptr, float turn_angle)
 
 		// Scale the texture interpolants in the main screen point list.
 
-		scale_texture_interpolants(pixmap_ptr, part_ptr->texture_style);
+		scale_spoint_texture_interpolants(pixmap_ptr, part_ptr->texture_style);
 
 		// Set pixmap pointer and alpha in the screen polygon.
 
@@ -2537,14 +2549,12 @@ render_orb(void)
 		one_on_dimensions = one_on_dimensions_list[pixmap_ptr->size_index];
 		width_scale = (float)pixmap_ptr->width * one_on_dimensions;
 		height_scale = (float)pixmap_ptr->height * one_on_dimensions;
-		/*
 		hardware_render_2D_polygon(pixmap_ptr, dummy_colour, orb_brightness,
-			curr_orb_x, curr_orb_y, visible_radius, curr_orb_width, curr_orb_height,
+			curr_orb_x, curr_orb_y, curr_orb_width, curr_orb_height,
 			left_offset / orb_width * width_scale, 
 			top_offset / orb_height * height_scale, 
 			(left_offset + curr_orb_width) / orb_width * width_scale, 
 			(top_offset + curr_orb_height) / orb_height * height_scale);
-		*/
 	}
 
 	// If not using hardware acceleration, render the orb as a 2D scaled
@@ -2859,7 +2869,7 @@ render_colour_polygons_or_spans(void)
 	if (hardware_acceleration) {
 		tpolygon *tpolygon_ptr = colour_tpolygon_list;
 		while (tpolygon_ptr != NULL) {
-			//hardware_render_polygon(tpolygon_ptr);
+			hardware_render_polygon(tpolygon_ptr);
 			tpolygon_ptr = del_tpolygon(tpolygon_ptr);
 		}
 		colour_tpolygon_list = NULL;
@@ -2906,7 +2916,7 @@ render_transparent_polygons_or_spans(void)
 	if (hardware_acceleration) {
 		tpolygon *tpolygon_ptr = transparent_tpolygon_list;
 		while (tpolygon_ptr != NULL) {
-			//hardware_render_polygon(tpolygon_ptr);
+			hardware_render_polygon(tpolygon_ptr);
 			tpolygon_ptr = del_tpolygon(tpolygon_ptr);
 		}
 		transparent_tpolygon_list = NULL;
@@ -3141,11 +3151,9 @@ render_frame(void)
 
 		// Render the sky polygon.
 
-		/*
 		hardware_render_2D_polygon(sky_pixmap_ptr, sky_colour, sky_brightness,
-			0.0f, 0.0f, visible_radius, (float)window_width, (float)window_height, 
+			0.0f, 0.0f, window_width, window_height, 
 			sky_start_u, sky_start_v, sky_end_u, sky_end_v);
-		*/
 
 		// Render the orb polygon.
 

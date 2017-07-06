@@ -302,7 +302,6 @@ struct hardware_vertex {
 };
 
 struct hardware_constant_buffer {
-	XMMATRIX view;
 	XMMATRIX projection;
 };
 
@@ -327,7 +326,6 @@ struct MYBITMAPINFO {
 
 char *colour_vertex_shader_source =
 "cbuffer constant_buffer : register(b0) {\n"
-"	matrix View;\n"
 "	matrix Projection;\n"
 "};\n"
 "struct VS_INPUT {\n"
@@ -341,7 +339,6 @@ char *colour_vertex_shader_source =
 "};\n"
 "PS_INPUT VS(VS_INPUT input) {\n"
 "	PS_INPUT output = (PS_INPUT)0;\n"
-//"	output.Pos = mul(input.Pos, View);\n"
 "	output.Pos = mul(input.Pos, Projection);\n"
 "   output.Colour = input.Colour;\n"
 "	return output;\n"
@@ -358,7 +355,6 @@ char *colour_pixel_shader_source =
 
 char *texture_vertex_shader_source =
 	"cbuffer constant_buffer : register(b0) {\n"
-	"	matrix View;\n"
 	"	matrix Projection;\n"
 	"};\n"
 	"struct VS_INPUT {\n"
@@ -373,7 +369,6 @@ char *texture_vertex_shader_source =
 	"};\n"
 	"PS_INPUT VS(VS_INPUT input) {\n"
 	"	PS_INPUT output = (PS_INPUT)0;\n"
-//	"	output.Pos = mul(input.Pos, View);\n"
 	"	output.Pos = mul(input.Pos, Projection);\n"
 	"	output.Tex = input.Tex;\n"
 	"   output.Colour = input.Colour;\n"
@@ -482,7 +477,8 @@ static ID3D11DeviceContext *d3d_device_context_ptr;
 static ID3D11RenderTargetView *d3d_render_target_view_ptr;
 static ID3D11Texture2D *d3d_depth_stencil_texture_ptr;
 static ID3D11DepthStencilView *d3d_depth_stencil_view_ptr;
-static ID3D11DepthStencilState *d3d_depth_stencil_state_ptr;
+static ID3D11DepthStencilState *d3d_3D_depth_stencil_state_ptr;
+static ID3D11DepthStencilState *d3d_2D_depth_stencil_state_ptr;
 static ID3D11VertexShader *d3d_colour_vertex_shader_ptr;
 static ID3D11VertexShader *d3d_texture_vertex_shader_ptr;
 static ID3D11InputLayout *d3d_vertex_layout_ptr;
@@ -493,7 +489,6 @@ static ID3D11BlendState *d3d_blend_state_ptr;
 static ID3D11RasterizerState *d3d_rasterizer_state_ptr;
 static ID3D11SamplerState *d3d_sampler_state_ptr;
 static ID3D11Buffer *d3d_constant_buffer_ptr;
-static XMMATRIX d3d_view_matrix;
 static XMMATRIX d3d_projection_matrix;
 
 static byte *framebuffer_ptr;
@@ -1837,197 +1832,6 @@ set_active_cursor(cursor *cursor_ptr)
 }
 
 //------------------------------------------------------------------------------
-// Set a render state.
-//------------------------------------------------------------------------------
-
-/*
-static bool
-set_render_state(D3DRENDERSTATETYPE type, DWORD value)
-{
-	if (SUCCEEDED(d3d_device_ptr->SetRenderState(type, value)))
-		return(true);
-	diagnose("Failed to set render state %d to %d", type, value);
-	return(false);
-}
-*/
-
-//------------------------------------------------------------------------------
-// Set a texture stage state.
-//------------------------------------------------------------------------------
-
-/*
-static bool
-set_texture_stage_state(DWORD stage, D3DTEXTURESTAGESTATETYPE type, DWORD value)
-{
-	if (SUCCEEDED(d3d_device_ptr->SetTextureStageState(stage, type, value)))
-		return(true);
-	diagnose("Failed to set texture stage %d type %d to %d", stage, type,
-		value);
-	return(false);
-}
-*/
-
-//------------------------------------------------------------------------------
-// Check a given depth buffer format with the display format.
-//------------------------------------------------------------------------------
-
-/*
-static bool
-check_depth_buffer_format(D3DFORMAT depth_buffer_format)
-{
-	return(SUCCEEDED(d3d_object_ptr->CheckDeviceFormat(D3DADAPTER_DEFAULT, 
-		D3DDEVTYPE_HAL, display_format, D3DUSAGE_DEPTHSTENCIL, D3DRTYPE_SURFACE, 
-		depth_buffer_format)) && 
-		SUCCEEDED(d3d_object_ptr->CheckDepthStencilMatch(D3DADAPTER_DEFAULT,
-		D3DDEVTYPE_HAL, display_format, display_format, depth_buffer_format)));
-	return(false);
-}
-*/
-
-//------------------------------------------------------------------------------
-// Create or recreate the Direct3D device.
-//------------------------------------------------------------------------------
-
-/*
-static bool
-create_d3d_device(bool recreate)
-{
-	D3DPRESENT_PARAMETERS d3d_pp;
-	D3DVIEWPORT8 d3d_viewport;
-
-	// Initialise the presentation parameters.
-
-	memset(&d3d_pp, 0, sizeof(D3DPRESENT_PARAMETERS));
-	d3d_pp.BackBufferWidth = display_width;
-	d3d_pp.BackBufferHeight = display_height;
-	d3d_pp.BackBufferFormat = display_format;
-	d3d_pp.BackBufferCount = 1;
-	d3d_pp.MultiSampleType = D3DMULTISAMPLE_NONE;
-	d3d_pp.SwapEffect = D3DSWAPEFFECT_DISCARD;
-	d3d_pp.hDeviceWindow = main_window_handle;
-	d3d_pp.Windowed = TRUE;
-	d3d_pp.EnableAutoDepthStencil = TRUE;
-	d3d_pp.AutoDepthStencilFormat = depth_buffer_format;
-	d3d_pp.Flags = D3DPRESENTFLAG_LOCKABLE_BACKBUFFER;
-	d3d_pp.FullScreen_RefreshRateInHz = D3DPRESENT_RATE_DEFAULT;
-	d3d_pp.FullScreen_PresentationInterval = D3DPRESENT_INTERVAL_DEFAULT;
-	
-	// Attempt to create or recreate the device.
-
-	if (recreate) {
-		if (FAILED(d3d_device_ptr->Reset(&d3d_pp))) {
-			d3d_device_ptr = NULL;
-			failed_to("recreate Direct3D device");
-			return(false);
-		}
-	} else if (FAILED(d3d_object_ptr->CreateDevice(D3DADAPTER_DEFAULT, 
-		D3DDEVTYPE_HAL, main_window_handle, D3DCREATE_SOFTWARE_VERTEXPROCESSING,
-		&d3d_pp, &d3d_device_ptr))) {
-		d3d_device_ptr = NULL;
-		failed_to_create("Direct3D device");
-		return(false);
-	}
-
-	// Determine the maximum texture size supported, and if it's less than the maximum we would like to support, use the smaller size.
-
-	D3DCAPS8 device_caps;
-	d3d_device_ptr->GetDeviceCaps(&device_caps);
-	int max_texture_width = MIN(device_caps.MaxTextureWidth, MAX_TEXTURE_SIZE);
-	int max_texture_height = MIN(device_caps.MaxTextureHeight, MAX_TEXTURE_SIZE);
-	max_texture_size = MIN(max_texture_width, max_texture_height);
-
-	// Set the viewport.
-
-	d3d_viewport.X = 0;
-	d3d_viewport.Y = 0;
-	d3d_viewport.Width = display_width;
-	d3d_viewport.Height = display_height;
-	d3d_viewport.MinZ = 0.0f;
-	d3d_viewport.MaxZ = 1.0f;
-	HRESULT result = d3d_device_ptr->SetViewport(&d3d_viewport);
-	if (FAILED(result)) {
-		failed_to_set("viewport");
-		return(false);
-	}
-
-	// Set the render states.
-
-	if (!set_render_state(D3DRS_ZENABLE, TRUE) ||
-		!set_render_state(D3DRS_ZWRITEENABLE, TRUE) ||
-		!set_render_state(D3DRS_ZFUNC, D3DCMP_LESSEQUAL) ||
-		!set_render_state(D3DRS_ALPHABLENDENABLE, TRUE) ||
-		!set_render_state(D3DRS_SRCBLEND, D3DBLEND_SRCALPHA) ||
-		!set_render_state(D3DRS_DESTBLEND, D3DBLEND_INVSRCALPHA) ||
-		!set_render_state(D3DRS_CULLMODE, D3DCULL_NONE) ||
-		!set_render_state(D3DRS_CLIPPING, FALSE) ||
-		!set_render_state(D3DRS_LIGHTING, FALSE) ||
-		!set_render_state(D3DRS_FOGENABLE, FALSE) ||
-		!set_render_state(D3DRS_SPECULARENABLE, FALSE) ||
-		!set_render_state(D3DRS_COLORVERTEX, TRUE)) {
-		failed_to_set("render states");
-		return(false);
-	}
-
-	// Set the first texture stage states.
-
-	if (!set_texture_stage_state(0, D3DTSS_COLORARG1, D3DTA_TEXTURE) ||
-		!set_texture_stage_state(0, D3DTSS_COLORARG2, D3DTA_CURRENT) ||
-		!set_texture_stage_state(0, D3DTSS_COLOROP, D3DTOP_MODULATE) ||
-		!set_texture_stage_state(0, D3DTSS_ALPHAARG1, D3DTA_TEXTURE) ||
-		!set_texture_stage_state(0, D3DTSS_ALPHAARG2, D3DTA_CURRENT) ||
-		!set_texture_stage_state(0, D3DTSS_ALPHAOP, D3DTOP_MODULATE) ||
-		!set_texture_stage_state(0, D3DTSS_ADDRESSU, D3DTADDRESS_WRAP) || 
-		!set_texture_stage_state(0, D3DTSS_ADDRESSV, D3DTADDRESS_WRAP) || 
-		!set_texture_stage_state(0, D3DTSS_MAGFILTER, D3DTEXF_LINEAR) ||
-		!set_texture_stage_state(0, D3DTSS_MINFILTER, D3DTEXF_LINEAR) ||
-		!set_texture_stage_state(1, D3DTSS_COLOROP, D3DTOP_DISABLE)) {
-		failed_to_set("texture stage");
-		return(false);
-	}
-
-	// Set the vertex shader.
-
-	if (FAILED(d3d_device_ptr->SetVertexShader(D3DFVF_XYZRHW | D3DFVF_DIFFUSE |
-		D3DFVF_TEX1 | D3DFVF_TEXCOORDSIZE2(0)))) {
-		failed_to_set("vertex shader");
-		return(false);
-	}
-
-	// Obtain a pointer to the frame buffer surface.
-	
-	if (FAILED(d3d_device_ptr->GetBackBuffer(0, D3DBACKBUFFER_TYPE_MONO, 
-		&d3d_framebuffer_surface_ptr))) {
-		failed_to_get("frame buffer surface");
-		return(false);
-	}
-
-	// Indicate success.
-
-	return(true);
-}
-*/
-
-//------------------------------------------------------------------------------
-// Destroy the Direct3D device.
-//------------------------------------------------------------------------------
-
-static void
-destroy_d3d_device(void)
-{
-	/*
-	// Release the frame buffer surface.
-
-	if (d3d_framebuffer_surface_ptr != NULL)
-		d3d_framebuffer_surface_ptr->Release();
-
-	// Release the Direct3D device.
-
-	if (d3d_device_ptr != NULL)
-		d3d_device_ptr->Release();
-	*/
-}
-
-//------------------------------------------------------------------------------
 // Start up the DirectSound system.
 //------------------------------------------------------------------------------
 
@@ -2738,7 +2542,7 @@ start_up_hardware_renderer(void)
 
 	d3d_device_context_ptr->OMSetRenderTargets(1, &d3d_render_target_view_ptr, d3d_depth_stencil_view_ptr);
 
-	// Create the depth stencil state.
+	// Create the 3D depth stencil state.
 
 	D3D11_DEPTH_STENCIL_DESC depth_stencil_desc;
 	ZeroMemory(&depth_stencil_desc, sizeof(depth_stencil_desc));
@@ -2746,7 +2550,14 @@ start_up_hardware_renderer(void)
 	depth_stencil_desc.DepthWriteMask = D3D11_DEPTH_WRITE_MASK_ALL;
 	depth_stencil_desc.DepthFunc = D3D11_COMPARISON_LESS_EQUAL;
 	depth_stencil_desc.StencilEnable = FALSE;
-	if (FAILED(d3d_device_ptr->CreateDepthStencilState(&depth_stencil_desc, &d3d_depth_stencil_state_ptr))) {
+	if (FAILED(d3d_device_ptr->CreateDepthStencilState(&depth_stencil_desc, &d3d_3D_depth_stencil_state_ptr))) {
+		return false;
+	}
+
+	// Create the 2D depth stencil state.
+
+	depth_stencil_desc.DepthEnable = FALSE;
+	if (FAILED(d3d_device_ptr->CreateDepthStencilState(&depth_stencil_desc, &d3d_2D_depth_stencil_state_ptr))) {
 		return false;
 	}
 
@@ -2946,9 +2757,13 @@ shut_down_hardware_renderer(void)
 		d3d_colour_vertex_shader_ptr->Release();
 		d3d_colour_vertex_shader_ptr = NULL;
 	}
-	if (d3d_depth_stencil_state_ptr) {
-		d3d_depth_stencil_state_ptr->Release();
-		d3d_depth_stencil_state_ptr = NULL;
+	if (d3d_2D_depth_stencil_state_ptr) {
+		d3d_2D_depth_stencil_state_ptr->Release();
+		d3d_2D_depth_stencil_state_ptr = NULL;
+	}
+	if (d3d_3D_depth_stencil_state_ptr) {
+		d3d_3D_depth_stencil_state_ptr->Release();
+		d3d_3D_depth_stencil_state_ptr = NULL;
 	}
 	if (d3d_depth_stencil_view_ptr) {
 		d3d_depth_stencil_view_ptr->Release();
@@ -3298,7 +3113,8 @@ create_main_window(void (*key_callback)(byte key_code, bool key_down),
 	d3d_render_target_view_ptr = NULL;
 	d3d_depth_stencil_texture_ptr = NULL;
 	d3d_depth_stencil_view_ptr = NULL;
-	d3d_depth_stencil_state_ptr = NULL;
+	d3d_3D_depth_stencil_state_ptr = NULL;
+	d3d_2D_depth_stencil_state_ptr = NULL;
 	d3d_colour_vertex_shader_ptr = NULL;
 	d3d_texture_vertex_shader_ptr = NULL;
 	d3d_vertex_layout_ptr = NULL;
@@ -7990,18 +7806,8 @@ hardware_set_projection_transform(float horz_field_of_view,
 								  float vert_field_of_view,
 								  float near_z, float far_z)
 {
-	// Initialize the projection
-
-	debug_message("Setting perspective projection for FOV (%f, %f) and z planes (%f, %f)\n", horz_field_of_view, vert_field_of_view,
-		near_z, far_z);
-
-	XMVECTOR eye = XMVectorSet(0.0f, 0.0f, 0.0f, 0.0f );
-	XMVECTOR at = XMVectorSet( 0.0f, 0.0f, 1.0f, 0.0f );
-	XMVECTOR up = XMVectorSet( 0.0f, 1.0f, 0.0f, 0.0f );
-	d3d_view_matrix = XMMatrixLookAtLH(eye, at, up);
-	d3d_projection_matrix = XMMatrixPerspectiveFovLH(vert_field_of_view, horz_field_of_view / vert_field_of_view, near_z, far_z);
+	d3d_projection_matrix = XMMatrixPerspectiveFovLH(RAD(vert_field_of_view), horz_field_of_view / vert_field_of_view, near_z, far_z);
 	hardware_constant_buffer constant_buffer;
-	constant_buffer.view = XMMatrixTranspose(d3d_view_matrix);
 	constant_buffer.projection = XMMatrixTranspose(d3d_projection_matrix);
 	d3d_device_context_ptr->UpdateSubresource(d3d_constant_buffer_ptr, 0, nullptr, &constant_buffer, 0, 0);
 }
@@ -8389,7 +8195,7 @@ add_tvertex_to_buffer(hardware_vertex *&vertex_buffer_ptr, tvertex *&tvertex_ptr
 
 void
 hardware_render_2D_polygon(pixmap *pixmap_ptr, RGBcolour colour, float brightness,
-						   float x, float y, float z, float width, float height,
+						   float sx, float sy, float width, float height,
 						   float start_u, float start_v, float end_u, float end_v)
 {
 	D3D11_MAPPED_SUBRESOURCE d3d_mapped_subresource;
@@ -8409,15 +8215,11 @@ hardware_render_2D_polygon(pixmap *pixmap_ptr, RGBcolour colour, float brightnes
 		colour.blue = colour.red;
 	} 
 	
-	// If the polygon has a colour, disable the texture and use the colour for
-	// lighting.
+	// If the polygon has a colour, disable the texture and use the colour for lighting.
 	
 	else {
 		d3d_device_context_ptr->VSSetShader(d3d_colour_vertex_shader_ptr, NULL, 0);
 		d3d_device_context_ptr->PSSetShader(d3d_colour_pixel_shader_ptr, NULL, 0);	
-		colour.red /= 255.0f;
-		colour.green /= 255.0f;
-		colour.blue /= 255.0f;
 	}
 
 	// Map the vertex buffer.
@@ -8428,25 +8230,28 @@ hardware_render_2D_polygon(pixmap *pixmap_ptr, RGBcolour colour, float brightnes
 	}
 	vertex_buffer_ptr = (hardware_vertex *)d3d_mapped_subresource.pData;
 
-	// Construct the Direct3D vertex list for the sky polygon.  The polygon is
-	// placed in the far distance so it will appear behind everything else.
+	// Construct the Direct3D vertex list for the sky polygon.  The polygon is placed at z = 1 so that the texture is not scaled.
 
-	add_vertex_to_buffer(vertex_buffer_ptr, x, y, z, start_u, start_v, &colour, 1.0f);
-	add_vertex_to_buffer(vertex_buffer_ptr, x + width, y, z, end_u, start_v, &colour, 1.0f);
-	add_vertex_to_buffer(vertex_buffer_ptr, x, y + height, z, start_u, end_v, &colour, 1.0f);
-	add_vertex_to_buffer(vertex_buffer_ptr, x + width, y + height, z, end_u, end_v, &colour, 1.0f);
+	float x = (sx - half_window_width) / half_window_width * half_viewport_width;
+	float y = (half_window_height - sy) / half_window_height * half_viewport_height;
+	float w = width / half_window_width * half_viewport_width;
+	float h = height / half_window_width * half_viewport_width;
+	add_vertex_to_buffer(vertex_buffer_ptr, x, y, 1.0f, start_u, start_v, &colour, 1.0f);
+	add_vertex_to_buffer(vertex_buffer_ptr, x + w, y, 1.0f, end_u, start_v, &colour, 1.0f);
+	add_vertex_to_buffer(vertex_buffer_ptr, x, y - h, 1.0f, start_u, end_v, &colour, 1.0f);
+	add_vertex_to_buffer(vertex_buffer_ptr, x + w, y - h, 1.0f, end_u, end_v, &colour, 1.0f);
 
 	// Unmap the vertex buffer.
 
 	d3d_device_context_ptr->Unmap(d3d_vertex_buffer_ptr, 0);
 
-	// Set up the context for the draw, then render the polygon.
+	// Set up the context for the draw, then render the polygon.  We turn off the depth buffer during the draw.
 
 	d3d_device_context_ptr->IASetInputLayout(d3d_vertex_layout_ptr);
 	d3d_device_context_ptr->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP);
 	d3d_device_context_ptr->VSSetConstantBuffers(0, 1, &d3d_constant_buffer_ptr);
 	d3d_device_context_ptr->PSSetSamplers(0, 1, &d3d_sampler_state_ptr);
-	d3d_device_context_ptr->OMSetDepthStencilState(d3d_depth_stencil_state_ptr, 1);
+	d3d_device_context_ptr->OMSetDepthStencilState(d3d_2D_depth_stencil_state_ptr, 1);
 	d3d_device_context_ptr->OMSetBlendState(d3d_blend_state_ptr, NULL, 0xFFFFFFFF);
 	d3d_device_context_ptr->RSSetState(d3d_rasterizer_state_ptr);
 	d3d_device_context_ptr->Draw(4, 0);
@@ -8499,7 +8304,7 @@ hardware_render_polygon(tpolygon *tpolygon_ptr)
 	d3d_device_context_ptr->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP);
 	d3d_device_context_ptr->VSSetConstantBuffers(0, 1, &d3d_constant_buffer_ptr);
 	d3d_device_context_ptr->PSSetSamplers(0, 1, &d3d_sampler_state_ptr);
-	d3d_device_context_ptr->OMSetDepthStencilState(d3d_depth_stencil_state_ptr, 1);
+	d3d_device_context_ptr->OMSetDepthStencilState(d3d_3D_depth_stencil_state_ptr, 1);
 	d3d_device_context_ptr->OMSetBlendState(d3d_blend_state_ptr, NULL, 0xFFFFFFFF);
 	d3d_device_context_ptr->RSSetState(d3d_rasterizer_state_ptr);
 	d3d_device_context_ptr->Draw(tpolygon_ptr->tvertices, 0);
