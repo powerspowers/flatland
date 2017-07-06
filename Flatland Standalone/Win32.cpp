@@ -7992,6 +7992,9 @@ hardware_set_projection_transform(float horz_field_of_view,
 {
 	// Initialize the projection
 
+	debug_message("Setting perspective projection for FOV (%f, %f) and z planes (%f, %f)\n", horz_field_of_view, vert_field_of_view,
+		near_z, far_z);
+
 	XMVECTOR eye = XMVectorSet(0.0f, 0.0f, 0.0f, 0.0f );
 	XMVECTOR at = XMVectorSet( 0.0f, 0.0f, 1.0f, 0.0f );
 	XMVECTOR up = XMVectorSet( 0.0f, 1.0f, 0.0f, 0.0f );
