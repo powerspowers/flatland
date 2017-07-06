@@ -1893,6 +1893,20 @@ get_brightness_index(float brightness)
 }
 
 //------------------------------------------------------------------------------
+// Convert a brightness index to a brightness level.
+//------------------------------------------------------------------------------
+
+float
+get_brightness(int brightness_index)
+{
+	if (brightness_index < 0)
+		brightness_index = 0;
+	else if (brightness_index > MAX_BRIGHTNESS_INDEX)
+		brightness_index = MAX_BRIGHTNESS_INDEX;
+	return 1.0f - (float)brightness_index / MAX_BRIGHTNESS_INDEX;
+}
+
+//------------------------------------------------------------------------------
 // Create the polygon and vertex lists for a sprite block.
 //------------------------------------------------------------------------------
 

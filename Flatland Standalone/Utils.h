@@ -107,6 +107,9 @@ remove_movable_block(block *block_ptr);
 int
 get_brightness_index(float brightness);
 
+float
+get_brightness(int brightness_index);
+
 void
 set_player_size(void);
 

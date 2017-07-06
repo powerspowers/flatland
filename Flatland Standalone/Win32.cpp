@@ -8352,17 +8352,14 @@ draw_pixmap(pixmap *pixmap_ptr, int brightness_index, int x, int y, int width,
 
 	// Lock the frame buffer surface.
 
-	if (hardware_acceleration) {
-	} else {
-		DDSURFACEDESC ddraw_surface_desc;
+	DDSURFACEDESC ddraw_surface_desc;
 
-		ddraw_surface_desc.dwSize = sizeof(ddraw_surface_desc);
-		if (ddraw_framebuffer_surface_ptr->Lock(NULL, &ddraw_surface_desc,
-			DDLOCK_SURFACEMEMORYPTR | DDLOCK_WAIT, NULL) != DD_OK)
-			return;
-		surface_ptr = (byte *)ddraw_surface_desc.lpSurface;
-		fb_bytes_per_row = ddraw_surface_desc.lPitch;
-	}
+	ddraw_surface_desc.dwSize = sizeof(ddraw_surface_desc);
+	if (ddraw_framebuffer_surface_ptr->Lock(NULL, &ddraw_surface_desc,
+		DDLOCK_SURFACEMEMORYPTR | DDLOCK_WAIT, NULL) != DD_OK)
+		return;
+	surface_ptr = (byte *)ddraw_surface_desc.lpSurface;
+	fb_bytes_per_row = ddraw_surface_desc.lPitch;
 
 	// Calculate the bytes per pixel.
 
@@ -8448,11 +8445,7 @@ draw_pixmap(pixmap *pixmap_ptr, int brightness_index, int x, int y, int width,
 
 	// Unlock the frame buffer surface.
 
-	if (hardware_acceleration) {
-		//d3d_framebuffer_surface_ptr->UnlockRect();
-	} else {
-		ddraw_framebuffer_surface_ptr->Unlock(surface_ptr);
-	}
+	ddraw_framebuffer_surface_ptr->Unlock(surface_ptr);
 }
 
 //------------------------------------------------------------------------------
