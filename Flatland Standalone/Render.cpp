@@ -134,9 +134,6 @@ init_renderer(void)
 	block_tvertex_list = NULL;
 	vertex_colour_list = NULL;
 	temp_spoint_list = NULL;
-	if (hardware_acceleration) {
-		hardware_init_vertex_list();
-	}
 }
 
 //------------------------------------------------------------------------------
@@ -210,13 +207,11 @@ set_up_renderer(void)
 	if (vertex_colour_list == NULL)
 		memory_error("vertex colour list");
 
-	// Create the temp screen point list and the hardware vertex list.
+	// Create the temp screen point list.
 
 	NEWARRAY(temp_spoint_list, spoint, max_polygon_vertices + 5);
 	if (temp_spoint_list == NULL)
 		memory_error("screen point list");
-	if (hardware_acceleration && !hardware_create_vertex_list(max_polygon_vertices + 5))
-		memory_error("hardware vertex list");
 }
 
 //------------------------------------------------------------------------------
@@ -238,9 +233,6 @@ clean_up_renderer(void)
 	if (temp_spoint_list != NULL) {
 		DELARRAY(temp_spoint_list, spoint, max_polygon_vertices + 5);
 		temp_spoint_list = NULL;
-	}
-	if (hardware_acceleration) {
-		hardware_destroy_vertex_list(max_polygon_vertices + 5);
 	}
 }
 
@@ -841,7 +833,7 @@ scale_spoint_texture_interpolants(pixmap *pixmap_ptr, int texture_style)
 	// If there is no pixmap or it is tiled, then use the maximum pixmap size.
 
 	if (pixmap_ptr == NULL || texture_style == TILED_TEXTURE) {
-		u_scale = max_texture_size;
+		u_scale = (float)max_texture_size;
 		v_scale = u_scale;
 	} else {
 		u_scale = (float)pixmap_ptr->width;
@@ -1099,7 +1091,7 @@ clip_2D_polygon(void)
 }
 
 //------------------------------------------------------------------------------
-// Determine if the mouse is currently pointing at the given polygon.
+// Determine if the mouse is currently pointing at the given screen polygon.
 //------------------------------------------------------------------------------
 
 static bool
@@ -1333,6 +1325,7 @@ static void
 render_polygon(polygon *polygon_ptr, float turn_angle)
 {
 	int polygon_visibility;
+	bool polygon_selected;
 	polygon_def *polygon_def_ptr;
 	spolygon *spolygon_ptr;
 	vertex polygon_centroid;
@@ -1455,6 +1448,10 @@ render_polygon(polygon *polygon_ptr, float turn_angle)
 			tpolygon_ptr->next_tpolygon_ptr = colour_tpolygon_list;
 			colour_tpolygon_list = tpolygon_ptr;
 		}
+
+		// XXX -- We don't have polygon selection implemented yet.
+
+		polygon_selected = false;
 	} 
 	
 	// If hardware acceleration is not enabled... 
@@ -1568,6 +1565,10 @@ render_polygon(polygon *polygon_ptr, float turn_angle)
 			} else if (!prepare_next_right_edge(sy))
 				break;
 		}
+
+		// Determine whether this polygon is selected.
+
+		polygon_selected = check_for_polygon_selection();
 	}
 
 	// Check whether this polygon is selected by the mouse, and if so 
@@ -1576,7 +1577,7 @@ render_polygon(polygon *polygon_ptr, float turn_angle)
 	// translucent, and it doesn't have an exit or any mouse-based triggers,
 	// then ignore it.
 
-	if (!found_selection && check_for_polygon_selection() &&
+	if (!found_selection && polygon_selected &&
 		(((!hardware_acceleration || part_ptr->alpha == 1.0f) &&
 		(texture_ptr == NULL || !texture_ptr->transparent)) ||
 			((curr_block_ptr != NULL &&
@@ -3152,7 +3153,7 @@ render_frame(void)
 		// Render the sky polygon.
 
 		hardware_render_2D_polygon(sky_pixmap_ptr, sky_colour, sky_brightness,
-			0.0f, 0.0f, window_width, window_height, 
+			0.0f, 0.0f, (float)window_width, (float)window_height, 
 			sky_start_u, sky_start_v, sky_end_u, sky_end_v);
 
 		// Render the orb polygon.

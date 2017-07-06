@@ -452,15 +452,6 @@ render_popup_span32(span *span_ptr);
 // Hardware rendering functions (called by the player thread only).
 
 void
-hardware_init_vertex_list(void);
-
-bool
-hardware_create_vertex_list(int max_vertices);
-
-void
-hardware_destroy_vertex_list(int max_vertices);
-
-void
 hardware_set_projection_transform(float horz_field_of_view,
 								  float vert_field_of_view,
 								  float near_z, float far_z);

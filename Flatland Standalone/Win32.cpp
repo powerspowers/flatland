@@ -482,6 +482,7 @@ static ID3D11DepthStencilState *d3d_2D_depth_stencil_state_ptr;
 static ID3D11VertexShader *d3d_colour_vertex_shader_ptr;
 static ID3D11VertexShader *d3d_texture_vertex_shader_ptr;
 static ID3D11InputLayout *d3d_vertex_layout_ptr;
+#define MAX_VERTICES 256
 static ID3D11Buffer *d3d_vertex_buffer_ptr;
 static ID3D11PixelShader *d3d_colour_pixel_shader_ptr;
 static ID3D11PixelShader *d3d_texture_pixel_shader_ptr;
@@ -2572,6 +2573,21 @@ start_up_hardware_renderer(void)
 	viewport.TopLeftY = 0;
 	d3d_device_context_ptr->RSSetViewports(1, &viewport);
 
+	// Create the vertex buffer.
+
+	D3D11_BUFFER_DESC bufferDesc;
+	bufferDesc.Usage = D3D11_USAGE_DYNAMIC;
+	bufferDesc.ByteWidth = sizeof(hardware_vertex) * MAX_VERTICES;
+	bufferDesc.BindFlags = D3D11_BIND_VERTEX_BUFFER;
+	bufferDesc.CPUAccessFlags = D3D11_CPU_ACCESS_WRITE;
+	bufferDesc.MiscFlags = 0;
+	if (FAILED(d3d_device_ptr->CreateBuffer(&bufferDesc, NULL, &d3d_vertex_buffer_ptr))) {
+		return false;
+	}
+	UINT stride = sizeof(hardware_vertex);
+	UINT offset = 0;
+	d3d_device_context_ptr->IASetVertexBuffers(0, 1, &d3d_vertex_buffer_ptr, &stride, &offset);
+
 	// Compile and create the colour vertex shader.
 
 	ID3DBlob *shader_blob_ptr;
@@ -2721,6 +2737,9 @@ start_up_hardware_renderer(void)
 static void
 shut_down_hardware_renderer(void)
 {
+	if (d3d_device_context_ptr) {
+		d3d_device_context_ptr->ClearState();
+	}
 	if (d3d_constant_buffer_ptr) {
 		d3d_constant_buffer_ptr->Release();
 		d3d_constant_buffer_ptr = NULL;
@@ -2756,6 +2775,10 @@ shut_down_hardware_renderer(void)
 	if (d3d_colour_vertex_shader_ptr) {
 		d3d_colour_vertex_shader_ptr->Release();
 		d3d_colour_vertex_shader_ptr = NULL;
+	}
+	if (d3d_vertex_buffer_ptr != NULL) {
+		d3d_vertex_buffer_ptr->Release();
+		d3d_vertex_buffer_ptr = NULL;
 	}
 	if (d3d_2D_depth_stencil_state_ptr) {
 		d3d_2D_depth_stencil_state_ptr->Release();
@@ -7748,56 +7771,6 @@ render_popup_span32(span *span_ptr)
 //==============================================================================
 
 //------------------------------------------------------------------------------
-// Initialise the Direct3D vertex list.
-//------------------------------------------------------------------------------
-
-void
-hardware_init_vertex_list(void)
-{
-	d3d_vertex_buffer_ptr = NULL;
-}
-
-//------------------------------------------------------------------------------
-// Create the Direct3D vertex list.
-//------------------------------------------------------------------------------
-
-bool
-hardware_create_vertex_list(int max_vertices)
-{
-	// Fill in a buffer description.
-
-	D3D11_BUFFER_DESC bufferDesc;
-	bufferDesc.Usage = D3D11_USAGE_DYNAMIC;
-	bufferDesc.ByteWidth = sizeof(hardware_vertex) * max_vertices;
-	bufferDesc.BindFlags = D3D11_BIND_VERTEX_BUFFER;
-	bufferDesc.CPUAccessFlags = D3D11_CPU_ACCESS_WRITE;
-	bufferDesc.MiscFlags = 0;
-
-	// Create the vertex buffer.
-
-	if (FAILED(d3d_device_ptr->CreateBuffer(&bufferDesc, NULL, &d3d_vertex_buffer_ptr))) {
-		return false;
-	}
-	UINT stride = sizeof(hardware_vertex);
-	UINT offset = 0;
-	d3d_device_context_ptr->IASetVertexBuffers(0, 1, &d3d_vertex_buffer_ptr, &stride, &offset);
-	return true;
-}
-
-//------------------------------------------------------------------------------
-// Destroy the Direct3D vertex list.
-//------------------------------------------------------------------------------
-
-void
-hardware_destroy_vertex_list(int max_vertices)
-{
-	if (d3d_vertex_buffer_ptr != NULL) {
-		d3d_vertex_buffer_ptr->Release();
-		d3d_vertex_buffer_ptr = NULL;
-	}
-}
-
-//------------------------------------------------------------------------------
 // Set the perspective transform.
 //------------------------------------------------------------------------------
 
@@ -8291,9 +8264,11 @@ hardware_render_polygon(tpolygon *tpolygon_ptr)
 	}
 	vertex_buffer_ptr = (hardware_vertex *)d3d_mapped_subresource.pData;
 	tvertex *tvertex_ptr = tpolygon_ptr->tvertex_list;
-	while (tvertex_ptr) {
+	int vertices = 0;
+	while (tvertex_ptr && vertices < MAX_VERTICES) {
 		add_tvertex_to_buffer(vertex_buffer_ptr, tvertex_ptr, tpolygon_ptr);
 		tvertex_ptr = del_tvertex(tvertex_ptr);
+		vertices++;
 	}
 	tpolygon_ptr->tvertex_list = NULL;
 	d3d_device_context_ptr->Unmap(d3d_vertex_buffer_ptr, 0);
