@@ -1408,7 +1408,7 @@ pixmap::pixmap()
 		image_updated[index] = false;
 #endif
 	}
-	spolygon_list = NULL;
+	tpolygon_list = NULL;
 }
 
 // Default destructor deletes the image buffer and cache entries.

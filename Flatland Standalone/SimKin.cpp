@@ -1052,7 +1052,7 @@ spot_simkin_object::method(const skString& method, skRValueArray& arguments, skR
 		if (arguments.entries() != 1)
 			return(false);
 		skString message = arguments[0].str();
-		debug_message("%s\n", (char *)(const char *)message);
+		//debug_message("%s\n", (char *)(const char *)message);
 	}
 
 	// If the method is "new_array", create a new array SimKin object and

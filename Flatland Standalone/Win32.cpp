@@ -294,15 +294,16 @@ struct hardware_vertex {
 	XMFLOAT2 texture_coords;
 	XMFLOAT4 diffuse_colour;
 
-	hardware_vertex(float sx, float sy, float sz, float tu, float tv, RGBcolour *diffuse_colour_ptr, float diffuse_alpha) {
-		position = XMFLOAT3(sx, sy, sz);
-		texture_coords = XMFLOAT2(tu, tv);
+	hardware_vertex(float x, float y, float z, float u, float v, RGBcolour *diffuse_colour_ptr, float diffuse_alpha) {
+		position = XMFLOAT3(x, y, z);
+		texture_coords = XMFLOAT2(u, v);
 		diffuse_colour = XMFLOAT4(diffuse_colour_ptr->red, diffuse_colour_ptr->green, diffuse_colour_ptr->blue, diffuse_alpha);
 	}
 };
 
 struct hardware_constant_buffer {
-	XMMATRIX projection_matrix;
+	XMMATRIX view;
+	XMMATRIX projection;
 };
 
 // Structure to hold the colour palette.
@@ -326,6 +327,7 @@ struct MYBITMAPINFO {
 
 char *colour_vertex_shader_source =
 "cbuffer constant_buffer : register(b0) {\n"
+"	matrix View;\n"
 "	matrix Projection;\n"
 "};\n"
 "struct VS_INPUT {\n"
@@ -339,7 +341,8 @@ char *colour_vertex_shader_source =
 "};\n"
 "PS_INPUT VS(VS_INPUT input) {\n"
 "	PS_INPUT output = (PS_INPUT)0;\n"
-"	output.Pos = input.Pos;\n"
+//"	output.Pos = mul(input.Pos, View);\n"
+"	output.Pos = mul(input.Pos, Projection);\n"
 "   output.Colour = input.Colour;\n"
 "	return output;\n"
 "}\n";
@@ -355,6 +358,7 @@ char *colour_pixel_shader_source =
 
 char *texture_vertex_shader_source =
 	"cbuffer constant_buffer : register(b0) {\n"
+	"	matrix View;\n"
 	"	matrix Projection;\n"
 	"};\n"
 	"struct VS_INPUT {\n"
@@ -369,7 +373,8 @@ char *texture_vertex_shader_source =
 	"};\n"
 	"PS_INPUT VS(VS_INPUT input) {\n"
 	"	PS_INPUT output = (PS_INPUT)0;\n"
-	"	output.Pos = input.Pos;\n"
+//	"	output.Pos = mul(input.Pos, View);\n"
+	"	output.Pos = mul(input.Pos, Projection);\n"
 	"	output.Tex = input.Tex;\n"
 	"   output.Colour = input.Colour;\n"
 	"	return output;\n"
@@ -488,6 +493,7 @@ static ID3D11BlendState *d3d_blend_state_ptr;
 static ID3D11RasterizerState *d3d_rasterizer_state_ptr;
 static ID3D11SamplerState *d3d_sampler_state_ptr;
 static ID3D11Buffer *d3d_constant_buffer_ptr;
+static XMMATRIX d3d_view_matrix;
 static XMMATRIX d3d_projection_matrix;
 
 static byte *framebuffer_ptr;
@@ -2758,11 +2764,12 @@ start_up_hardware_renderer(void)
 	// Compile and create the colour vertex shader.
 
 	ID3DBlob *shader_blob_ptr;
-	if (FAILED(D3DCompile(colour_vertex_shader_source, strlen(colour_vertex_shader_source), "colour vertex shader", NULL, NULL, "VS", "vs_4_0",
-		0, 0, &shader_blob_ptr, NULL))) {
+	HRESULT result = D3DCompile(colour_vertex_shader_source, strlen(colour_vertex_shader_source), "colour vertex shader", NULL, NULL,
+		"VS", "vs_4_0", 0, 0, &shader_blob_ptr, NULL);
+	if (FAILED(result)) {
 		return false;
 	}
-	HRESULT result = d3d_device_ptr->CreateVertexShader(shader_blob_ptr->GetBufferPointer(), shader_blob_ptr->GetBufferSize(), NULL,
+	result = d3d_device_ptr->CreateVertexShader(shader_blob_ptr->GetBufferPointer(), shader_blob_ptr->GetBufferSize(), NULL,
 		&d3d_colour_vertex_shader_ptr);
 	shader_blob_ptr->Release();
 	if (FAILED(result)) {	
@@ -5154,7 +5161,6 @@ begin_3D_scene(void)
 void
 end_3D_scene(void)
 {
-	//d3d_device_ptr->EndScene();
 }
 
 //------------------------------------------------------------------------------
@@ -7984,14 +7990,16 @@ hardware_set_projection_transform(float horz_field_of_view,
 								  float vert_field_of_view,
 								  float near_z, float far_z)
 {
-	// Initialize the projection matrix.
+	// Initialize the projection
 
-	float w = (float)(1.0 / tan(horz_field_of_view * 0.5));
-	float h = (float)(1.0 / tan(vert_field_of_view * 0.5));
-	float Q = far_z / (far_z - near_z);
-	d3d_projection_matrix = XMMATRIX(w, 0, 0, 0, 0, h, 0, 0, 0, 0, Q, 1, 0, 0, -Q * near_z, 0); 
+	XMVECTOR eye = XMVectorSet(0.0f, 0.0f, 0.0f, 0.0f );
+	XMVECTOR at = XMVectorSet( 0.0f, 0.0f, 1.0f, 0.0f );
+	XMVECTOR up = XMVectorSet( 0.0f, 1.0f, 0.0f, 0.0f );
+	d3d_view_matrix = XMMatrixLookAtLH(eye, at, up);
+	d3d_projection_matrix = XMMatrixPerspectiveFovLH(vert_field_of_view, horz_field_of_view / vert_field_of_view, near_z, far_z);
 	hardware_constant_buffer constant_buffer;
-	constant_buffer.projection_matrix = d3d_projection_matrix;
+	constant_buffer.view = XMMatrixTranspose(d3d_view_matrix);
+	constant_buffer.projection = XMMatrixTranspose(d3d_projection_matrix);
 	d3d_device_context_ptr->UpdateSubresource(d3d_constant_buffer_ptr, 0, nullptr, &constant_buffer, 0, 0);
 }
 
@@ -8356,23 +8364,20 @@ hardware_set_texture(cache_entry *cache_entry_ptr)
 }
 
 //------------------------------------------------------------------------------
-// Add a vertex to the vertex buffer.
+// Add a transformed vertex to the vertex buffer.
 //------------------------------------------------------------------------------
 
 static void
-add_vertex_to_buffer(hardware_vertex *&vertex_buffer_ptr, float sx, float sy, float sz, float tu, float tv, RGBcolour *colour_ptr, float alpha)
+add_vertex_to_buffer(hardware_vertex *&vertex_buffer_ptr, float x, float y, float z, float u, float v, RGBcolour *colour_ptr, float alpha)
 {
-	*vertex_buffer_ptr++ = hardware_vertex((sx - half_window_width) / half_window_width, (half_window_height - sy) / half_window_height, sz,
-		tu, tv, colour_ptr, alpha);
+	*vertex_buffer_ptr++ = hardware_vertex(x, y, z, u, v, colour_ptr, alpha);
 }
 
 static void
-add_spoint_to_buffer(hardware_vertex *&vertex_buffer_ptr, spolygon *spolygon_ptr, int index)
+add_tvertex_to_buffer(hardware_vertex *&vertex_buffer_ptr, tvertex *&tvertex_ptr, tpolygon *tpolygon_ptr)
 {
-	spoint *spoint_ptr = &spolygon_ptr->spoint_list[index];
-	float tz = 1.0f / spoint_ptr->one_on_tz;
-	add_vertex_to_buffer(vertex_buffer_ptr, spoint_ptr->sx, spoint_ptr->sy, 1.0f - spoint_ptr->one_on_tz, 
-		spoint_ptr->u_on_tz * tz, spoint_ptr->v_on_tz * tz, &spoint_ptr->colour, spolygon_ptr->alpha);
+	add_vertex_to_buffer(vertex_buffer_ptr, tvertex_ptr->x, tvertex_ptr->y, tvertex_ptr->z, tvertex_ptr->u, tvertex_ptr->v,
+		&tvertex_ptr->colour, tpolygon_ptr->alpha);
 }
 
 //------------------------------------------------------------------------------
@@ -8380,10 +8385,9 @@ add_spoint_to_buffer(hardware_vertex *&vertex_buffer_ptr, spolygon *spolygon_ptr
 //------------------------------------------------------------------------------
 
 void
-hardware_render_2D_polygon(pixmap *pixmap_ptr, RGBcolour colour,
-						   float brightness, float x, float y, float width,
-						   float height, float start_u, float start_v,
-						   float end_u, float end_v, bool disable_transparency)
+hardware_render_2D_polygon(pixmap *pixmap_ptr, RGBcolour colour, float brightness,
+						   float x, float y, float z, float width, float height,
+						   float start_u, float start_v, float end_u, float end_v)
 {
 	D3D11_MAPPED_SUBRESOURCE d3d_mapped_subresource;
 	hardware_vertex *vertex_buffer_ptr;
@@ -8424,10 +8428,10 @@ hardware_render_2D_polygon(pixmap *pixmap_ptr, RGBcolour colour,
 	// Construct the Direct3D vertex list for the sky polygon.  The polygon is
 	// placed in the far distance so it will appear behind everything else.
 
-	add_vertex_to_buffer(vertex_buffer_ptr, x, y, 1.0f, start_u, start_v, &colour, 1.0f);
-	add_vertex_to_buffer(vertex_buffer_ptr, x + width, y, 1.0f, end_u, start_v, &colour, 1.0f);
-	add_vertex_to_buffer(vertex_buffer_ptr, x, y + height, 1.0f, start_u, end_v, &colour, 1.0f);
-	add_vertex_to_buffer(vertex_buffer_ptr, x + width, y + height, 1.0f, end_u, end_v, &colour, 1.0f);
+	add_vertex_to_buffer(vertex_buffer_ptr, x, y, z, start_u, start_v, &colour, 1.0f);
+	add_vertex_to_buffer(vertex_buffer_ptr, x + width, y, z, end_u, start_v, &colour, 1.0f);
+	add_vertex_to_buffer(vertex_buffer_ptr, x, y + height, z, start_u, end_v, &colour, 1.0f);
+	add_vertex_to_buffer(vertex_buffer_ptr, x + width, y + height, z, end_u, end_v, &colour, 1.0f);
 
 	// Unmap the vertex buffer.
 
@@ -8450,16 +8454,16 @@ hardware_render_2D_polygon(pixmap *pixmap_ptr, RGBcolour colour,
 //------------------------------------------------------------------------------
 
 void
-hardware_render_polygon(spolygon *spolygon_ptr)
+hardware_render_polygon(tpolygon *tpolygon_ptr)
 {
 	pixmap *pixmap_ptr;
 	D3D11_MAPPED_SUBRESOURCE d3d_mapped_subresource;
 	hardware_vertex *vertex_buffer_ptr;
 
-	// If the polygon has a pixmap, get the cache entry and enable the texture,
-	// otherwise disable the texture.
+	// If the polygon has a pixmap, use the texture shaders with the shader resource view for the pixmap's texture,
+	// otherwise use the colour shaders.
 
-	pixmap_ptr = spolygon_ptr->pixmap_ptr;
+	pixmap_ptr = tpolygon_ptr->pixmap_ptr;
 	if (pixmap_ptr != NULL) {
 		d3d_device_context_ptr->VSSetShader(d3d_texture_vertex_shader_ptr, NULL, 0);
 		d3d_device_context_ptr->PSSetShader(d3d_texture_pixel_shader_ptr, NULL, 0);
@@ -8471,38 +8475,19 @@ hardware_render_polygon(spolygon *spolygon_ptr)
 		d3d_device_context_ptr->PSSetShader(d3d_colour_pixel_shader_ptr, NULL, 0);	
 	}
 
-	// Map the vertex buffer.
+	// Fill the vertex buffer with transformed vertices from the polygon, removing the vertices from the polygon in the process.
 
 	if (FAILED(d3d_device_context_ptr->Map(d3d_vertex_buffer_ptr, 0, D3D11_MAP_WRITE_DISCARD, 0, &d3d_mapped_subresource))) {
 		diagnose("Failed to map vertex buffer");
 		return;
 	}
 	vertex_buffer_ptr = (hardware_vertex *)d3d_mapped_subresource.pData;
-
-	// Fill the vertex buffer for this polygon by alternating between vertices taken from stepping forward and backward through the vertex list.
-	// This ensures we end up with a triangle strip suitable for rendering.
-
-	int i = 1;
-	int j = spolygon_ptr->spoints - 1;
-	bool left = true;	
-	add_spoint_to_buffer(vertex_buffer_ptr, spolygon_ptr, 0);
-	while (i <= j)
-	{
-		if (left)
-		{
-			add_spoint_to_buffer(vertex_buffer_ptr, spolygon_ptr, i);
-			i++;
-		}
-		else
-		{
-			add_spoint_to_buffer(vertex_buffer_ptr, spolygon_ptr, j);
-			j--;
-		}
-		left = !left;
+	tvertex *tvertex_ptr = tpolygon_ptr->tvertex_list;
+	while (tvertex_ptr) {
+		add_tvertex_to_buffer(vertex_buffer_ptr, tvertex_ptr, tpolygon_ptr);
+		tvertex_ptr = del_tvertex(tvertex_ptr);
 	}
-
-	// Unmap the vertex buffer.
-
+	tpolygon_ptr->tvertex_list = NULL;
 	d3d_device_context_ptr->Unmap(d3d_vertex_buffer_ptr, 0);
 
 	// Set up the context for the draw, then render the polygon.
@@ -8514,7 +8499,7 @@ hardware_render_polygon(spolygon *spolygon_ptr)
 	d3d_device_context_ptr->OMSetDepthStencilState(d3d_depth_stencil_state_ptr, 1);
 	d3d_device_context_ptr->OMSetBlendState(d3d_blend_state_ptr, NULL, 0xFFFFFFFF);
 	d3d_device_context_ptr->RSSetState(d3d_rasterizer_state_ptr);
-	d3d_device_context_ptr->Draw(spolygon_ptr->spoints, 0);
+	d3d_device_context_ptr->Draw(tpolygon_ptr->tvertices, 0);
 }
 
 //==============================================================================

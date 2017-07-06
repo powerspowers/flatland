@@ -484,13 +484,12 @@ void
 hardware_set_texture(cache_entry *cache_entry_ptr);
 
 void
-hardware_render_2D_polygon(pixmap *pixmap_ptr, RGBcolour colour, 
-						   float brightness, float x, float y, float width,
-						   float height, float start_u, float start_v, 
-						   float end_u, float end_v, bool disable_transparency);
+hardware_render_2D_polygon(pixmap *pixmap_ptr, RGBcolour colour, float brightness, 
+					       float x, float y, float z, float width, float height, 
+						   float start_u, float start_v, float end_u, float end_v);
 
 void
-hardware_render_polygon(spolygon *spolygon_ptr);
+hardware_render_polygon(tpolygon *tpolygon_ptr);
 
 // Pixmap drawing function (called by the player thread only).
 

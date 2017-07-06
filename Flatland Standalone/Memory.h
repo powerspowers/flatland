@@ -91,6 +91,34 @@ dup_span(span *old_span_ptr);
 span *
 del_span(span *span_ptr);
 
+// Functions for managing free transformed vertices.
+
+void
+init_free_tvertex_list(void);
+
+void
+delete_free_tvertex_list(void);
+
+tvertex *
+new_tvertex(void);
+
+tvertex *
+del_tvertex(tvertex *tvertex_ptr);
+
+// Functions for managing free transformed polygons.
+
+void
+init_free_tpolygon_list(void);
+
+void
+delete_free_tpolygon_list(void);
+
+tpolygon *
+new_tpolygon(void);
+
+tpolygon *
+del_tpolygon(tpolygon *tpolygon_ptr);
+
 // Functions for managing screen polygons.
 
 void

@@ -26,12 +26,11 @@
 #define INTERSECTS_FRUSTUM	1
 #define INSIDE_FRUSTUM		2
 
-// List of solid colour spans, transparent screen polygons and colour screen
-// polygons.
+// List of solid colour spans, transparent transformed polygons and colour transformed polygons.
 
 static span *colour_span_list;
-static spolygon *transparent_spolygon_list;
-static spolygon *colour_spolygon_list;
+static tpolygon *transparent_tpolygon_list;
+static tpolygon *colour_tpolygon_list;
 
 // The current absolute and relative camera position.
 
@@ -186,6 +185,11 @@ set_up_renderer(void)
 		}
 		block_def_ptr = block_def_ptr->next_block_def_ptr;
 	}
+
+	// Initialise the free transformed vertex and polygon lists.
+
+	init_free_tvertex_list();
+	init_free_tpolygon_list();
 
 	// Initialise the screen polygon list.  The maximum number of screen points
 	// per polygon must be the maximum number of polygon vertices + 5; this
@@ -1248,6 +1252,70 @@ prepare_next_right_edge(float scan_sy)
 }
 
 //------------------------------------------------------------------------------
+// Add a transformed vertex to a transformed polygon.
+//------------------------------------------------------------------------------
+
+static void
+add_tvertex_to_tpolygon(tpolygon *tpolygon_ptr, int tvertex_index, polygon_def *polygon_def_ptr, tvertex *&last_tvertex_ptr)
+{
+	vertex_def *vertex_def_ptr = &polygon_def_ptr->vertex_def_list[tvertex_index];
+	vertex *tvertex_ptr = &block_tvertex_list[vertex_def_ptr->vertex_no];
+	tvertex *new_tvertex_ptr = new_tvertex();
+	new_tvertex_ptr->x = tvertex_ptr->x;
+	new_tvertex_ptr->y = tvertex_ptr->y;
+	new_tvertex_ptr->z = tvertex_ptr->z;
+	new_tvertex_ptr->u = vertex_def_ptr->u;
+	new_tvertex_ptr->v = vertex_def_ptr->v;
+	new_tvertex_ptr->colour = vertex_colour_list[tvertex_index];
+	new_tvertex_ptr->next_tvertex_ptr = NULL;
+	debug_message("Transformed vertex %d is (%f, %f, %f)\n", tvertex_index, new_tvertex_ptr->x, new_tvertex_ptr->y, new_tvertex_ptr->z);
+	if (last_tvertex_ptr) {
+		last_tvertex_ptr->next_tvertex_ptr = new_tvertex_ptr;
+	} else {
+		tpolygon_ptr->tvertex_list = new_tvertex_ptr;
+	}
+	last_tvertex_ptr = new_tvertex_ptr;
+}
+
+//------------------------------------------------------------------------------
+// Create a transformed polygon suitable for handing over to the hardware
+// renderer.
+//------------------------------------------------------------------------------
+
+static tpolygon *
+create_transformed_polygon(polygon_def *polygon_def_ptr, pixmap *pixmap_ptr, part *part_ptr)
+{
+	// Get a new transformed polygon object, and initialize everything but the transformed vertex list.
+
+	tpolygon *tpolygon_ptr = new_tpolygon();
+	tpolygon_ptr->pixmap_ptr = pixmap_ptr;
+	tpolygon_ptr->alpha = part_ptr->alpha;
+	tpolygon_ptr->tvertex_list = NULL;
+	tpolygon_ptr->tvertices = polygon_def_ptr->vertices;
+	tpolygon_ptr->next_tpolygon_ptr = NULL;
+
+	// Step through this polygon by alternating between vertices taken from stepping forward and backward through the vertex list.
+	// This ensures we end up with a triangle strip suitable for rendering.
+
+	int i = 1;
+	int j = tpolygon_ptr->tvertices - 1;
+	bool front = true;
+	tvertex *last_tvertex_ptr = NULL;
+	add_tvertex_to_tpolygon(tpolygon_ptr, 0, polygon_def_ptr, last_tvertex_ptr);
+	while (i <= j) {
+		if (front) {
+			add_tvertex_to_tpolygon(tpolygon_ptr, i, polygon_def_ptr, last_tvertex_ptr);
+			i++;
+		} else {
+			add_tvertex_to_tpolygon(tpolygon_ptr, j, polygon_def_ptr, last_tvertex_ptr);
+			j--;
+		}
+		front = !front;
+	}
+	return tpolygon_ptr;
+}
+
+//------------------------------------------------------------------------------
 // Render a polygon.
 //------------------------------------------------------------------------------
 
@@ -1267,8 +1335,7 @@ render_polygon(polygon *polygon_ptr, float turn_angle)
 	texture *texture_ptr;
 	pixmap *pixmap_ptr;
 	float sy, end_sy;
-	vertex centre(UNITS_PER_HALF_BLOCK, UNITS_PER_HALF_BLOCK, 
-		UNITS_PER_HALF_BLOCK);
+	vertex centre(UNITS_PER_HALF_BLOCK, UNITS_PER_HALF_BLOCK, UNITS_PER_HALF_BLOCK);
 
 	// If the polygon is trivially invisible (inactive, zero faces or facing
 	// away from the camera), then don't render it.
@@ -1282,8 +1349,7 @@ render_polygon(polygon *polygon_ptr, float turn_angle)
 	
 	if (curr_block_visibility == INSIDE_FRUSTUM)
 		polygon_visibility = INSIDE_FRUSTUM;
-	else if ((polygon_visibility = compare_polygon_against_frustum(polygon_ptr))
-		== OUTSIDE_FRUSTUM)
+	else if ((polygon_visibility = compare_polygon_against_frustum(polygon_ptr)) == OUTSIDE_FRUSTUM)
 		return;
 
 	// Get a pointer to the part and texture.
@@ -1292,38 +1358,31 @@ render_polygon(polygon *polygon_ptr, float turn_angle)
 	part_ptr = polygon_def_ptr->part_ptr;
 	texture_ptr = part_ptr->texture_ptr;
 
-	// Get a pointer to the next available screen polygon, and make it's screen
-	// point list be the main screen point list.
-
-	spolygon_ptr = get_next_screen_polygon();
-	main_spoint_list = spolygon_ptr->spoint_list;
-
-	// If the texture exists, get a pointer to the current pixmap.
-
-	if (texture_ptr != NULL) {
-		switch (curr_block_type) {
-		case MULTIFACETED_SPRITE:
-			pixmap_ptr = 
-				&texture_ptr->pixmap_list[curr_block_ptr->pixmap_index];
-			break;
-		default:
-			if (texture_ptr->loops)
-				pixmap_ptr = texture_ptr->get_curr_pixmap_ptr(curr_time_ms -
-					start_time_ms);
-			else
-				pixmap_ptr = texture_ptr->get_curr_pixmap_ptr(curr_time_ms -
-					curr_block_ptr->start_time_ms);
-		}
-	} else
-		pixmap_ptr = NULL;
-
-	// Rotate the polygon's normal vector by the turn angle, then reverse it if
-	// the back of the polygon is visible.
+	// Rotate the polygon's normal vector by the turn angle, then reverse it if the back of the polygon is visible.
 
 	normal_vector = polygon_ptr->normal_vector;
 	normal_vector.rotate_y(turn_angle);
 	if (!front_face_visible)
 		normal_vector = -normal_vector;
+
+	// If the texture exists, get a pointer to the current pixmap, and compute the size of half a texel in normalised
+	// texture units for this pixmap. If there is no pixmap, assume a pixmap size of 256x256.
+
+	if (texture_ptr != NULL) {
+		if (curr_block_type == MULTIFACETED_SPRITE) {
+			pixmap_ptr = &texture_ptr->pixmap_list[curr_block_ptr->pixmap_index];
+		} else if (texture_ptr->loops) {
+			pixmap_ptr = texture_ptr->get_curr_pixmap_ptr(curr_time_ms - start_time_ms);
+		} else {
+			pixmap_ptr = texture_ptr->get_curr_pixmap_ptr(curr_time_ms - curr_block_ptr->start_time_ms);
+		}
+		half_texel_u = 0.5f / pixmap_ptr->width;
+		half_texel_v = 0.5f / pixmap_ptr->height;
+	} else {
+		pixmap_ptr = NULL;
+		half_texel_u = 1.953125e-3;
+		half_texel_v = 1.953125e-3;
+	}
 
 	// If hardware acceleration is enabled...
 
@@ -1331,50 +1390,68 @@ render_polygon(polygon *polygon_ptr, float turn_angle)
 		int vertex_no;
 		RGBcolour *vertex_colour_ptr;
 		vertex polygon_vertex;
+		tpolygon *tpolygon_ptr;
 
-		// Compute the normalised lit colour for all polygon vertices, after
-		// rotating them by the turn angle.  If the turn angle is zero, we skip
-		// that step to save time.
+		// Compute the normalised lit colour for all polygon vertices, after rotating them by the turn angle.
+		// If the turn angle is zero, we skip that step to save time.
 
 		PREPARE_VERTEX_LIST(curr_block_ptr);
 		PREPARE_VERTEX_DEF_LIST(polygon_def_ptr);
 		if (FEQ(turn_angle, 0.0f)) {
-			for (vertex_no = 0; vertex_no < polygon_def_ptr->vertices; 
-				vertex_no++) {
-				polygon_vertex = *VERTEX_PTR(vertex_no) + 
-					curr_block_ptr->translation;
+			for (vertex_no = 0; vertex_no < polygon_def_ptr->vertices; vertex_no++) {
+				polygon_vertex = *VERTEX_PTR(vertex_no) + curr_block_ptr->translation;
 				vertex_colour_ptr = &vertex_colour_list[vertex_no];
-				compute_vertex_colour(curr_block_ptr->active_light_list, 
-					&polygon_vertex, &normal_vector, vertex_colour_ptr);
+				compute_vertex_colour(curr_block_ptr->active_light_list, &polygon_vertex, &normal_vector, vertex_colour_ptr);
 				vertex_colour_ptr->normalise();
 			}
 		} else {
-			for (vertex_no = 0; vertex_no < polygon_def_ptr->vertices; 
-				vertex_no++) {
+			for (vertex_no = 0; vertex_no < polygon_def_ptr->vertices; vertex_no++) {
 				polygon_vertex = *VERTEX_PTR(vertex_no);
 				polygon_vertex -= centre;
 				polygon_vertex.rotate_y(turn_angle);
 				polygon_vertex += block_centre;
 				vertex_colour_ptr = &vertex_colour_list[vertex_no];
-				compute_vertex_colour(curr_block_ptr->active_light_list,
-					&polygon_vertex, &normal_vector, vertex_colour_ptr);
+				compute_vertex_colour(curr_block_ptr->active_light_list, &polygon_vertex, &normal_vector, vertex_colour_ptr);
 				vertex_colour_ptr->normalise();
 			}
 		}
 
-		// If this polygon has no pixmap, blend it's colour with the vertex
-		// colours.
+		// If this polygon has no pixmap, blend it's colour with the vertex colours.
 
 		if (pixmap_ptr == NULL)
-			for (vertex_no = 0; vertex_no < polygon_def_ptr->vertices; 
-				vertex_no++)
+			for (vertex_no = 0; vertex_no < polygon_def_ptr->vertices; vertex_no++)
 				vertex_colour_list[vertex_no].blend(part_ptr->normalised_colour);
+
+		// Create the transformed polygon.
+
+		if (pixmap_ptr != NULL) {
+			tpolygon_ptr = create_transformed_polygon(polygon_def_ptr, pixmap_ptr, part_ptr);
+		}
+
+		// Add the transformed polygon to a list in the pixmap if it has a texture, a special transparent list if it's
+		// translucent or transparent, or a special colour list if it has no texture.
+
+		if (pixmap_ptr != NULL) {
+			if (part_ptr->alpha < 1.0 || pixmap_ptr->transparent_index >= 0) {
+				tpolygon_ptr->next_tpolygon_ptr = transparent_tpolygon_list;
+				transparent_tpolygon_list = tpolygon_ptr;
+			} else {
+				tpolygon_ptr->next_tpolygon_ptr = pixmap_ptr->tpolygon_list;
+				pixmap_ptr->tpolygon_list = tpolygon_ptr;
+			}
+		} else {
+			//tpolygon_ptr->next_tpolygon_ptr = colour_tpolygon_list;
+			//colour_tpolygon_list = tpolygon_ptr;
+		}
 	} 
 	
-	// If hardware acceleration is not enabled, compute the brightness at the
-	// polygon centroid, and compute the colour pixel.
+	// If hardware acceleration is not enabled... 
 
 	else {
+		spoint *left_spoint_ptr, *right_spoint_ptr;
+
+		// Compute the brightness at the polygon centroid, and compute the colour pixel.
+
 		polygon_centroid = polygon_ptr->centroid + block_translation;
 		brightness = compute_vertex_brightness(curr_block_ptr->active_light_list,
 			&polygon_centroid, &normal_vector);
@@ -1382,113 +1459,44 @@ render_polygon(polygon *polygon_ptr, float turn_angle)
 		colour = part_ptr->colour;
 		colour.adjust_brightness(brightness);
 		colour_pixel = RGB_to_display_pixel(colour);
-	}
-			
-	// Compute the size of half a texel in normalised texture units for this
-	// pixmap.  If there is no pixmap, assume a pixmap size of 256x256.
 
-	if (pixmap_ptr != NULL) {
-		half_texel_u = 0.5f / pixmap_ptr->width;
-		half_texel_v = 0.5f / pixmap_ptr->height;
-	} else {
-		half_texel_u = 1.953125e-3;
-		half_texel_v = 1.953125e-3;
-	}
+		// Get a pointer to the next available screen polygon, and make it's screen
+		// point list be the main screen point list.
 
-	// If the polygon intersects the frustum, clip the polygon against the 
-	// viewing plane before projecting it onto the 2D screen, then clip it
-	// against the window.  If there are no screen points left after this
-	// process, the polygon was off-screen and does not need to be rendered.
+		spolygon_ptr = get_next_screen_polygon();
+		main_spoint_list = spolygon_ptr->spoint_list;
+
+		// If the polygon intersects the frustum, clip the polygon against the 
+		// viewing plane before projecting it onto the 2D screen, then clip it
+		// against the window.  If there are no screen points left after this
+		// process, the polygon was off-screen and does not need to be rendered.
 			
-	if (polygon_visibility == INTERSECTS_FRUSTUM) {
-		clip_and_project_3D_polygon(polygon_def_ptr, pixmap_ptr);
-		if (spoints > 0)
-			clip_2D_polygon();
-		if (spoints == 0)
-			return;
-	} 
+		if (polygon_visibility == INTERSECTS_FRUSTUM) {
+			clip_and_project_3D_polygon(polygon_def_ptr, pixmap_ptr);
+			if (spoints > 0)
+				clip_2D_polygon();
+			if (spoints == 0)
+				return;
+		} 
 	
-	// If the polygon is completely inside the frustum, just project it onto
-	// the 2D screen without any clipping.
+		// If the polygon is completely inside the frustum, just project it onto
+		// the 2D screen without any clipping.
 
-	else
-		project_3D_polygon(polygon_def_ptr, pixmap_ptr);
+		else
+			project_3D_polygon(polygon_def_ptr, pixmap_ptr);
 
-	// Remember the number of screen points.
+		// Remember the number of screen points.
 
-	spolygon_ptr->spoints = spoints;
+		spolygon_ptr->spoints = spoints;
 
-	// Scale the texture interpolants in the main screen point list.
+		// Scale the texture interpolants in the main screen point list.
 
-	scale_texture_interpolants(pixmap_ptr, part_ptr->texture_style);
+		scale_texture_interpolants(pixmap_ptr, part_ptr->texture_style);
 
-	// Check whether this polygon is selected by the mouse, and if so 
-	// remember it as the currently selected block, popup block and square,
-	// and exit.  However, if the polygon has a transparent texture or is
-	// translucent, and it doesn't have an exit or any mouse-based triggers,
-	// then ignore it.
+		// Set pixmap pointer and alpha in the screen polygon.
 
-	if (!found_selection && check_for_polygon_selection() &&
-		(((!hardware_acceleration || part_ptr->alpha == 1.0f) &&
-		  (texture_ptr == NULL || !texture_ptr->transparent)) ||
-		 ((curr_block_ptr != NULL &&
-		   ((curr_block_ptr->trigger_flags & MOUSE_TRIGGERS) ||
-			(curr_block_ptr->popup_trigger_flags & MOUSE_TRIGGERS) ||
-			(curr_block_ptr->exit_ptr != NULL &&
-			 (curr_block_ptr->exit_ptr->trigger_flags & MOUSE_TRIGGERS)))) ||
-		  (curr_square_ptr != NULL &&
-		   ((curr_square_ptr->trigger_flags & MOUSE_TRIGGERS) ||
-			(curr_square_ptr->popup_trigger_flags & MOUSE_TRIGGERS) ||
-			(curr_square_ptr->exit_ptr != NULL &&
-			(curr_square_ptr->exit_ptr->trigger_flags & MOUSE_TRIGGERS))))))) {
-		found_selection = true;
-		curr_selected_block_ptr = curr_block_ptr;
-		curr_selected_square_ptr = curr_square_ptr;
-		curr_popup_block_ptr = curr_block_ptr;
-		curr_popup_square_ptr = curr_square_ptr;
-		if (curr_square_ptr != NULL && curr_square_ptr->exit_ptr != NULL)
-			curr_selected_exit_ptr = curr_square_ptr->exit_ptr;
-		else if (curr_block_ptr != NULL)
-			curr_selected_exit_ptr = curr_block_ptr->exit_ptr;
-#ifdef _DEBUG
-		curr_selected_polygon_no = 
-			(polygon_ptr - curr_block_ptr->polygon_list) + 1;
-		curr_selected_block_def_ptr = curr_block_ptr->block_def_ptr;
-#endif
-		//*mp* from the polygon set the part pointer
-		curr_selected_part_ptr = polygon_ptr->polygon_def_ptr->part_ptr;
-	}
-
-	// Set pixmap pointer and alpha in the screen polygon.
-
-	spolygon_ptr->pixmap_ptr = pixmap_ptr;
-	spolygon_ptr->alpha = part_ptr->alpha;
-
-	// If using hardware acceleration, add the screen polygon to a list in
-	// the pixmap if it has a texture, a special transparent list if it's
-	// translucent or transparent, or a special colour list if it has no
-	// texture.
-
-	if (hardware_acceleration) {
-		if (pixmap_ptr != NULL) {
-			if (part_ptr->alpha < 1.0 || pixmap_ptr->transparent_index >= 0) {
-				spolygon_ptr->next_spolygon_ptr2 = transparent_spolygon_list;
-				transparent_spolygon_list = spolygon_ptr;
-			} else {
-				spolygon_ptr->next_spolygon_ptr2 = pixmap_ptr->spolygon_list;
-				pixmap_ptr->spolygon_list = spolygon_ptr;
-			}
-		} else {
-			spolygon_ptr->next_spolygon_ptr2 = colour_spolygon_list;
-			colour_spolygon_list = spolygon_ptr;
-		}
-	}
-
-	// If we're not using hardware acceleration, perform the polygon
-	// rasterisation in software...
-
-	else {
-		spoint *left_spoint_ptr, *right_spoint_ptr;
+		spolygon_ptr->pixmap_ptr = pixmap_ptr;
+		spolygon_ptr->alpha = part_ptr->alpha;
 
 		// Obtain pointers to the screen points representing the bounding box of
 		// the polygon, as well as the last screen point in the list.
@@ -1513,7 +1521,7 @@ render_polygon(polygon *polygon_ptr, float turn_angle)
 		prepare_next_left_edge(sy);
 		right_spoint2_ptr = top_spoint_ptr;
 		prepare_next_right_edge(sy);
-		
+
 		// Add the polygon to the span buffer row by row, recomputing the
 		// slopes of the interpolants as as we pass the next left and right
 		// vertex, until we've reached the bottom vertex or the bottom of
@@ -1548,6 +1556,43 @@ render_polygon(polygon *polygon_ptr, float turn_angle)
 			} else if (!prepare_next_right_edge(sy))
 				break;
 		}
+	}
+
+	// Check whether this polygon is selected by the mouse, and if so 
+	// remember it as the currently selected block, popup block and square,
+	// and exit.  However, if the polygon has a transparent texture or is
+	// translucent, and it doesn't have an exit or any mouse-based triggers,
+	// then ignore it.
+
+	if (!found_selection && check_for_polygon_selection() &&
+		(((!hardware_acceleration || part_ptr->alpha == 1.0f) &&
+		(texture_ptr == NULL || !texture_ptr->transparent)) ||
+			((curr_block_ptr != NULL &&
+			((curr_block_ptr->trigger_flags & MOUSE_TRIGGERS) ||
+				(curr_block_ptr->popup_trigger_flags & MOUSE_TRIGGERS) ||
+				(curr_block_ptr->exit_ptr != NULL &&
+				(curr_block_ptr->exit_ptr->trigger_flags & MOUSE_TRIGGERS)))) ||
+					(curr_square_ptr != NULL &&
+				((curr_square_ptr->trigger_flags & MOUSE_TRIGGERS) ||
+						(curr_square_ptr->popup_trigger_flags & MOUSE_TRIGGERS) ||
+					(curr_square_ptr->exit_ptr != NULL &&
+					(curr_square_ptr->exit_ptr->trigger_flags & MOUSE_TRIGGERS))))))) {
+		found_selection = true;
+		curr_selected_block_ptr = curr_block_ptr;
+		curr_selected_square_ptr = curr_square_ptr;
+		curr_popup_block_ptr = curr_block_ptr;
+		curr_popup_square_ptr = curr_square_ptr;
+		if (curr_square_ptr != NULL && curr_square_ptr->exit_ptr != NULL)
+			curr_selected_exit_ptr = curr_square_ptr->exit_ptr;
+		else if (curr_block_ptr != NULL)
+			curr_selected_exit_ptr = curr_block_ptr->exit_ptr;
+#ifdef _DEBUG
+		curr_selected_polygon_no = 
+			(polygon_ptr - curr_block_ptr->polygon_list) + 1;
+		curr_selected_block_def_ptr = curr_block_ptr->block_def_ptr;
+#endif
+		//*mp* from the polygon set the part pointer
+		curr_selected_part_ptr = polygon_ptr->polygon_def_ptr->part_ptr;
 	}
 }
 
@@ -2492,12 +2537,14 @@ render_orb(void)
 		one_on_dimensions = one_on_dimensions_list[pixmap_ptr->size_index];
 		width_scale = (float)pixmap_ptr->width * one_on_dimensions;
 		height_scale = (float)pixmap_ptr->height * one_on_dimensions;
+		/*
 		hardware_render_2D_polygon(pixmap_ptr, dummy_colour, orb_brightness,
-			curr_orb_x, curr_orb_y, curr_orb_width, curr_orb_height,
+			curr_orb_x, curr_orb_y, visible_radius, curr_orb_width, curr_orb_height,
 			left_offset / orb_width * width_scale, 
 			top_offset / orb_height * height_scale, 
 			(left_offset + curr_orb_width) / orb_width * width_scale, 
-			(top_offset + curr_orb_height) / orb_height * height_scale, false);
+			(top_offset + curr_orb_height) / orb_height * height_scale);
+		*/
 	}
 
 	// If not using hardware acceleration, render the orb as a 2D scaled
@@ -2533,23 +2580,19 @@ render_orb(void)
 static void
 render_textured_polygons(texture *texture_ptr)
 {
-	int pixmap_no;
-	pixmap *pixmap_ptr;
-	spolygon *spolygon_ptr;
-
 	// Step through each pixmap in this texture...
 
-	for (pixmap_no = 0; pixmap_no < texture_ptr->pixmaps; pixmap_no++) {
-		pixmap_ptr = &texture_ptr->pixmap_list[pixmap_no];
+	for (int pixmap_no = 0; pixmap_no < texture_ptr->pixmaps; pixmap_no++) {
+		pixmap *pixmap_ptr = &texture_ptr->pixmap_list[pixmap_no];
 
-		// Render all the screen polygons in the pixmap via hardware.
+		// Render all the transformed polygons in the pixmap via hardware, removing them from the pixmap as we go.
 
-		spolygon_ptr = pixmap_ptr->spolygon_list;
-		while (spolygon_ptr != NULL) {
-			hardware_render_polygon(spolygon_ptr);
-			spolygon_ptr = spolygon_ptr->next_spolygon_ptr2;
+		tpolygon *tpolygon_ptr = pixmap_ptr->tpolygon_list;
+		while (tpolygon_ptr != NULL) {
+			hardware_render_polygon(tpolygon_ptr);
+			tpolygon_ptr = del_tpolygon(tpolygon_ptr);
 		}
-		pixmap_ptr->spolygon_list = NULL;
+		pixmap_ptr->tpolygon_list = NULL;
 	}
 }
 
@@ -2810,15 +2853,16 @@ render_textured_polygons_or_spans(void)
 static void
 render_colour_polygons_or_spans(void)
 {
-	// If using hardware acceleration, render the screen polygons in the solid
-	// colour screen polygon list via hardware.
+	// If using hardware acceleration, render the transformed polygons in the solid colour transformed polygon list via hardware,
+	// removing them from the list in the process.
 
 	if (hardware_acceleration) {
-		spolygon *spolygon_ptr = colour_spolygon_list;
-		while (spolygon_ptr != NULL) {
-			hardware_render_polygon(spolygon_ptr);
-			spolygon_ptr = spolygon_ptr->next_spolygon_ptr2;
+		tpolygon *tpolygon_ptr = colour_tpolygon_list;
+		while (tpolygon_ptr != NULL) {
+			//hardware_render_polygon(tpolygon_ptr);
+			tpolygon_ptr = del_tpolygon(tpolygon_ptr);
 		}
+		colour_tpolygon_list = NULL;
 	}
 
 	// If not using OpenGL or hardware acceleration, render the solid colour
@@ -2852,20 +2896,20 @@ render_colour_polygons_or_spans(void)
 static void
 render_transparent_polygons_or_spans(void)
 {
-	spolygon *spolygon_ptr;
 	int row;
 	span_row *span_row_ptr;
 	span *span_ptr;
 
-	// If using hardware acceleration, render the screen polygons in the
-	// transparent screen polygon list in back to front order, via hardware.
+	// If using hardware acceleration, render the transformed polygons in the transparent transformed polygon list in back to front order,
+	// via hardware, removing them from the list in the process.
 
 	if (hardware_acceleration) {
-		spolygon_ptr = transparent_spolygon_list;
-		while (spolygon_ptr != NULL) {
-			hardware_render_polygon(spolygon_ptr);
-			spolygon_ptr = spolygon_ptr->next_spolygon_ptr2;
+		tpolygon *tpolygon_ptr = transparent_tpolygon_list;
+		while (tpolygon_ptr != NULL) {
+			//hardware_render_polygon(tpolygon_ptr);
+			tpolygon_ptr = del_tpolygon(tpolygon_ptr);
 		}
+		transparent_tpolygon_list = NULL;
 	}
 
 	// If not using hardware acceleration, render the transparent spans from
@@ -2999,11 +3043,11 @@ render_frame(void)
 	else
 		lock_frame_buffer(frame_buffer_ptr, frame_buffer_width);
 
-	// Reset the span and screen polygon lists.
+	// Reset the span and transformed polygon lists.
 
 	colour_span_list = NULL;
-	transparent_spolygon_list = NULL;
-	colour_spolygon_list = NULL;
+	transparent_tpolygon_list = NULL;
+	colour_tpolygon_list = NULL;
 	reset_screen_polygon_list();
 
 #ifdef _DEBUG
@@ -3097,9 +3141,11 @@ render_frame(void)
 
 		// Render the sky polygon.
 
+		/*
 		hardware_render_2D_polygon(sky_pixmap_ptr, sky_colour, sky_brightness,
-			0.0f, 0.0f, (float)window_width, (float)window_height, 
-			sky_start_u, sky_start_v, sky_end_u, sky_end_v, true);
+			0.0f, 0.0f, visible_radius, (float)window_width, (float)window_height, 
+			sky_start_u, sky_start_v, sky_end_u, sky_end_v);
+		*/
 
 		// Render the orb polygon.
 
@@ -3186,7 +3232,7 @@ render_frame(void)
 			sky_right_edge.v_on_tz += sky_delta_v;
 		}
 	}
-	
+
 	// Render all movable blocks.
 	
 	render_movable_blocks();
@@ -3234,14 +3280,6 @@ render_frame(void)
 	render_colour_polygons_or_spans();
 	render_transparent_polygons_or_spans();
 
-	// If hardware acceleration is enabled, end the 3D scene, otherwise unlock
-	// the frame buffer.
-
-	if (hardware_acceleration)
-		end_3D_scene();
-	else
-		unlock_frame_buffer();
-
 	// If hardware acceleration is enabled, render the visible popup list in
 	// back to front order.
 
@@ -3257,6 +3295,14 @@ render_frame(void)
 			popup_ptr = popup_ptr->next_visible_popup_ptr;
 		}
 	}
+
+	// If hardware acceleration is enabled, end the 3D scene, otherwise unlock
+	// the frame buffer.
+
+	if (hardware_acceleration)
+		end_3D_scene();
+	else
+		unlock_frame_buffer();
 
 	// If the viewpoint has changed since the last frame, reset the current
 	// popup block and square, and if there was a previous popup block and/or 

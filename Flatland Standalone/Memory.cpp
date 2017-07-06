@@ -59,6 +59,14 @@ static object object_list[MAX_OBJECTS];
 
 static span *free_span_list;
 
+// Linked list of free transformed vertices.
+
+static tvertex *free_tvertex_list;
+
+// Linked list of free transformed polygons.
+
+static tpolygon *free_tpolygon_list;
+
 // Screen polygon list, the last screen polygon in the list, and the
 // current screen polygon.
 
@@ -383,6 +391,104 @@ del_span(span *span_ptr)
 	span_ptr->next_span_ptr = free_span_list;
 	free_span_list = span_ptr;
 	return(next_span_ptr);
+}
+
+//------------------------------------------------------------------------------
+// Free transformed vertex management.
+//------------------------------------------------------------------------------
+
+// Initialise the free transformed vertex list.
+
+void
+init_free_tvertex_list(void)
+{
+	free_tvertex_list = NULL;
+}
+
+// Delete the free transformed vertex list.
+
+void
+delete_free_tvertex_list(void)
+{
+	while (free_tvertex_list != NULL) {
+		tvertex *next_tvertex_ptr = free_tvertex_list->next_tvertex_ptr;
+		DEL(free_tvertex_list, tvertex);
+		free_tvertex_list = next_tvertex_ptr;
+	}
+}
+
+// Return a pointer the next free transformed vertex, or NULL if we are out of memory.
+
+tvertex *
+new_tvertex(void)
+{
+	tvertex *tvertex_ptr = free_tvertex_list;
+	if (tvertex_ptr != NULL) {
+		free_tvertex_list = tvertex_ptr->next_tvertex_ptr;
+	} else {
+		NEW(tvertex_ptr, tvertex);
+	}
+	return tvertex_ptr;
+}
+
+// Add the transformed vertex to the head of the free transformed vertex list, and return a pointer to the next transformed vertex.
+
+tvertex *
+del_tvertex(tvertex *tvertex_ptr)
+{
+	tvertex *next_tvertex_ptr = tvertex_ptr->next_tvertex_ptr;
+	tvertex_ptr->next_tvertex_ptr = free_tvertex_list;
+	free_tvertex_list = tvertex_ptr;
+	return(next_tvertex_ptr);
+}
+
+//------------------------------------------------------------------------------
+// Free transformed polygon management.
+//------------------------------------------------------------------------------
+
+// Initialise the free transformed polygon list.
+
+void
+init_free_tpolygon_list(void)
+{
+	free_tpolygon_list = NULL;
+}
+
+// Delete the free transformed polygon list.
+
+void
+delete_free_tpolygon_list(void)
+{
+	while (free_tpolygon_list != NULL) {
+		tpolygon *next_tpolygon_ptr = free_tpolygon_list->next_tpolygon_ptr;
+		DEL(free_tpolygon_list, tpolygon);
+		free_tpolygon_list = next_tpolygon_ptr;
+	}
+}
+
+// Return a pointer the next free transformed polygon, or NULL if we are out of memory.
+
+tpolygon *
+new_tpolygon(void)
+{
+	tpolygon *tpolygon_ptr = free_tpolygon_list;
+	if (tpolygon_ptr != NULL) {
+		free_tpolygon_list = tpolygon_ptr->next_tpolygon_ptr;
+	} else {
+		NEW(tpolygon_ptr, tpolygon);
+	}
+	return tpolygon_ptr;
+}
+
+// Add the transformed polygon to the head of the free transformed polygon list, and return a pointer to the next transformed polygon.
+
+tpolygon *
+del_tpolygon(tpolygon *tpolygon_ptr)
+{
+	tpolygon *next_tpolygon_ptr = tpolygon_ptr->next_tpolygon_ptr;
+	tpolygon_ptr->next_tpolygon_ptr = free_tpolygon_list;
+	free_tpolygon_list = tpolygon_ptr;
+	return(next_tpolygon_ptr);
 }
 
 //------------------------------------------------------------------------------

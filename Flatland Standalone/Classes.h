@@ -510,6 +510,7 @@ struct blockref {
 //------------------------------------------------------------------------------
 // Scale entry class - each value is a multiplier
 //------------------------------------------------------------------------------
+
 struct float_triplet {
 	float x, y, z;
 };
@@ -633,6 +634,31 @@ struct circle {
 // Polygon rasterisation classes.
 //==============================================================================
 
+struct pixmap;						// Forward declarations.
+
+//------------------------------------------------------------------------------
+// Transformed vertex class.
+//------------------------------------------------------------------------------
+
+struct tvertex {
+	float x, y, z;
+	float u, v;
+	RGBcolour colour;
+	tvertex *next_tvertex_ptr;
+};
+
+//------------------------------------------------------------------------------
+// Transformed polygon class.
+//------------------------------------------------------------------------------
+
+struct tpolygon {
+	pixmap *pixmap_ptr;				// Pointer to pixmap.
+	int tvertices;					// Number of transformed vertices.
+	tvertex *tvertex_list;			// List of transformed vertices.
+	float alpha;					// Translucency factor.
+	tpolygon *next_tpolygon_ptr;	// Next transformed polygon in list.
+};
+
 //------------------------------------------------------------------------------
 // Screen point class.
 //------------------------------------------------------------------------------
@@ -647,8 +673,6 @@ struct spoint {
 //------------------------------------------------------------------------------
 // Screen polygon class.
 //------------------------------------------------------------------------------
-
-struct pixmap;						// Forward declarations.
 
 struct spolygon {
 	pixmap *pixmap_ptr;				// Pointer to pixmap.
@@ -797,7 +821,7 @@ struct pixmap {
 	int delay_ms;					// Animation delay time in milliseconds.
 	cache_entry *cache_entry_list[BRIGHTNESS_LEVELS];	// Cache entries.
 	span *span_lists[BRIGHTNESS_LEVELS];				// Span lists.
-	spolygon *spolygon_list;		// Screen polygon list.
+	tpolygon *tpolygon_list;		// Transformed polygon list.
 
 #ifdef STREAMING_MEDIA
 	bool image_updated[BRIGHTNESS_LEVELS];				// Image updated list.
@@ -1277,6 +1301,7 @@ struct frame_def {
 //------------------------------------------------------------------------------
 // Animation definition class.
 //------------------------------------------------------------------------------
+
 struct animation_def {
 	int frames;						// number of frames in the animation
 	bool original_frames;			// Whether this is the original block that contains the animation frames
