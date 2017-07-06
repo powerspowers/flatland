@@ -2153,7 +2153,7 @@ render_popup_texture(popup *popup_ptr, pixmap *pixmap_ptr)
 		float u = (float)pixmap_ptr->width * one_on_dimensions;
 		float v = (float)pixmap_ptr->height * one_on_dimensions;
 		hardware_render_2D_polygon(pixmap_ptr, dummy_colour, get_brightness(popup_ptr->brightness_index),
-			popup_ptr->sx, popup_ptr->sy, pixmap_ptr->width, pixmap_ptr->height, 0.0f, 0.0f, u, v);
+			(float)popup_ptr->sx, (float)popup_ptr->sy, (float)pixmap_ptr->width, (float)pixmap_ptr->height, 0.0f, 0.0f, u, v);
 	}
 
 	// If not using hardware acceleration, add the popup image to the span
