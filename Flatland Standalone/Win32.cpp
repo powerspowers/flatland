@@ -1110,6 +1110,7 @@ create_pixmap_for_text(texture *texture_ptr, int width, int height,
 		return(false);
 	pixmap_ptr->image_is_16_bit = false;
 	pixmap_ptr->image_size = width * height;
+	pixmap_ptr->size_index = get_size_index(width, height);
 	NEWARRAY(pixmap_ptr->image_ptr, imagebyte, pixmap_ptr->image_size);
 	if (pixmap_ptr->image_ptr == NULL)
 		return(false);
@@ -1152,6 +1153,8 @@ create_pixmap_for_text(texture *texture_ptr, int width, int height,
 		if (!texture_ptr->create_palette_index_table())
 			return(false);
 	} else {
+		if (!texture_ptr->create_texture_palette_list())
+			return(false);
 		if (!texture_ptr->create_display_palette_list())
 			return(false);
 	}
@@ -1334,32 +1337,6 @@ draw_text_on_pixmap(texture *texture_ptr, char *text, int text_alignment,
 }
 
 //------------------------------------------------------------------------------
-// Draw an icon onto the frame buffer surface at the given x coordinate, and
-// aligned to the bottom of the display.
-//------------------------------------------------------------------------------
-
-static void
-draw_icon(icon *icon_ptr, bool active_icon, int x)
-{
-	int y;
-	texture *texture_ptr;
-	pixmap *pixmap_ptr;
-
-	// Select the correct icon texture.
-
-	if (active_icon)
-		texture_ptr = icon_ptr->texture1_ptr;
-	else
-		texture_ptr = icon_ptr->texture0_ptr;
-
-	// Draw the pixmap.
-
-	pixmap_ptr = texture_ptr->pixmap_list;
-	y = display_height - icon_ptr->height;
-	draw_pixmap(pixmap_ptr, 0, x, y, pixmap_ptr->width, pixmap_ptr->height);
-}
-
-//------------------------------------------------------------------------------
 // Create the label texture.
 //------------------------------------------------------------------------------
 
@@ -1375,7 +1352,7 @@ create_label_texture(void)
 		return(false);
 	bg_colour.set_RGB(0x33, 0x33, 0x33);
 	text_colour.set_RGB(0xff, 0xcc, 0x66);
-	if (!create_pixmap_for_text(label_texture_ptr, display_width,
+	if (!create_pixmap_for_text(label_texture_ptr, max_texture_size,
 		TASK_BAR_HEIGHT, text_colour, &bg_colour)) 
 		return(false);
 
@@ -1421,7 +1398,16 @@ draw_splash_graphic(void)
 
 		// Draw the pixmap at full brightness.
 
-		draw_pixmap(pixmap_ptr, 0, x, y, pixmap_ptr->width, pixmap_ptr->height);
+		if (hardware_acceleration) {
+			RGBcolour dummy_colour;
+			float one_on_dimensions = 1.0f / image_dimensions_list[pixmap_ptr->size_index];
+			float u = (float)pixmap_ptr->width * one_on_dimensions;
+			float v = (float)pixmap_ptr->height * one_on_dimensions;
+			hardware_render_2D_polygon(pixmap_ptr, dummy_colour, 1.0f, (float)x, (float)y, (float)pixmap_ptr->width, (float)pixmap_ptr->height,
+				0.0f, 0.0f, u, v);
+		} else {
+			draw_pixmap(pixmap_ptr, 0, x, y, pixmap_ptr->width, pixmap_ptr->height);
+		}
 	}
 }
 
@@ -1452,13 +1438,22 @@ draw_label(void)
 	else {
 		y = mouse_y - curr_cursor_ptr->hotspot_y + GetSystemMetrics(SM_CYCURSOR);
 		if (y + TASK_BAR_HEIGHT >= window_height)
-				y = mouse_y - curr_cursor_ptr->hotspot_y - TASK_BAR_HEIGHT;
+			y = mouse_y - curr_cursor_ptr->hotspot_y - TASK_BAR_HEIGHT;
 	}
 
 	// Now draw the label pixmap.
 
 	pixmap_ptr = label_texture_ptr->pixmap_list;
-	draw_pixmap(pixmap_ptr, 0, x, y, label_width, pixmap_ptr->height);
+	if (hardware_acceleration) {
+		RGBcolour dummy_colour;
+		float one_on_dimensions = 1.0f / image_dimensions_list[pixmap_ptr->size_index];
+		float u = (float)pixmap_ptr->width * one_on_dimensions;
+		float v = (float)pixmap_ptr->height * one_on_dimensions;
+		hardware_render_2D_polygon(pixmap_ptr, dummy_colour, 1.0f, (float)x, (float)y, (float)pixmap_ptr->width, (float)pixmap_ptr->height,
+			0.0f, 0.0f, u, v);
+	} else {
+		draw_pixmap(pixmap_ptr, 0, x, y, label_width, pixmap_ptr->height);
+	}
 }
 
 //------------------------------------------------------------------------------
@@ -2424,6 +2419,11 @@ start_up_platform_API(void *instance_handle, int show_command, void (*quit_callb
 		failed_to_create("splash image");
 		return(false);
 	}
+
+	// Create the texture palette list for the splash texture.
+
+	if (!splash_texture_ptr->create_texture_palette_list())
+		return(false);
 
 	// Return sucess status.
 
@@ -8311,9 +8311,6 @@ draw_pixmap(pixmap *pixmap_ptr, int brightness_index, int x, int y, int width,
 	pixel transparency_mask32 = 0;
 	int image_width, span_width;
 	fixed u, v;
-
-	if (hardware_acceleration)
-		return;
 
 	// If the pixmap is completely off screen then return without having drawn
 	// anything.
