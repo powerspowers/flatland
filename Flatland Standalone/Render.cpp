@@ -37,6 +37,7 @@ static tpolygon *colour_tpolygon_list;
 static vertex camera_position;
 static int camera_column, camera_row, camera_level;
 static vertex relative_camera_position;
+static vector camera_direction;
 
 // The visiblity of the current block.
 
@@ -319,7 +320,7 @@ transform_vertex(vertex *old_vertex_ptr, vertex *new_vertex_ptr)
 }
 
 //------------------------------------------------------------------------------
-// Transform a vertex by the player orientation.
+// Transform a vector by the player orientation.
 //------------------------------------------------------------------------------
 
 void
@@ -1449,9 +1450,9 @@ render_polygon(polygon *polygon_ptr, float turn_angle)
 			colour_tpolygon_list = tpolygon_ptr;
 		}
 
-		// XXX -- We don't have polygon selection implemented yet.
+		// Determine whether the polygon has been selected by the mouse.
 
-		polygon_selected = false;
+		polygon_selected = mouse_intersects_with_polygon(mouse_x, mouse_y, &camera_direction, tpolygon_ptr);
 	} 
 	
 	// If hardware acceleration is not enabled... 
@@ -3141,7 +3142,7 @@ render_frame(void)
 	sky_end_u = sky_start_u + horz_field_of_view / 15.0f;
 	sky_end_v = sky_start_v + vert_field_of_view / 15.0f;
 
-	// Compute the position of the camera.
+	// Compute the position of the camera in world space.
 
 	camera_position.x = player_camera_offset.dx;
 	camera_position.y = player_camera_offset.dy;
@@ -3149,6 +3150,13 @@ render_frame(void)
 	camera_position.rotate_x(player_viewpoint.look_angle);
 	camera_position.rotate_y(player_viewpoint.turn_angle);
 	camera_position += player_viewpoint.position;
+
+	// Compute the direction of the camera in view space.
+
+	float view_mouse_x = (mouse_x - half_window_width) / half_window_width * half_viewport_width;
+	float view_mouse_y = (half_window_height - mouse_y) / half_window_height * half_viewport_height;
+	camera_direction = vector(view_mouse_x, view_mouse_y, 1.0f);
+	camera_direction.normalise();
 
 	// If using hardware acceleration...
 	

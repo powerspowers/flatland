@@ -448,6 +448,10 @@ render_popup_span24(span *span_ptr);
 void
 render_popup_span32(span *span_ptr);
 
+// Function to determine intersection of the mouse with a polygon.
+
+bool
+mouse_intersects_with_polygon(float mouse_x, float mouse_y, vector *camera_direction_ptr, tpolygon *tpolygon_ptr);
 
 // Hardware rendering functions (called by the player thread only).
 

@@ -33,6 +33,7 @@
 #include <d3d11.h>
 #include <DirectXColors.h>
 #include <DirectXMath.h>
+#include <DirectXCollision.h>
 #include <d3dcompiler.h>
 #include <ddraw.h>
 #include <dsound.h>
@@ -2726,6 +2727,22 @@ start_up_hardware_renderer(void)
 	red_comp_mask = 0xff0000;
 	green_comp_mask = 0x00ff00;
 	blue_comp_mask = 0x0000ff;
+
+	/*
+	vertex camera_start = vertex(0, 0, 0);
+	vertex vertex0 = vertex(0, 2, 2);
+	vertex vertex2 = vertex(2, -2, 2);
+	vertex vertex1 = vertex(-2, -2, 2);
+	float distance;
+
+	ray_intersects_with_polygon(camera_start, vertex(0, 0, 1), vertex0, vertex1, vertex2, distance);
+	ray_intersects_with_polygon(camera_start, vertex(0, 1, 1), vertex0, vertex1, vertex2, distance);
+	ray_intersects_with_polygon(camera_start, vertex(1, -1, 1), vertex0, vertex1, vertex2, distance);
+	ray_intersects_with_polygon(camera_start, vertex(-1, -1, 1), vertex0, vertex1, vertex2, distance);
+
+	ray_intersects_with_polygon(camera_start, vertex(-1, 1, 1), vertex0, vertex1, vertex2, distance);
+	ray_intersects_with_polygon(camera_start, vertex(1, 1, 1), vertex0, vertex1, vertex2, distance);
+	*/
 
 	// Indicate success.
 
@@ -7767,6 +7784,33 @@ render_popup_span32(span *span_ptr)
 	render_linear_span32(pixmap_ptr->image_is_16_bit, image_ptr, fb_ptr,
 		palette_ptr, transparent_index, transparency_mask32, image_width,
 		span_width, u);
+}
+
+//==============================================================================
+// Function to determine intersection of the mouse with a polygon.
+//==============================================================================
+
+bool
+mouse_intersects_with_polygon(float mouse_x, float mouse_y, vector *camera_direction_ptr, tpolygon *tpolygon_ptr)
+{
+	XMVECTOR ray_start = XMVectorSet(0.0f, 0.0f, 0.0f, 0.0f);
+	XMVECTOR ray_direction = XMVectorSet(camera_direction_ptr->dx, camera_direction_ptr->dy, camera_direction_ptr->dz, 0.0f);
+	tvertex *tvertex_ptr = tpolygon_ptr->tvertex_list;
+	XMVECTOR tvertex0 = XMVectorSet(tvertex_ptr->x, tvertex_ptr->y, tvertex_ptr->z, 0.0f);
+	tvertex_ptr = tvertex_ptr->next_tvertex_ptr;
+	XMVECTOR tvertex1 = XMVectorSet(tvertex_ptr->x, tvertex_ptr->y, tvertex_ptr->z, 0.0f);
+	tvertex_ptr = tvertex_ptr->next_tvertex_ptr;
+	while (tvertex_ptr) {
+		XMVECTOR tvertex2 = XMVectorSet(tvertex_ptr->x, tvertex_ptr->y, tvertex_ptr->z, 0.0f);
+		float distance;
+		if (TriangleTests::Intersects(ray_start, ray_direction, tvertex0, tvertex1, tvertex2, distance)) {
+			return true;
+		}
+		tvertex0 = tvertex1;
+		tvertex1 = tvertex2;
+		tvertex_ptr = tvertex_ptr->next_tvertex_ptr;
+	}
+	return false;
 }
 
 //==============================================================================
