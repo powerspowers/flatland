@@ -1448,9 +1448,9 @@ draw_label(void)
 	if (hardware_acceleration) {
 		RGBcolour dummy_colour;
 		float one_on_dimensions = 1.0f / image_dimensions_list[pixmap_ptr->size_index];
-		float u = (float)pixmap_ptr->width * one_on_dimensions;
+		float u = label_width * one_on_dimensions;
 		float v = (float)pixmap_ptr->height * one_on_dimensions;
-		hardware_render_2D_polygon(pixmap_ptr, dummy_colour, 1.0f, (float)x, (float)y, (float)pixmap_ptr->width, (float)pixmap_ptr->height,
+		hardware_render_2D_polygon(pixmap_ptr, dummy_colour, 1.0f, (float)x, (float)y, label_width, (float)pixmap_ptr->height,
 			0.0f, 0.0f, u, v);
 	} else {
 		draw_pixmap(pixmap_ptr, 0, x, y, label_width, pixmap_ptr->height);
