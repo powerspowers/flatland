@@ -263,20 +263,18 @@ rotate_vertex(vertex *old_vertex_ptr, vertex *new_vertex_ptr)
 	// Rotate the vertex around the Y axis by the inverse of the player turn 
 	// angle.
 
-	new_vertex_ptr->x = 
-		old_vertex_ptr->x * cosine.table[player_viewpoint.inv_turn_angle] + 
-		old_vertex_ptr->z * sine.table[player_viewpoint.inv_turn_angle];
-	rz = old_vertex_ptr->z * cosine.table[player_viewpoint.inv_turn_angle] - 
-		old_vertex_ptr->x * sine.table[player_viewpoint.inv_turn_angle];
+	new_vertex_ptr->x = old_vertex_ptr->x * cosf(player_viewpoint.inv_turn_angle_radians) + 
+		old_vertex_ptr->z * sinf(player_viewpoint.inv_turn_angle_radians);
+	rz = old_vertex_ptr->z * cosf(player_viewpoint.inv_turn_angle_radians) - 
+		old_vertex_ptr->x * sinf(player_viewpoint.inv_turn_angle_radians);
 
 	// Rotate the vertex around the X axis by the inverse of the player look
 	// angle.
 
-	new_vertex_ptr->y = 
-		old_vertex_ptr->y * cosine.table[player_viewpoint.inv_look_angle] - 
-		rz * sine.table[player_viewpoint.inv_look_angle];
-	new_vertex_ptr->z = rz * cosine.table[player_viewpoint.inv_look_angle] + 
-		old_vertex_ptr->y * sine.table[player_viewpoint.inv_look_angle];
+	new_vertex_ptr->y = old_vertex_ptr->y * cosf(player_viewpoint.inv_look_angle_radians) - 
+		rz * sinf(player_viewpoint.inv_look_angle_radians);
+	new_vertex_ptr->z = rz * cosf(player_viewpoint.inv_look_angle_radians) + 
+		old_vertex_ptr->y * sinf(player_viewpoint.inv_look_angle_radians);
 }
 
 //------------------------------------------------------------------------------
@@ -296,21 +294,15 @@ transform_vertex(vertex *old_vertex_ptr, vertex *new_vertex_ptr)
 	ty = old_vertex_ptr->y - player_viewpoint.position.y;
 	tz = old_vertex_ptr->z - player_viewpoint.position.z;
 
-	// Rotate the vertex around the Y axis by the inverse of the player 
-	// turn angle.
+	// Rotate the vertex around the Y axis by the inverse of the player turn angle.
 
-	rx = tx * cosine.table[player_viewpoint.inv_turn_angle] + 
-		tz * sine.table[player_viewpoint.inv_turn_angle];
-	rz1 = tz * cosine.table[player_viewpoint.inv_turn_angle] - 
-		tx * sine.table[player_viewpoint.inv_turn_angle];
+	rx = tx * cosf(player_viewpoint.inv_turn_angle_radians) + tz * sinf(player_viewpoint.inv_turn_angle_radians);
+	rz1 = tz * cosf(player_viewpoint.inv_turn_angle_radians) - tx * sinf(player_viewpoint.inv_turn_angle_radians);
 
-	// Rotate the vertex around the X axis by the inverse of the player 
-	// look angle.
+	// Rotate the vertex around the X axis by the inverse of the player look angle.
 
-	ry = ty * cosine.table[player_viewpoint.inv_look_angle] - 
-		rz1 * sine.table[player_viewpoint.inv_look_angle];
-	rz2 = rz1 * cosine.table[player_viewpoint.inv_look_angle] + 
-		ty * sine.table[player_viewpoint.inv_look_angle];
+	ry = ty * cosf(player_viewpoint.inv_look_angle_radians)- rz1 * sinf(player_viewpoint.inv_look_angle_radians);
+	rz2 = rz1 * cosf(player_viewpoint.inv_look_angle_radians) + ty * sinf(player_viewpoint.inv_look_angle_radians);
 
 	// Translate the vertex by the camera offset.
 
@@ -331,20 +323,18 @@ transform_vector(vector *old_vector_ptr, vector *new_vector_ptr)
 	// Rotate the vector around the Y axis by the inverse of the player turn
 	// angle.
 
-	new_vector_ptr->dx = 
-		old_vector_ptr->dx * cosine.table[player_viewpoint.inv_turn_angle] + 
-		old_vector_ptr->dz * sine.table[player_viewpoint.inv_turn_angle];
-	rdz = old_vector_ptr->dz * cosine.table[player_viewpoint.inv_turn_angle] - 
-		old_vector_ptr->dx * sine.table[player_viewpoint.inv_turn_angle];
+	new_vector_ptr->dx = old_vector_ptr->dx * cosf(player_viewpoint.inv_turn_angle_radians) + 
+		old_vector_ptr->dz * sinf(player_viewpoint.inv_turn_angle_radians);
+	rdz = old_vector_ptr->dz * cosf(player_viewpoint.inv_turn_angle_radians) - 
+		old_vector_ptr->dx * sinf(player_viewpoint.inv_turn_angle_radians);
 
 	// Rotate the vertex around the X axis by the inverse of the player look
 	// angle.
 
-	new_vector_ptr->dy = 
-		old_vector_ptr->dy * cosine.table[player_viewpoint.inv_look_angle] - 
-		rdz * sine.table[player_viewpoint.inv_look_angle];
-	new_vector_ptr->dz = rdz * cosine.table[player_viewpoint.inv_look_angle] + 
-		old_vector_ptr->dy * sine.table[player_viewpoint.inv_look_angle];
+	new_vector_ptr->dy = old_vector_ptr->dy * cosf(player_viewpoint.inv_look_angle_radians) - 
+		rdz * sinf(player_viewpoint.inv_look_angle_radians);
+	new_vector_ptr->dz = rdz * cosf(player_viewpoint.inv_look_angle_radians) + 
+		old_vector_ptr->dy * sinf(player_viewpoint.inv_look_angle_radians);
 }
 
 //------------------------------------------------------------------------------
@@ -1452,7 +1442,7 @@ render_polygon(polygon *polygon_ptr, float turn_angle)
 
 		// Determine whether the polygon has been selected by the mouse.
 
-		polygon_selected = mouse_intersects_with_polygon(mouse_x, mouse_y, &camera_direction, tpolygon_ptr);
+		polygon_selected = mouse_intersects_with_polygon((float)mouse_x, (float)mouse_y, &camera_direction, tpolygon_ptr);
 	} 
 	
 	// If hardware acceleration is not enabled... 

@@ -597,7 +597,8 @@ struct viewpoint {
 	vertex position;
 	vertex last_position;
 	float turn_angle, look_angle;
-	int inv_turn_angle, inv_look_angle;
+	float turn_angle_radians, look_angle_radians;
+	float inv_turn_angle_radians, inv_look_angle_radians;
 };
 
 //------------------------------------------------------------------------------
@@ -1552,32 +1553,4 @@ struct world {
 	block *get_block_ptr(int column, int row, int level);
 	void get_square_location(square *square_ptr, int *column_ptr, int *row_ptr,
 		int *level_ptr);
-};
-
-//==============================================================================
-// Trigonometry classes.
-//==============================================================================
-
-//------------------------------------------------------------------------------
-// Sine table class.
-//------------------------------------------------------------------------------
-
-struct sine_table {
-	float table[361];
-
-	sine_table();
-	~sine_table();
-	float operator[](float angle);
-};
-
-//------------------------------------------------------------------------------
-// Cosine table class.
-//------------------------------------------------------------------------------
-
-struct cosine_table {
-	float table[361];
-
-	cosine_table();
-	~cosine_table();
-	float operator[](float angle);
 };

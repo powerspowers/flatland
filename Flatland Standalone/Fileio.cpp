@@ -549,16 +549,13 @@ compute_texture_coordinates(polygon_def *polygon_def_ptr,
 static void
 rotate_texture_coordinates(polygon_def *polygon_def_ptr, float texture_angle)
 {
-	for (int vertex_no = 0; vertex_no < polygon_def_ptr->vertices; 
-		vertex_no++) {
-		vertex_def *vertex_def_ptr;
-		float tu, tv, ru, rv;
-
-		vertex_def_ptr = &polygon_def_ptr->vertex_def_list[vertex_no];
-		tu = vertex_def_ptr->u - 0.5f;
-		tv = vertex_def_ptr->v - 0.5f;
-		ru = tu * cosine[texture_angle] + tv * sine[texture_angle];
-		rv = tv * cosine[texture_angle] - tu * sine[texture_angle];
+	float texture_angle_radians = RAD(texture_angle);
+	for (int vertex_no = 0; vertex_no < polygon_def_ptr->vertices; vertex_no++) {
+		vertex_def *vertex_def_ptr = &polygon_def_ptr->vertex_def_list[vertex_no];
+		float tu = vertex_def_ptr->u - 0.5f;
+		float tv = vertex_def_ptr->v - 0.5f;
+		float ru = tu * cosf(texture_angle_radians) + tv * sinf(texture_angle_radians);
+		float rv = tv * cosf(texture_angle_radians) - tu * sinf(texture_angle_radians);
 		vertex_def_ptr->u = ru + 0.5f;
 		vertex_def_ptr->v = rv + 0.5f;
 	}

@@ -875,10 +875,9 @@ vertex::operator !=(vertex A)
 void 
 vertex::rotate_x(float angle)
 {
-	float temp_y;
-
-	temp_y = y * cosine[angle] - z * sine[angle];
-	z = z * cosine[angle] + y * sine[angle];
+	float angle_radians = RAD(angle);
+	float temp_y = y * cosf(angle_radians) - z * sinf(angle_radians);
+	z = z * cosf(angle_radians) + y * sinf(angle_radians);
 	y = temp_y;
 }
 
@@ -887,10 +886,9 @@ vertex::rotate_x(float angle)
 void
 vertex::rotate_y(float angle)
 {
-	float temp_x;
-
-	temp_x = x * cosine[angle] + z * sine[angle];
-	z = z * cosine[angle] - x * sine[angle];
+	float angle_radians = RAD(angle);
+	float temp_x = x * cosf(angle_radians) + z * sinf(angle_radians);
+	z = z * cosf(angle_radians) - x * sinf(angle_radians);
 	x = temp_x;
 }
 
@@ -899,10 +897,9 @@ vertex::rotate_y(float angle)
 void
 vertex::rotate_z(float angle)
 {
-	float temp_x;
-
-	temp_x = x * cosine[angle] - y * sine[angle];
-	y = y * cosine[angle] + x * sine[angle];
+	float angle_radians = RAD(angle);
+	float temp_x = x * cosf(angle_radians) - y * sinf(angle_radians);
+	y = y * cosf(angle_radians) + x * sinf(angle_radians);
 	x = temp_x;
 }
 
@@ -1054,10 +1051,9 @@ vector::length(void)
 void 
 vector::rotate_x(float look_angle)
 {
-	float temp_dy;
-
-	temp_dy = dy * cosine[look_angle] - dz * sine[look_angle];
-	dz = dz * cosine[look_angle] + dy * sine[look_angle];
+	float look_angle_radians = RAD(look_angle);
+	float temp_dy = dy * cosf(look_angle_radians) - dz * sinf(look_angle_radians);
+	dz = dz * cosf(look_angle_radians) + dy * sinf(look_angle_radians);
 	dy = temp_dy;
 }
 
@@ -1066,10 +1062,9 @@ vector::rotate_x(float look_angle)
 void
 vector::rotate_y(float turn_angle)
 {
-	float temp_dx;
-
-	temp_dx = dx * cosine[turn_angle] + dz * sine[turn_angle];
-	dz = dz * cosine[turn_angle] - dx * sine[turn_angle];
+	float turn_angle_radians = RAD(turn_angle);
+	float temp_dx = dx * cosf(turn_angle_radians) + dz * sinf(turn_angle_radians);
+	dz = dz * cosf(turn_angle_radians) - dx * sinf(turn_angle_radians);
 	dx = temp_dx;
 }
 
@@ -1833,7 +1828,7 @@ light::set_radius(float light_radius)
 void
 light::set_cone_angle(float light_cone_angle)
 {
-	cos_cone_angle = cosine[light_cone_angle];
+	cos_cone_angle = cosf(RAD(light_cone_angle));
 	cone_angle_M = 1.0f / (1.0f - cos_cone_angle);
 }
 
@@ -4089,76 +4084,4 @@ world::get_square_location(square *square_ptr, int *column_ptr, int *row_ptr,
 	*row_ptr = offset / columns;
 	offset = offset % columns;
 	*column_ptr = offset;
-}
-
-//==============================================================================
-// Trigonometry classes.
-//==============================================================================
-
-//------------------------------------------------------------------------------
-// Sine table class.
-//------------------------------------------------------------------------------
-
-// Default constructor creates the sine table for angles 0-359.
-
-sine_table::sine_table()
-{
-	int index;
-	float angle;
-
-	for (index = 0, angle = 0.0; index <= 360; index++, angle += 1.0)
-		table[index] = (float)sin(RAD(angle));
-}
-
-// Default destructor does nothing.
-
-sine_table::~sine_table()
-{
-}
-
-// Operator [] returns the sine of an angle.
-
-float
-sine_table::operator[](float angle)
-{
-	int index;
-
-	index = (int)angle % 360;
-	if (index < 0)
-		index += 360;
-	return(table[index]);
-}
-
-//------------------------------------------------------------------------------
-// Cosine table class.
-//------------------------------------------------------------------------------
-
-// Default constructor creates the cosine table for angles 0-359.
-
-cosine_table::cosine_table()
-{
-	int index;
-	float angle;
-
-	for (index = 0, angle = 0.0; index <= 360; index++, angle += 1.0)
-		table[index] = (float)cos(RAD(angle));
-}
-
-// Default destructor does nothing.
-
-cosine_table::~cosine_table()
-{
-}
-
-// Operator [] returns the cosine of an angle.
-
-float
-cosine_table::operator[](float angle)
-{
-	int index;
-	
-	index = (int)angle % 360;
-	if (index < 0)
-		index += 360;
-	return(table[index]);
 }

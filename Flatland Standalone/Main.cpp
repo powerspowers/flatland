@@ -105,11 +105,6 @@ unsigned int min_rover_version;
 
 string spot_title;
 
-// Trigonometry tables.
-
-sine_table sine;
-cosine_table cosine;
-
 // Visible radius, and frustum vertex list (in view space).
 
 float visible_radius;
@@ -3187,43 +3182,37 @@ render_next_frame(void)
 		}
 	}
 
-	// Set the trajectory based upon the move delta, side delta, and the turn
-	// angle.
+	// Set the trajectory based upon the move delta, side delta, and the turn angle.
 
-	trajectory.dx = move_delta * sine[player_viewpoint.turn_angle] +
-		side_delta * sine[player_viewpoint.turn_angle + 90.0f];
+	trajectory.dx = move_delta * sinf(RAD(player_viewpoint.turn_angle)) +
+		side_delta * sinf(RAD(player_viewpoint.turn_angle + 90.0f));
 	trajectory.dy = 0.0f;
-	trajectory.dz = move_delta * cosine[player_viewpoint.turn_angle] +
-		side_delta * cosine[player_viewpoint.turn_angle + 90.0f];
+	trajectory.dz = move_delta * cosf(RAD(player_viewpoint.turn_angle)) +
+		side_delta * cosf(RAD(player_viewpoint.turn_angle + 90.0f));
 
-	// Adjust the trajectory to take in account collisions, then move the
-	// player along this trajectory.
+	// Adjust the trajectory to take in account collisions, then move the player along this trajectory.
 
 	do {
-		new_trajectory = adjust_trajectory(trajectory, elapsed_time, 
-			player_falling);
-		player_viewpoint.position = player_viewpoint.position + 
-			new_trajectory;
+		new_trajectory = adjust_trajectory(trajectory, elapsed_time, player_falling);
+		player_viewpoint.position = player_viewpoint.position + new_trajectory;
 	} while (FNE(trajectory.dx, 0.0f) || FNE(trajectory.dz, 0.0f));
 
 	// If the new trajectory is zero, adjust the look angle by the look delta.
 
 	if (!new_trajectory) {
-		player_viewpoint.look_angle = 
-			neg_adjust_angle(player_viewpoint.look_angle + look_delta);
+		player_viewpoint.look_angle = neg_adjust_angle(player_viewpoint.look_angle + look_delta);
 		if (FGT(player_viewpoint.look_angle, 90.0f))
 			player_viewpoint.look_angle = 90.0f;
 		else if (FLT(player_viewpoint.look_angle, -90.0f))
 			player_viewpoint.look_angle = -90.0f;
 	}
-	
-	// Compute the inverse of the player turn and look angles, and convert them
-	// to positive integers.
 
-	player_viewpoint.inv_turn_angle = 
-		(int)(360.0f - player_viewpoint.turn_angle);
-	player_viewpoint.inv_look_angle = 
-		(int)(360.0f - pos_adjust_angle(player_viewpoint.look_angle));
+	// Compute the normal and inverse of the player turn and look angles, in radians.
+
+	player_viewpoint.turn_angle_radians = RAD(player_viewpoint.turn_angle);
+	player_viewpoint.look_angle_radians = RAD(player_viewpoint.look_angle);
+	player_viewpoint.inv_turn_angle_radians = RAD(360.0f - player_viewpoint.turn_angle);
+	player_viewpoint.inv_look_angle_radians = RAD(360.0f - pos_adjust_angle(player_viewpoint.look_angle));
 
 	// Set the trajectory tilted flag.  The trajectory is tilted if there is a
 	// Y component to the trajectory in addition to an X or Z component.
@@ -4044,10 +4033,8 @@ take_snapshot(void)
 
 		// Calculate the inverse turn and look angles.
 
-		player_viewpoint.inv_turn_angle = (int)(360.0f - 
-			player_viewpoint.turn_angle);
-		player_viewpoint.inv_look_angle = (int)(360.0f - 
-			player_viewpoint.look_angle);
+		player_viewpoint.inv_turn_angle_radians = RAD(360.0f - player_viewpoint.turn_angle);
+		player_viewpoint.inv_look_angle_radians = RAD(360.0f - player_viewpoint.look_angle);
 
 		// Use a horizontal and vertical field of view that is wide enough
 		// to encompass the entire spot.

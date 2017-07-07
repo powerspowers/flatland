@@ -73,11 +73,6 @@ extern unsigned int min_rover_version;
 
 extern string spot_title;
 
-// Trigonometry tables.
-
-extern sine_table sine;
-extern cosine_table cosine;
-
 // Visible radius, and frustum vertex list (in view space).
 
 extern float visible_radius;
