@@ -3306,11 +3306,6 @@ blockset::~blockset()
 		block_def_list = next_block_def_ptr;
 	}
 
-	// Delete the placeholder texture, if it exists.
-
-	if (placeholder_texture_ptr != NULL)
-		DEL(placeholder_texture_ptr, texture);
-
 	// Delete the texture list.
 
 	while (first_texture_ptr != NULL) {
@@ -3482,9 +3477,9 @@ block_def::rotate_z(float angle)
 void
 blockset::add_texture(texture *texture_ptr)
 {
-	if (last_texture_ptr != NULL)
+	if (last_texture_ptr != NULL) {
 		last_texture_ptr->next_texture_ptr = texture_ptr;
-	else
+	} else
 		first_texture_ptr = texture_ptr;
 	last_texture_ptr = texture_ptr;
 }
