@@ -399,7 +399,7 @@ void
 unlock_frame_buffer(void);
 
 bool
-display_frame_buffer(bool show_splash_graphic);
+display_frame_buffer(void);
 
 void
 clear_frame_buffer(int x, int y, int width, int height);
@@ -456,9 +456,7 @@ mouse_intersects_with_polygon(float mouse_x, float mouse_y, vector *camera_direc
 // Hardware rendering functions (called by the player thread only).
 
 void
-hardware_set_projection_transform(float horz_field_of_view,
-								  float vert_field_of_view,
-								  float near_z, float far_z);
+hardware_set_projection_transform(float viewport_width, float viewport_height, float near_z, float far_z);
 
 void
 hardware_enable_fog(void);

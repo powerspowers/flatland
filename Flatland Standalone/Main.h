@@ -23,6 +23,8 @@ extern float horz_field_of_view;
 extern float vert_field_of_view;
 extern float horz_scaling_factor;
 extern float vert_scaling_factor;
+extern float viewport_width;
+extern float viewport_height;
 extern float half_viewport_width;
 extern float half_viewport_height;
 extern float horz_pixels_per_degree;

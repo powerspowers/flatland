@@ -1442,7 +1442,7 @@ render_polygon(polygon *polygon_ptr, float turn_angle)
 
 		// Determine whether the polygon has been selected by the mouse.
 
-		polygon_selected = mouse_intersects_with_polygon((float)mouse_x, (float)mouse_y, &camera_direction, tpolygon_ptr);
+		polygon_selected = !found_selection && mouse_intersects_with_polygon((float)mouse_x, (float)mouse_y, &camera_direction, tpolygon_ptr);
 	} 
 	
 	// If hardware acceleration is not enabled... 
@@ -1559,7 +1559,7 @@ render_polygon(polygon *polygon_ptr, float turn_angle)
 
 		// Determine whether this polygon is selected.
 
-		polygon_selected = check_for_polygon_selection();
+		polygon_selected = !found_selection && check_for_polygon_selection();
 	}
 
 	// Check whether this polygon is selected by the mouse, and if so 

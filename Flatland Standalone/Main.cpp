@@ -62,6 +62,8 @@ float vert_field_of_view;
 float horz_scaling_factor;
 float vert_scaling_factor;
 float aspect_ratio;
+float viewport_width;
+float viewport_height;
 float half_viewport_width;
 float half_viewport_height;
 float horz_pixels_per_degree;
@@ -3151,8 +3153,7 @@ render_next_frame(void)
 		set_clipping_plane(FAR_CLIPPING_PLANE, visible_radius);
 		compute_frustum_plane_equations();
 		if (hardware_acceleration) {
-			hardware_set_projection_transform(horz_field_of_view, 
-				vert_field_of_view, 1.0f, visible_radius);
+			hardware_set_projection_transform(viewport_width, viewport_height, 1.0f, visible_radius);
 			if (global_fog_enabled)
 				hardware_update_fog_settings(&global_fog);
 		}
@@ -3237,7 +3238,7 @@ render_next_frame(void)
 	player_viewpoint.position.y += player_dimensions.y;
 	render_frame();
 	player_viewpoint.position.y -= player_dimensions.y;
-	display_frame_buffer(false);
+	display_frame_buffer();
 	frames_rendered++;
 
 #ifdef SIMKIN
@@ -3726,10 +3727,12 @@ set_viewport(void)
 	half_horz_field_of_view = horz_field_of_view * 0.5f;
 	half_vert_field_of_view = vert_field_of_view * 0.5f;
 
-	// Compute half the viewport dimensions.
+	// Compute the viewport dimensions.
 
 	half_viewport_width = (float)tan(RAD(half_horz_field_of_view));
 	half_viewport_height = (float)tan(RAD(half_vert_field_of_view));
+	viewport_width = half_viewport_width * 2.0f;
+	viewport_height = half_viewport_height * 2.0f;
 
 	// Compute the horizontal and vertical scaling factors.
 
@@ -3749,8 +3752,7 @@ set_viewport(void)
 	set_clipping_plane(FAR_CLIPPING_PLANE, visible_radius);
 	compute_frustum_plane_equations();
 	if (hardware_acceleration)
-		hardware_set_projection_transform(horz_field_of_view, 
-			vert_field_of_view, 1.0f, visible_radius);
+		hardware_set_projection_transform(viewport_width, viewport_height, 1.0f, visible_radius);
 }
 
 //------------------------------------------------------------------------------
@@ -3922,7 +3924,7 @@ refresh_player_window(void)
 					return(false);
 				}
 				clear_frame_buffer(0, 0, window_width, window_height);
-				display_frame_buffer(!spot_loaded.get());
+				display_frame_buffer();
 			}
 		}
 	}

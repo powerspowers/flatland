@@ -539,11 +539,6 @@ static unsigned long streaming_thread_handle;
 
 #endif // STREAMING MEDIA
 
-// Splash graphic as a texture and as a bitmap.
-
-static texture *splash_texture_ptr;
-static bitmap *splash_bitmap_ptr;
-
 // App window data.
 
 static HINSTANCE app_instance_handle;
@@ -629,10 +624,6 @@ typedef void (*inactive_callback)(void *window_data_ptr);
 
 #define HANDLE_KEYUP_MSG(window_handle, message, fn) \
     (fn)((window_handle), (UINT)(wParam), FALSE, FALSE, (UINT)HIWORD(lParam))
-
-// Splash graphic flag.
-
-static bool splash_graphic_enabled;
 
 // Virtual key to key code table.
 
@@ -1374,45 +1365,6 @@ destroy_label_texture(void)
 }
 
 //------------------------------------------------------------------------------
-// Draw the splash graphic.
-//------------------------------------------------------------------------------
-
-static void
-draw_splash_graphic(void)
-{
-	// Draw the splash graphic if it exists and it's smaller than the 3D window.
-
-	if (splash_texture_ptr && 
-		splash_texture_ptr->width <= window_width &&
-		splash_texture_ptr->height <= window_height) {
-		pixmap *pixmap_ptr;
-		int x, y;
-
-		// Draw the first pixmap of the splash graphic.
-
-		pixmap_ptr = &splash_texture_ptr->pixmap_list[0];
-
-		// Center the pixmap in the window.
-
-		x = (window_width - splash_texture_ptr->width) / 2;
-		y = (window_height - splash_texture_ptr->height) / 2;
-
-		// Draw the pixmap at full brightness.
-
-		if (hardware_acceleration) {
-			RGBcolour dummy_colour;
-			float one_on_dimensions = 1.0f / image_dimensions_list[pixmap_ptr->size_index];
-			float u = (float)pixmap_ptr->width * one_on_dimensions;
-			float v = (float)pixmap_ptr->height * one_on_dimensions;
-			hardware_render_2D_polygon(pixmap_ptr, dummy_colour, 1.0f, (float)x, (float)y, (float)pixmap_ptr->width, (float)pixmap_ptr->height,
-				0.0f, 0.0f, u, v);
-		} else {
-			draw_pixmap(pixmap_ptr, 0, x, y, pixmap_ptr->width, pixmap_ptr->height);
-		}
-	}
-}
-
-//------------------------------------------------------------------------------
 // Draw a label.
 //------------------------------------------------------------------------------
 
@@ -1448,9 +1400,9 @@ draw_label(void)
 	if (hardware_acceleration) {
 		RGBcolour dummy_colour;
 		float one_on_dimensions = 1.0f / image_dimensions_list[pixmap_ptr->size_index];
-		float u = label_width * one_on_dimensions;
+		float u = (float)label_width * one_on_dimensions;
 		float v = (float)pixmap_ptr->height * one_on_dimensions;
-		hardware_render_2D_polygon(pixmap_ptr, dummy_colour, 1.0f, (float)x, (float)y, label_width, (float)pixmap_ptr->height,
+		hardware_render_2D_polygon(pixmap_ptr, dummy_colour, 1.0f, (float)x, (float)y, (float)label_width, (float)pixmap_ptr->height,
 			0.0f, 0.0f, u, v);
 	} else {
 		draw_pixmap(pixmap_ptr, 0, x, y, label_width, pixmap_ptr->height);
@@ -1933,60 +1885,6 @@ lower_semaphore(void *semaphore_handle)
 // Plugin window functions.
 //==============================================================================
 
-//------------------------------------------------------------------------------
-// Paint splash graphic and window text on the given window.
-//------------------------------------------------------------------------------
-
-static void
-paint_splash_graphic(HWND window_handle, HDC hdc, int window_width,
-					 int window_height, const char *window_text)
-{
-	// Draw the splash graphic if it exists and is smaller than the window
-	// and there is enough room for the window text.
-
-	if (splash_bitmap_ptr && 
-		splash_bitmap_ptr->width <= window_width &&
-		splash_bitmap_ptr->height <= window_height - TASK_BAR_HEIGHT) {
-		HDC splash_hdc;
-		HBITMAP old_bitmap_handle;
-		int x, y;
-		RECT rect;
-
-		// Determine the position to draw the splash graphic so that it's
-		// centered in the window.
-
-		x = (window_width - splash_bitmap_ptr->width) / 2;
-		y = (window_height - TASK_BAR_HEIGHT - splash_bitmap_ptr->height) / 2;
-
-		// Create a device context for the splash graphic.
-
-		splash_hdc = CreateCompatibleDC(hdc);
-		old_bitmap_handle = SelectBitmap(splash_hdc, splash_bitmap_ptr->handle);
-
-		// Copy the splash bitmap onto the window.
-
-		BitBlt(hdc, x, y, splash_bitmap_ptr->width, 
-			splash_bitmap_ptr->height, splash_hdc, 0, 0, SRCCOPY);
-
-		// Select the default bitmap into the device context before
-		// deleting it.
-
-		SelectBitmap(splash_hdc, old_bitmap_handle);
-		DeleteDC(splash_hdc);
-
-		// Draw the window text centered below the splash graphic.
-
-		rect.left = 0;
-		rect.top = y + splash_bitmap_ptr->height;
-		rect.right = window_width;
-		rect.bottom = rect.top + TASK_BAR_HEIGHT;
-		SetBkMode(hdc, TRANSPARENT);
-		SetTextColor(hdc, RGB(0xff, 0xcc, 0x66));
-		DrawText(hdc, window_text, strlen(window_text), &rect, 
-			DT_CENTER | DT_VCENTER | DT_SINGLELINE | DT_NOPREFIX);
-	}
-}
-
 #ifdef SYMBOLIC_DEBUG
 
 //------------------------------------------------------------------------------
@@ -2286,8 +2184,6 @@ start_up_platform_API(void *instance_handle, int show_command, void (*quit_callb
 
 	app_instance_handle = (HINSTANCE)instance_handle;
 	quit_callback_ptr = quit_callback;
-	splash_texture_ptr = NULL;
-	splash_bitmap_ptr = NULL;
 
 	// Initialise the common control DLL.
 
@@ -2415,19 +2311,6 @@ start_up_platform_API(void *instance_handle, int show_command, void (*quit_callb
 	ShowWindow(app_window_handle, show_command);
 	UpdateWindow(app_window_handle);
 
-	// Load the splash graphic GIF resource as a texture and bitmap.
-
-	if ((splash_texture_ptr = load_GIF_resource(IDR_SPLASH)) == NULL ||
-		(splash_bitmap_ptr = texture_to_bitmap(splash_texture_ptr)) == NULL) {
-		failed_to_create("splash image");
-		return(false);
-	}
-
-	// Create the texture palette list for the splash texture.
-
-	if (!splash_texture_ptr->create_texture_palette_list())
-		return(false);
-
 	// Return sucess status.
 
 	return(true);
@@ -2440,13 +2323,6 @@ start_up_platform_API(void *instance_handle, int show_command, void (*quit_callb
 void
 shut_down_platform_API(void)
 {
-	// Delete the splash graphic texture and bitmap.
-
-	if (splash_texture_ptr != NULL)
-		DEL(splash_texture_ptr, texture);
-	if (splash_bitmap_ptr != NULL)
-		DEL(splash_bitmap_ptr, bitmap);
-
 	// Unregister the main window class.
 
 	if (app_instance_handle != NULL)
@@ -2552,7 +2428,7 @@ start_up_hardware_renderer(void)
 	ZeroMemory(&depth_stencil_desc, sizeof(depth_stencil_desc));
 	depth_stencil_desc.DepthEnable = TRUE;
 	depth_stencil_desc.DepthWriteMask = D3D11_DEPTH_WRITE_MASK_ALL;
-	depth_stencil_desc.DepthFunc = D3D11_COMPARISON_LESS_EQUAL;
+	depth_stencil_desc.DepthFunc = D3D11_COMPARISON_LESS;
 	depth_stencil_desc.StencilEnable = FALSE;
 	if (FAILED(d3d_device_ptr->CreateDepthStencilState(&depth_stencil_desc, &d3d_3D_depth_stencil_state_ptr))) {
 		return false;
@@ -3086,16 +2962,10 @@ handle_main_window_event(HWND window_handle, UINT message, WPARAM wParam,
 void
 set_main_window_size(int width, int height)
 {
-	// Remember the new window size.
-
 	display_width = width;
 	display_height = height;
 	window_width = width;
 	window_height = height;
-	if (width < 320 || height < 240)
-		splash_graphic_enabled = false;
-	else
-		splash_graphic_enabled = true;
 }
 
 //------------------------------------------------------------------------------
@@ -3360,17 +3230,6 @@ create_main_window(void (*key_callback)(byte key_code, bool key_down),
 	if (!create_light_tables()) {
 		failed_to_create("light tables");
 		return(false);
-	}
-
-	// Create the palette index table or initialise the display palette list for
-	// the splash graphic textures.
-
-	if (display_depth == 8) {
-		if (splash_texture_ptr != NULL)
-			splash_texture_ptr->create_palette_index_table();
-	} else {
-		if (splash_texture_ptr != NULL)
-			splash_texture_ptr->create_display_palette_list();
 	}
 
 	// Create the label texture.
@@ -5113,7 +4972,7 @@ unlock_frame_buffer(void)
 //------------------------------------------------------------------------------
 
 bool
-display_frame_buffer(bool show_splash_graphic)
+display_frame_buffer(void)
 {
 	// If a spot is loaded, hardware acceleration is not enabled, and the
 	// display depth is 8, dither the contents of the 16-bit frame buffer into
@@ -5176,11 +5035,6 @@ display_frame_buffer(bool show_splash_graphic)
 		if (ddraw_framebuffer_surface_ptr->Unlock(fb_ptr) != DD_OK)
 			return(false);
 	}
-
-	// Draw the splash graphic if it's requested and it's enabled.
-
-	if (show_splash_graphic && splash_graphic_enabled)
-		draw_splash_graphic();
 
 	// Draw the label if it's visible.
 
@@ -7822,11 +7676,9 @@ mouse_intersects_with_polygon(float mouse_x, float mouse_y, vector *camera_direc
 //------------------------------------------------------------------------------
 
 void
-hardware_set_projection_transform(float horz_field_of_view,
-								  float vert_field_of_view,
-								  float near_z, float far_z)
+hardware_set_projection_transform(float viewport_width, float viewport_height, float near_z, float far_z)
 {
-	d3d_projection_matrix = XMMatrixPerspectiveFovLH(RAD(vert_field_of_view), horz_field_of_view / vert_field_of_view, near_z, far_z);
+	d3d_projection_matrix = XMMatrixPerspectiveLH(viewport_width, viewport_height, near_z, far_z);
 	hardware_constant_buffer constant_buffer;
 	constant_buffer.projection = XMMatrixTranspose(d3d_projection_matrix);
 	d3d_device_context_ptr->UpdateSubresource(d3d_constant_buffer_ptr, 0, nullptr, &constant_buffer, 0, 0);
