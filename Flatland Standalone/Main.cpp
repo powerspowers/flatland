@@ -1125,12 +1125,10 @@ start_up_spot(void)
 	displayed_error_log_file = false;
 	initiate_first_download();
 
-	// If hardware acceleration and global fog is enabled, then update the fog
-	// settings for the first time and enable fog.
+	// If hardware acceleration is enabled, then update the fog settings for the first time.
 
-	if (hardware_acceleration && global_fog_enabled) {
-		hardware_enable_fog();
-		hardware_update_fog_settings(&global_fog);
+	if (hardware_acceleration) {
+		hardware_update_fog_settings(global_fog_enabled, &global_fog);
 	}
 
 #if STREAMING_MEDIA
@@ -1224,12 +1222,6 @@ shut_down_spot(void)
 	}
 
 #endif
-
-	// If hardware acceleration and global fog is enabled, then disable
-	// fog.
-
-	if (hardware_acceleration && global_fog_enabled)
-		hardware_disable_fog();
 
 	// Delete map.
 
@@ -3145,8 +3137,7 @@ render_next_frame(void)
 
 	// If the visible radius has changed, compute the vertices of the frustum
 	// in view space, and generate the plane equations from these.  Also set
-	// the projection transform and update fog settings, if necessary, if
-	// hardware acceleration is enabled.
+	// the projection transform and update fog settings, if hardware acceleration is enabled.
 
 	if (visible_radius != old_visible_radius) {
 		set_clipping_plane(NEAR_CLIPPING_PLANE, 1.0f);
@@ -3154,8 +3145,7 @@ render_next_frame(void)
 		compute_frustum_plane_equations();
 		if (hardware_acceleration) {
 			hardware_set_projection_transform(viewport_width, viewport_height, 1.0f, visible_radius);
-			if (global_fog_enabled)
-				hardware_update_fog_settings(&global_fog);
+			hardware_update_fog_settings(global_fog_enabled, &global_fog);
 		}
 	}
 
@@ -3457,12 +3447,6 @@ pause_spot(void)
 		stop_streaming_thread();
 
 #endif
-
-	// If hardware acceleration and global fog is enabled, then disable
-	// fog.
-
-	if (hardware_acceleration && global_fog_enabled)
-		hardware_disable_fog();
 }
 
 //------------------------------------------------------------------------------
@@ -3591,14 +3575,6 @@ resume_spot(void)
 		start_streaming_thread();
 
 #endif
-
-	// If hardware acceleration and global fog is enabled, then update the fog
-	// settings and enable fog.
-
-	if (hardware_acceleration && global_fog_enabled) {
-		hardware_enable_fog();
-		hardware_update_fog_settings(&global_fog);
-	}
 
 	// Reset the stats for the new display mode.
 
@@ -3878,14 +3854,9 @@ handle_window_resize(void)
 		return(false);
 
 	// Initialise player window, and signal the plugin thread that the player
-	// window has been initialised or not.  If hardware acceleration and global
-	// fog is enabled, then update the fog settings and enable fog.
+	// window has been initialised or not.
 
 	if (init_player_window()) {
-		if (hardware_acceleration && global_fog_enabled) {
-			hardware_enable_fog();
-			hardware_update_fog_settings(&global_fog);
-		}
 		player_window_initialised.send_event(true);
 		return(true);
 	} else {

@@ -1952,10 +1952,8 @@ fog_simkin_object::setValue(const skString& field, const skString& attribute, co
 
 	// Update the fog setting in hardware
 
-	if (hardware_acceleration && global_fog_enabled) {
-		hardware_disable_fog();
-		hardware_enable_fog();
-		hardware_update_fog_settings(&global_fog);
+	if (hardware_acceleration) {
+		hardware_update_fog_settings(global_fog_enabled, &global_fog);
 	}
 
 	return(true);

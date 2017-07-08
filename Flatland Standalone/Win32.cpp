@@ -302,7 +302,17 @@ struct hardware_vertex {
 	}
 };
 
-struct hardware_constant_buffer {
+// Hardware constant buffers.
+
+struct hardware_fog_constant_buffer {
+	int fog_enabled;
+	float fog_start;
+	float fog_end;
+	XMFLOAT4 fog_colour;
+	float fog_density;
+};
+
+struct hardware_matrix_constant_buffer {
 	XMMATRIX projection;
 };
 
@@ -326,36 +336,57 @@ struct MYBITMAPINFO {
 //------------------------------------------------------------------------------
 
 char *colour_vertex_shader_source =
-"cbuffer constant_buffer : register(b0) {\n"
-"	matrix Projection;\n"
-"};\n"
-"struct VS_INPUT {\n"
-"	float4 Pos : POSITION;\n"
-"	float2 Tex : TEXCOORD0;\n"
-"   float4 Colour : COLOUR;\n"
-"};\n"
-"struct PS_INPUT {\n"
-"	float4 Pos : SV_POSITION;\n"
-"   float4 Colour : COLOUR;\n"
-"};\n"
-"PS_INPUT VS(VS_INPUT input) {\n"
-"	PS_INPUT output = (PS_INPUT)0;\n"
-"	output.Pos = mul(input.Pos, Projection);\n"
-"   output.Colour = input.Colour;\n"
-"	return output;\n"
-"}\n";
+	"cbuffer fog_constant_buffer : register(b0) {\n"
+	"	int fog_enabled;\n"
+	"	float fog_start;\n"
+	"	float fog_end;\n"
+	"	float4 fog_colour;\n"
+	"	float fog_density;\n"
+	"};\n"
+	"cbuffer matrix_constant_buffer : register(b1) {\n"
+	"	matrix Projection;\n"
+	"};\n"
+	"struct VS_INPUT {\n"
+	"	float4 Pos : POSITION;\n"
+	"	float2 Tex : TEXCOORD0;\n"
+	"   float4 Colour : COLOUR;\n"
+	"};\n"
+	"struct PS_INPUT {\n"
+	"	float4 Pos : SV_POSITION;\n"
+	"   float4 Colour : COLOUR;\n"
+	"};\n"
+	"PS_INPUT VS(VS_INPUT input) {\n"
+	"	PS_INPUT output = (PS_INPUT)0;\n"
+	"	output.Pos = mul(input.Pos, Projection);\n"
+	"   output.Colour = input.Colour;\n"
+	"	return output;\n"
+	"}\n";
 
 char *colour_pixel_shader_source =
-"struct PS_INPUT {\n"
-"	float4 Pos : SV_POSITION;\n"
-"   float4 Colour : COLOUR;\n"
-"};\n"
-"float4 PS(PS_INPUT input) : SV_Target {\n"
-"	return input.Colour;\n"
-"}\n";
+	"cbuffer fog_constant_buffer : register(b0) {\n"
+	"	int fog_enabled;\n"
+	"	float fog_start;\n"
+	"	float fog_end;\n"
+	"	float4 fog_colour;\n"
+	"	float fog_density;\n"
+	"};\n"
+	"struct PS_INPUT {\n"
+	"	float4 Pos : SV_POSITION;\n"
+	"   float4 Colour : COLOUR;\n"
+	"};\n"
+	"float4 PS(PS_INPUT input) : SV_Target {\n"
+	"	return input.Colour;\n"
+	"}\n";
 
 char *texture_vertex_shader_source =
-	"cbuffer constant_buffer : register(b0) {\n"
+	"cbuffer fog_constant_buffer : register(b0) {\n"
+	"	int fog_enabled;\n"
+	"	float fog_start;\n"
+	"	float fog_end;\n"
+	"	float4 fog_colour;\n"
+	"	float fog_density;\n"
+	"};\n"
+	"cbuffer matrix_constant_buffer : register(b1) {\n"
 	"	matrix Projection;\n"
 	"};\n"
 	"struct VS_INPUT {\n"
@@ -377,6 +408,13 @@ char *texture_vertex_shader_source =
 	"}\n";
 
 char *texture_pixel_shader_source =
+	"cbuffer fog_constant_buffer : register(b0) {\n"
+	"	int fog_enabled;\n"
+	"	float fog_start;\n"
+	"	float fog_end;\n"
+	"	float4 fog_colour;\n"
+	"	float fog_density;\n"
+	"};\n"
 	"Texture2D txDiffuse : register(t0);\n"
 	"SamplerState samLinear : register(s0);\n"
 	"struct PS_INPUT {\n"
@@ -490,13 +528,11 @@ static ID3D11PixelShader *d3d_texture_pixel_shader_ptr;
 static ID3D11BlendState *d3d_blend_state_ptr;
 static ID3D11RasterizerState *d3d_rasterizer_state_ptr;
 static ID3D11SamplerState *d3d_sampler_state_ptr;
-static ID3D11Buffer *d3d_constant_buffer_ptr;
+static ID3D11Buffer *d3d_constant_buffer_list[2];
 static XMMATRIX d3d_projection_matrix;
 
 static byte *framebuffer_ptr;
 static int framebuffer_width;
-//static hardware_texture *curr_hardware_texture_ptr;
-
 
 // Private sound data.
 
@@ -2586,15 +2622,19 @@ start_up_hardware_renderer(void)
 		return false;
 	}
 
-	// Create the constant buffer.
+	// Create the fog and matrix constant buffers.
 
 	D3D11_BUFFER_DESC constant_buffer_desc;
 	ZeroMemory(&constant_buffer_desc, sizeof(constant_buffer_desc));
 	constant_buffer_desc.Usage = D3D11_USAGE_DEFAULT;
-	constant_buffer_desc.ByteWidth = sizeof(hardware_constant_buffer);
 	constant_buffer_desc.BindFlags = D3D11_BIND_CONSTANT_BUFFER;
 	constant_buffer_desc.CPUAccessFlags = 0;
-	if (FAILED(d3d_device_ptr->CreateBuffer(&constant_buffer_desc, NULL, &d3d_constant_buffer_ptr))) {
+	constant_buffer_desc.ByteWidth = sizeof(hardware_fog_constant_buffer);
+	if (FAILED(d3d_device_ptr->CreateBuffer(&constant_buffer_desc, NULL, &d3d_constant_buffer_list[0]))) {
+		return false;
+	}
+	constant_buffer_desc.ByteWidth = sizeof(hardware_matrix_constant_buffer);
+	if (FAILED(d3d_device_ptr->CreateBuffer(&constant_buffer_desc, NULL, &d3d_constant_buffer_list[1]))) {
 		return false;
 	}
 
@@ -2603,22 +2643,6 @@ start_up_hardware_renderer(void)
 	red_comp_mask = 0xff0000;
 	green_comp_mask = 0x00ff00;
 	blue_comp_mask = 0x0000ff;
-
-	/*
-	vertex camera_start = vertex(0, 0, 0);
-	vertex vertex0 = vertex(0, 2, 2);
-	vertex vertex2 = vertex(2, -2, 2);
-	vertex vertex1 = vertex(-2, -2, 2);
-	float distance;
-
-	ray_intersects_with_polygon(camera_start, vertex(0, 0, 1), vertex0, vertex1, vertex2, distance);
-	ray_intersects_with_polygon(camera_start, vertex(0, 1, 1), vertex0, vertex1, vertex2, distance);
-	ray_intersects_with_polygon(camera_start, vertex(1, -1, 1), vertex0, vertex1, vertex2, distance);
-	ray_intersects_with_polygon(camera_start, vertex(-1, -1, 1), vertex0, vertex1, vertex2, distance);
-
-	ray_intersects_with_polygon(camera_start, vertex(-1, 1, 1), vertex0, vertex1, vertex2, distance);
-	ray_intersects_with_polygon(camera_start, vertex(1, 1, 1), vertex0, vertex1, vertex2, distance);
-	*/
 
 	// Indicate success.
 
@@ -2635,9 +2659,13 @@ shut_down_hardware_renderer(void)
 	if (d3d_device_context_ptr) {
 		d3d_device_context_ptr->ClearState();
 	}
-	if (d3d_constant_buffer_ptr) {
-		d3d_constant_buffer_ptr->Release();
-		d3d_constant_buffer_ptr = NULL;
+	if (d3d_constant_buffer_list[1]) {
+		d3d_constant_buffer_list[1]->Release();
+		d3d_constant_buffer_list[1] = NULL;
+	}
+	if (d3d_constant_buffer_list[0]) {
+		d3d_constant_buffer_list[0]->Release();
+		d3d_constant_buffer_list[0] = NULL;
 	}
 	if (d3d_sampler_state_ptr) {
 		d3d_sampler_state_ptr->Release();
@@ -3035,9 +3063,9 @@ create_main_window(void (*key_callback)(byte key_code, bool key_down),
 	d3d_blend_state_ptr = NULL;
 	d3d_rasterizer_state_ptr = NULL;
 	d3d_sampler_state_ptr = NULL;
-	d3d_constant_buffer_ptr = NULL;
+	d3d_constant_buffer_list[0] = NULL;
+	d3d_constant_buffer_list[1] = NULL;
 	framebuffer_ptr = NULL;
-	//curr_hardware_texture_ptr = NULL;
 	dsound_object_ptr = NULL;
 	label_visible = false;
 	progress_window_handle = NULL;	
@@ -7679,19 +7707,9 @@ void
 hardware_set_projection_transform(float viewport_width, float viewport_height, float near_z, float far_z)
 {
 	d3d_projection_matrix = XMMatrixPerspectiveLH(viewport_width, viewport_height, near_z, far_z);
-	hardware_constant_buffer constant_buffer;
+	hardware_matrix_constant_buffer constant_buffer;
 	constant_buffer.projection = XMMatrixTranspose(d3d_projection_matrix);
-	d3d_device_context_ptr->UpdateSubresource(d3d_constant_buffer_ptr, 0, nullptr, &constant_buffer, 0, 0);
-}
-
-//------------------------------------------------------------------------------
-// Enable global fog.
-//------------------------------------------------------------------------------
-
-void
-hardware_enable_fog(void)
-{
-	//set_render_state(D3DRS_FOGENABLE, TRUE);
+	d3d_device_context_ptr->UpdateSubresource(d3d_constant_buffer_list[1], 0, nullptr, &constant_buffer, 0, 0);
 }
 
 //------------------------------------------------------------------------------
@@ -7699,48 +7717,15 @@ hardware_enable_fog(void)
 //------------------------------------------------------------------------------
 
 void
-hardware_update_fog_settings(fog *fog_ptr)
+hardware_update_fog_settings(bool enabled, fog *fog_ptr)
 {
-	/*
-	float radius;
-
-	// Set the fog colour.
-
-	set_render_state(D3DRS_FOGCOLOR, D3DCOLOR_RGBA((byte)fog_ptr->colour.red, 
-		(byte)fog_ptr->colour.green, (byte)fog_ptr->colour.blue, 255));
-
-	// Set the fog style.
-
-	switch (fog_ptr->style) {
-	case LINEAR_FOG:
-		set_render_state(D3DRS_FOGTABLEMODE, D3DFOG_LINEAR);
-		radius = fog_ptr->start_radius;
-		if (radius == 0.0f)
-			radius = 1.0f;
-		set_render_state(D3DRS_FOGSTART, *((DWORD *)(&radius)));
-		radius = fog_ptr->end_radius;
-		if (radius == 0.0f) {
-			radius = visible_radius - UNITS_PER_BLOCK;
-			if (radius < 1.0f)
-				radius = 1.0f;
-		}
-		set_render_state(D3DRS_FOGEND, *((DWORD *)(&radius)));
-		break;
-	case EXPONENTIAL_FOG:
-		set_render_state(D3DRS_FOGTABLEMODE, D3DFOG_EXP2);
-		set_render_state(D3DRS_FOGDENSITY, *((DWORD *)(&fog_ptr->density)));
-	}
-	*/
-}
-
-//------------------------------------------------------------------------------
-// Disable fog.
-//------------------------------------------------------------------------------
-
-void
-hardware_disable_fog(void)
-{
-	//set_render_state(D3DRS_FOGENABLE, FALSE);
+	hardware_fog_constant_buffer constant_buffer;
+	constant_buffer.fog_enabled = enabled;
+	constant_buffer.fog_start = fog_ptr->start_radius == 0.0f ? 1.0f : fog_ptr->start_radius;
+	constant_buffer.fog_end = fog_ptr->end_radius == 0.0f ? visible_radius : fog_ptr->end_radius;
+	constant_buffer.fog_colour = XMFLOAT4(fog_ptr->colour.red, fog_ptr->colour.green, fog_ptr->colour.blue, 1.0f);
+	constant_buffer.fog_density = fog_ptr->density;
+	d3d_device_context_ptr->UpdateSubresource(d3d_constant_buffer_list[0], 0, nullptr, &constant_buffer, 0, 0);
 }
 
 //------------------------------------------------------------------------------
@@ -8121,7 +8106,7 @@ hardware_render_2D_polygon(pixmap *pixmap_ptr, RGBcolour colour, float brightnes
 
 	d3d_device_context_ptr->IASetInputLayout(d3d_vertex_layout_ptr);
 	d3d_device_context_ptr->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP);
-	d3d_device_context_ptr->VSSetConstantBuffers(0, 1, &d3d_constant_buffer_ptr);
+	d3d_device_context_ptr->VSSetConstantBuffers(0, 2, d3d_constant_buffer_list);
 	d3d_device_context_ptr->PSSetSamplers(0, 1, &d3d_sampler_state_ptr);
 	d3d_device_context_ptr->OMSetDepthStencilState(d3d_2D_depth_stencil_state_ptr, 1);
 	d3d_device_context_ptr->OMSetBlendState(d3d_blend_state_ptr, NULL, 0xFFFFFFFF);
@@ -8176,7 +8161,7 @@ hardware_render_polygon(tpolygon *tpolygon_ptr)
 
 	d3d_device_context_ptr->IASetInputLayout(d3d_vertex_layout_ptr);
 	d3d_device_context_ptr->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP);
-	d3d_device_context_ptr->VSSetConstantBuffers(0, 1, &d3d_constant_buffer_ptr);
+	d3d_device_context_ptr->VSSetConstantBuffers(0, 2, d3d_constant_buffer_list);
 	d3d_device_context_ptr->PSSetSamplers(0, 1, &d3d_sampler_state_ptr);
 	d3d_device_context_ptr->OMSetDepthStencilState(d3d_3D_depth_stencil_state_ptr, 1);
 	d3d_device_context_ptr->OMSetBlendState(d3d_blend_state_ptr, NULL, 0xFFFFFFFF);
