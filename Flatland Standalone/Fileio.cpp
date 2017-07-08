@@ -2220,6 +2220,7 @@ parse_fog_tag(fog *fog_ptr)
 		fog_ptr->colour = fog_colour;
 	else
 		fog_ptr->colour.set_RGB(255, 255, 255);
+	fog_ptr->colour.normalise();
 	if (parsed_attribute[FOG_START])
 		fog_ptr->start_radius = fog_start;
 	else

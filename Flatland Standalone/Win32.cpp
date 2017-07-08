@@ -305,7 +305,7 @@ struct hardware_vertex {
 // Hardware constant buffers.
 
 struct hardware_fog_constant_buffer {
-	int fog_enabled;
+	int fog_style;
 	float fog_start;
 	float fog_end;
 	XMFLOAT4 fog_colour;
@@ -337,93 +337,110 @@ struct MYBITMAPINFO {
 
 char *colour_vertex_shader_source =
 	"cbuffer fog_constant_buffer : register(b0) {\n"
-	"	int fog_enabled;\n"
+	"	int fog_style;\n"
 	"	float fog_start;\n"
 	"	float fog_end;\n"
 	"	float4 fog_colour;\n"
 	"	float fog_density;\n"
 	"};\n"
 	"cbuffer matrix_constant_buffer : register(b1) {\n"
-	"	matrix Projection;\n"
+	"	matrix projection;\n"
 	"};\n"
 	"struct VS_INPUT {\n"
-	"	float4 Pos : POSITION;\n"
-	"	float2 Tex : TEXCOORD0;\n"
-	"   float4 Colour : COLOUR;\n"
+	"	float4 pos : POSITION;\n"
+	"	float2 tex : TEXCOORD0;\n"
+	"   float4 colour : COLOUR;\n"
 	"};\n"
 	"struct PS_INPUT {\n"
-	"	float4 Pos : SV_POSITION;\n"
-	"   float4 Colour : COLOUR;\n"
+	"	float4 pos : SV_POSITION;\n"
+	"   float4 colour : COLOUR;\n"
+	"	float fog_factor : FOG;\n"
 	"};\n"
 	"PS_INPUT VS(VS_INPUT input) {\n"
 	"	PS_INPUT output = (PS_INPUT)0;\n"
-	"	output.Pos = mul(input.Pos, Projection);\n"
-	"   output.Colour = input.Colour;\n"
+	"	output.pos = mul(input.pos, projection);\n"
+	"   output.colour = input.colour;\n"
+	"	if (fog_style) {\n"
+	"		output.fog_factor = saturate((fog_end - input.pos.z) / (fog_end - fog_start));\n"
+	"	}\n"
 	"	return output;\n"
 	"}\n";
 
 char *colour_pixel_shader_source =
 	"cbuffer fog_constant_buffer : register(b0) {\n"
-	"	int fog_enabled;\n"
+	"	int fog_style;\n"
 	"	float fog_start;\n"
 	"	float fog_end;\n"
 	"	float4 fog_colour;\n"
 	"	float fog_density;\n"
 	"};\n"
 	"struct PS_INPUT {\n"
-	"	float4 Pos : SV_POSITION;\n"
-	"   float4 Colour : COLOUR;\n"
+	"	float4 pos : SV_POSITION;\n"
+	"   float4 colour : COLOUR;\n"
+	"	float fog_factor : FOG;\n"
 	"};\n"
 	"float4 PS(PS_INPUT input) : SV_Target {\n"
-	"	return input.Colour;\n"
+	"   if (fog_style) {\n"
+	"		return input.fog_factor * input.colour + (1.0 - input.fog_factor) * fog_colour;\n"
+	"	}\n"
+	"	return input.colour;\n"
 	"}\n";
 
 char *texture_vertex_shader_source =
 	"cbuffer fog_constant_buffer : register(b0) {\n"
-	"	int fog_enabled;\n"
+	"	int fog_style;\n"
 	"	float fog_start;\n"
 	"	float fog_end;\n"
 	"	float4 fog_colour;\n"
 	"	float fog_density;\n"
 	"};\n"
 	"cbuffer matrix_constant_buffer : register(b1) {\n"
-	"	matrix Projection;\n"
+	"	matrix projection;\n"
 	"};\n"
 	"struct VS_INPUT {\n"
-	"	float4 Pos : POSITION;\n"
-	"	float2 Tex : TEXCOORD0;\n"
-	"   float4 Colour : COLOUR;\n"
+	"	float4 pos : POSITION;\n"
+	"	float2 tex : TEXCOORD0;\n"
+	"   float4 colour : COLOUR;\n"
 	"};\n"
 	"struct PS_INPUT {\n"
-	"	float4 Pos : SV_POSITION;\n"
-	"	float2 Tex : TEXCOORD0;\n"
-	"   float4 Colour : COLOUR;\n"
+	"	float4 pos : SV_POSITION;\n"
+	"	float2 tex : TEXCOORD0;\n"
+	"   float4 colour : COLOUR;\n"
+	"	float fog_factor : FOG;\n"
 	"};\n"
 	"PS_INPUT VS(VS_INPUT input) {\n"
 	"	PS_INPUT output = (PS_INPUT)0;\n"
-	"	output.Pos = mul(input.Pos, Projection);\n"
-	"	output.Tex = input.Tex;\n"
-	"   output.Colour = input.Colour;\n"
+	"	output.pos = mul(input.pos, projection);\n"
+	"	output.tex = input.tex;\n"
+	"   output.colour = input.colour;\n"
+	"	if (fog_style) {\n"
+	"		output.fog_factor = saturate((fog_end - input.pos.z) / (fog_end - fog_start));\n"
+	"	}\n"
 	"	return output;\n"
 	"}\n";
 
 char *texture_pixel_shader_source =
 	"cbuffer fog_constant_buffer : register(b0) {\n"
-	"	int fog_enabled;\n"
+	"	int fog_style;\n"
 	"	float fog_start;\n"
 	"	float fog_end;\n"
 	"	float4 fog_colour;\n"
 	"	float fog_density;\n"
 	"};\n"
-	"Texture2D txDiffuse : register(t0);\n"
-	"SamplerState samLinear : register(s0);\n"
+	"Texture2D tx_diffuse : register(t0);\n"
+	"SamplerState sam_linear : register(s0);\n"
 	"struct PS_INPUT {\n"
-	"	float4 Pos : SV_POSITION;\n"
-	"	float2 Tex : TEXCOORD0;\n"
-	"   float4 Colour : COLOUR;\n"
+	"	float4 pos : SV_POSITION;\n"
+	"	float2 tex : TEXCOORD0;\n"
+	"   float4 colour : COLOUR;\n"
+	"	float fog_factor : FOG;\n"
 	"};\n"
 	"float4 PS(PS_INPUT input) : SV_Target {\n"
-	"	return txDiffuse.Sample(samLinear, input.Tex) * input.Colour;\n"
+	"	float4 texture_colour = tx_diffuse.Sample(sam_linear, input.tex) * input.colour;\n"
+	"   if (fog_style) {\n"
+	"		return input.fog_factor * texture_colour + (1.0 - input.fog_factor) * fog_colour;\n"
+	"	}\n"
+	"	return texture_colour;\n"
 	"}\n";
 
 //------------------------------------------------------------------------------
@@ -7720,7 +7737,7 @@ void
 hardware_update_fog_settings(bool enabled, fog *fog_ptr)
 {
 	hardware_fog_constant_buffer constant_buffer;
-	constant_buffer.fog_enabled = enabled;
+	constant_buffer.fog_style = enabled ? fog_ptr->style + 1 : 0;
 	constant_buffer.fog_start = fog_ptr->start_radius == 0.0f ? 1.0f : fog_ptr->start_radius;
 	constant_buffer.fog_end = fog_ptr->end_radius == 0.0f ? visible_radius : fog_ptr->end_radius;
 	constant_buffer.fog_colour = XMFLOAT4(fog_ptr->colour.red, fog_ptr->colour.green, fog_ptr->colour.blue, 1.0f);
@@ -8087,7 +8104,7 @@ hardware_render_2D_polygon(pixmap *pixmap_ptr, RGBcolour colour, float brightnes
 	}
 	vertex_buffer_ptr = (hardware_vertex *)d3d_mapped_subresource.pData;
 
-	// Construct the Direct3D vertex list for the sky polygon.  The polygon is placed at z = 1 so that the texture is not scaled.
+	// Construct the Direct3D vertex list for the polygon.  The polygon is placed at z = 1 so that the texture is not scaled.
 
 	float x = (sx - half_window_width) / half_window_width * half_viewport_width;
 	float y = (half_window_height - sy) / half_window_height * half_viewport_height;
@@ -8107,6 +8124,7 @@ hardware_render_2D_polygon(pixmap *pixmap_ptr, RGBcolour colour, float brightnes
 	d3d_device_context_ptr->IASetInputLayout(d3d_vertex_layout_ptr);
 	d3d_device_context_ptr->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP);
 	d3d_device_context_ptr->VSSetConstantBuffers(0, 2, d3d_constant_buffer_list);
+	d3d_device_context_ptr->PSSetConstantBuffers(0, 1, d3d_constant_buffer_list);
 	d3d_device_context_ptr->PSSetSamplers(0, 1, &d3d_sampler_state_ptr);
 	d3d_device_context_ptr->OMSetDepthStencilState(d3d_2D_depth_stencil_state_ptr, 1);
 	d3d_device_context_ptr->OMSetBlendState(d3d_blend_state_ptr, NULL, 0xFFFFFFFF);
@@ -8162,6 +8180,7 @@ hardware_render_polygon(tpolygon *tpolygon_ptr)
 	d3d_device_context_ptr->IASetInputLayout(d3d_vertex_layout_ptr);
 	d3d_device_context_ptr->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP);
 	d3d_device_context_ptr->VSSetConstantBuffers(0, 2, d3d_constant_buffer_list);
+	d3d_device_context_ptr->PSSetConstantBuffers(0, 1, d3d_constant_buffer_list);
 	d3d_device_context_ptr->PSSetSamplers(0, 1, &d3d_sampler_state_ptr);
 	d3d_device_context_ptr->OMSetDepthStencilState(d3d_3D_depth_stencil_state_ptr, 1);
 	d3d_device_context_ptr->OMSetBlendState(d3d_blend_state_ptr, NULL, 0xFFFFFFFF);

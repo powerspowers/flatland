@@ -3119,8 +3119,7 @@ render_frame(void)
 	// Get the sky pixmap, if there is one.
 
 	if (sky_texture_ptr != NULL)
-		sky_pixmap_ptr = sky_texture_ptr->get_curr_pixmap_ptr(curr_time_ms - 
-			start_time_ms);
+		sky_pixmap_ptr = sky_texture_ptr->get_curr_pixmap_ptr(curr_time_ms - start_time_ms);
 	else
 		sky_pixmap_ptr = NULL;
 
@@ -3152,15 +3151,19 @@ render_frame(void)
 	
 	if (hardware_acceleration) {
 
-		// Render the sky polygon.
+		// Render the sky and orb polygon.  If fog is enabled, render the sky using the fog colour instead,
+		// and don't show the orb.
 
-		hardware_render_2D_polygon(sky_pixmap_ptr, sky_colour, sky_brightness,
-			0.0f, 0.0f, (float)window_width, (float)window_height, 
-			sky_start_u, sky_start_v, sky_end_u, sky_end_v);
-
-		// Render the orb polygon.
-
-		render_orb();
+		if (global_fog_enabled) {
+			hardware_render_2D_polygon(NULL, global_fog.colour, 1.0f,
+				0.0f, 0.0f, (float)window_width, (float)window_height, 
+				sky_start_u, sky_start_v, sky_end_u, sky_end_v);
+		} else {
+			hardware_render_2D_polygon(sky_pixmap_ptr, sky_colour, sky_brightness,
+				0.0f, 0.0f, (float)window_width, (float)window_height, 
+				sky_start_u, sky_start_v, sky_end_u, sky_end_v);
+			render_orb();
+		}
 	}
 
 	// If not using hardware acceleration...
