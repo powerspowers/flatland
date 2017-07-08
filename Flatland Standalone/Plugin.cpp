@@ -1114,7 +1114,7 @@ timer_event_callback(void)
 			}
 		} else
 			fatal_error("Unable to display 3DML document", "One or more errors "
-				"in the 3DML document has prevented the Flatland Rover from "
+				"in the 3DML document has prevented Flatland from "
 				"displaying it.");
 	}
 

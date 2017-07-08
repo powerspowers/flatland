@@ -413,9 +413,9 @@ check_for_rover_update(int update_type)
 
 	if (!download_URL(VERSION_URL, version_file_path)) {
 		if (update_type == USER_REQUESTED_UPDATE)
-			fatal_error("Error checking for new version of Flatland Rover",
+			fatal_error("Error checking for new version of Flatland",
 				"Unable to determine whether or not there is a new version of "
-				"Flatland Rover available.  Check that your Internet connection "
+				"Flatland available.  Check that your Internet connection "
 				"is running, and try again later.");
 		remove(version_file_path);
 		return;
@@ -433,8 +433,8 @@ check_for_rover_update(int update_type)
 
 		case AUTO_UPDATE:
 		case USER_REQUESTED_UPDATE:
-			if (query("New version of Flatland Rover available", true, 
-				"Version %s of Flatland Rover is available.\n"
+			if (query("New version of Flatland available", true, 
+				"Version %s of Flatland is available.\n"
 				"Would you like to download it from our web site?", 
 				version_number_to_string(version_number)))
 				request_URL(ROVER_DOWNLOAD_URL, NULL, "_self");
@@ -450,9 +450,9 @@ check_for_rover_update(int update_type)
 				min_rover_version_str = 
 					version_number_to_string(min_rover_version);
 				version_number_str = version_number_to_string(version_number);
-				if (query("Newer version of Flatland Rover required", true, 
+				if (query("Newer version of Flatland required", true, 
 					"This spot makes use of features that are only present in\n"
-					"version %s or later of Flatland Rover (you have version "
+					"version %s or later of Flatland (you have version "
 					"%s).\nWould you like to download the latest version (%s) "
 					"from our web site?", min_rover_version_str, 
 					version_number_to_string(ROVER_VERSION_NUMBER),
@@ -466,8 +466,8 @@ check_for_rover_update(int update_type)
 	// update in progress flag and remove the version file.
 
 	else if (update_type == USER_REQUESTED_UPDATE)
-		information("Flatland Rover is up-to-date",
-			"You have the latest version (%s) of Flatland Rover.",
+		information("Flatland is up-to-date",
+			"You have the latest version (%s) of Flatland.",
 			version_number_to_string(ROVER_VERSION_NUMBER));
 
 	// Remove the version file now that we're done with it.
@@ -530,9 +530,9 @@ static void
 display_low_memory_error(void)
 {
 	fatal_error("Insufficient memory", "There is insufficient memory to "
-		"run the Flatland Rover.  Try closing some applications first, then "
-		"click on the RELOAD or REFRESH button on your browser to restart the "
-		"Flatland Rover.");
+		"run Flatland.  Try closing some applications first, then "
+		"click on the RELOAD or REFRESH button on your browser to restart "
+		"Flatland");
 }
 
 //------------------------------------------------------------------------------

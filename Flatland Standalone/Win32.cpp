@@ -2094,7 +2094,7 @@ LRESULT CALLBACK app_window_proc(HWND hWnd, UINT message, WPARAM wParam, LPARAM 
 			switch (wmId)
 			{
 			case IDM_ABOUT:
-				DialogBox(app_instance_handle, MAKEINTRESOURCE(IDD_ABOUTBOX), hWnd, about_box_dialog_proc);
+				DialogBox(app_instance_handle, MAKEINTRESOURCE(IDD_ABOUT), hWnd, about_box_dialog_proc);
 				break;
 			case ID_HELP_VIEWHELP:
 				open_help_window();
@@ -3067,7 +3067,7 @@ create_main_window(void (*key_callback)(byte key_code, bool key_down),
 	display_depth = GetDeviceCaps(screen, BITSPIXEL);
 	DeleteDC(screen);
 	if (display_depth < 8) {
-		fatal_error("Unsupported colour mode", "The Flatland Rover does not "
+		fatal_error("Unsupported colour mode", "Flatland does not "
 			"support 16-color displays.\n\nTo view this 3DML document, change "
 			"your display setting in the Display control panel,\nthen click on "
 			"the RELOAD or REFRESH button of your browser.\nSome versions of "
@@ -9709,7 +9709,7 @@ static void
 download_wmp(void)
 {
 	if (query("Windows Media Player required", true,
-		"Flatland Rover requires the latest version of Windows Media Player\n"
+		"Flatland requires the latest version of Windows Media Player\n"
 		"to play back the streaming media in this spot.\n\n"
 		"Do you wish to download Windows Media Player now?"))
 		wmp_download_requested.send_event(true);
