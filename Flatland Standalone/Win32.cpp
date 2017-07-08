@@ -361,7 +361,7 @@ char *colour_vertex_shader_source =
 	"	output.pos = mul(input.pos, projection);\n"
 	"   output.colour = input.colour;\n"
 	"	if (fog_style) {\n"
-	"		output.fog_factor = saturate((fog_end - input.pos.z) / (fog_end - fog_start));\n"
+	"		output.fog_factor = saturate((fog_end - length(input.pos)) / (fog_end - fog_start));\n"
 	"	}\n"
 	"	return output;\n"
 	"}\n";
@@ -414,7 +414,7 @@ char *texture_vertex_shader_source =
 	"	output.tex = input.tex;\n"
 	"   output.colour = input.colour;\n"
 	"	if (fog_style) {\n"
-	"		output.fog_factor = saturate((fog_end - input.pos.z) / (fog_end - fog_start));\n"
+	"		output.fog_factor = saturate((fog_end - length(input.pos)) / (fog_end - fog_start));\n"
 	"	}\n"
 	"	return output;\n"
 	"}\n";
