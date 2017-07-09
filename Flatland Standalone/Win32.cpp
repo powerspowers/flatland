@@ -2122,7 +2122,12 @@ INT_PTR CALLBACK about_box_dialog_proc(HWND hDlg, UINT message, WPARAM wParam, L
 	switch (message)
 	{
 	case WM_INITDIALOG:
-		return (INT_PTR)TRUE;
+		{
+			string version = "Flatland ";
+			version += version_number_to_string(ROVER_VERSION_NUMBER);
+			SendDlgItemMessage(hDlg, IDC_STATIC_BOLD5, WM_SETTEXT, 0, (LPARAM)(char *)version);
+			return (INT_PTR)TRUE;
+		}
 
 	case WM_COMMAND:
 		if (LOWORD(wParam) == IDOK || LOWORD(wParam) == IDCANCEL)

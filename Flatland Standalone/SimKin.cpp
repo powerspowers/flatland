@@ -1000,6 +1000,11 @@ spot_simkin_object::getValue(const skString& field, const skString& attribute, s
 		value = enable_player_translation;
 	else if (field == "user_can_look")
 		value = enable_player_rotation;
+
+	// If the field is "version", then return the Flatland version string.
+
+	else if (field == "version")
+		value = skString(version_number_to_string(ROVER_VERSION_NUMBER));
 	
 	// All other fields are passed to the default getValue function for
 	// processing.
@@ -1020,7 +1025,8 @@ spot_simkin_object::setValue(const skString& field, const skString& attribute, c
 	// If the field is "title", set the current title.
 
 	if (field == "title") {
-		set_title("%s", (const char *)value.str());
+		spot_title = (const char *)value.str();
+		set_title("%s", spot_title);
 		return(true);
 	}
 
@@ -1052,7 +1058,7 @@ spot_simkin_object::method(const skString& method, skRValueArray& arguments, skR
 		if (arguments.entries() != 1)
 			return(false);
 		skString message = arguments[0].str();
-		//debug_message("%s\n", (char *)(const char *)message);
+		debug_message("%s\n", (char *)(const char *)message);
 	}
 
 	// If the method is "new_array", create a new array SimKin object and
