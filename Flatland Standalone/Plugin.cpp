@@ -44,9 +44,8 @@ string new_rover_file_path;
 static unsigned long player_thread_handle;
 static unsigned long downloader_thread_handle;
 
-// Acceleration mode and hardware acceleration flag.
+// Hardware acceleration flag.
 
-int acceleration_mode;
 bool hardware_acceleration;
 
 // Variables used to request a URL.
@@ -161,7 +160,6 @@ static bool fast_mode_enabled;
 static int curr_button_status;
 static bool movement_enabled;
 static bool download_sounds_flag;
-static bool hardware_acceleration_flag;
 static int old_visible_block_radius;
 static int old_user_debug_level;
 static float window_half_width;
@@ -311,41 +309,6 @@ destroy_player_window()
 	URL_was_downloaded.reset_event();
 	player_window_shutdown_requested.reset_event();
 	player_window_created = false;
-}
-
-//------------------------------------------------------------------------------
-// Function to toggle the window mode between accelerated and non-accelerated
-// graphics.
-//------------------------------------------------------------------------------
-
-static void
-toggle_window_mode(void)
-{
-	// Signal the player thread that a window mode change is requested, and
-	// wait for the player thread to signal that the player window has shut
-	// down.
-
-	window_mode_change_requested.send_event(true);
-	player_window_shut_down.wait_for_event();
-
-	// Destroy the main window.
-
-	destroy_main_window();
-
-	// Toggle the hardware acceleration mode.
-
-	hardware_acceleration = !hardware_acceleration;
-
-	// Create the player window.
-
-	if (!create_player_window()) {
-		// TODO: Quit the app?
-	}
-
-	// Reset the title, and the label if there is one.
-
-	set_title(NULL);
-	show_label(NULL);
 }
 
 //==============================================================================
@@ -761,8 +724,6 @@ options_window_callback(int option_ID, int option_value)
 	case OK_BUTTON:
 		download_sounds.set(download_sounds_flag);
 		close_options_window();
-		if (hardware_acceleration_flag != hardware_acceleration)
-			toggle_window_mode();
 		save_config_file();
 		break;
 	case CANCEL_BUTTON:
@@ -772,9 +733,6 @@ options_window_callback(int option_ID, int option_value)
 		break;
 	case DOWNLOAD_SOUNDS_CHECKBOX:
 		download_sounds_flag = option_value ? true : false;
-		break;
-	case ENABLE_3D_ACCELERATION_CHECKBOX:
-		hardware_acceleration_flag = option_value ? true : false;
 		break;
 	case VISIBLE_RADIUS_EDITBOX:
 		visible_block_radius.set(option_value);
@@ -870,7 +828,6 @@ void
 show_options_window()
 {
 	download_sounds_flag = download_sounds.get();
-	hardware_acceleration_flag = hardware_acceleration;
 	old_visible_block_radius = visible_block_radius.get();
 	old_user_debug_level = user_debug_level.get();
 	open_options_window(download_sounds_flag, old_visible_block_radius,
@@ -1185,7 +1142,7 @@ resize_event_callback(void *window_handle, int width, int height)
 		main_window_resized.send_event(false);
 		player_window_shut_down.wait_for_event();
 		destroy_main_window();
-		// TODO: Quit the app?
+		fatal_error("Window size changed", "Flatland failed to reinitialize after the window size changed.");
 	}
 
 	// Draw the current title, and label if there is one.
@@ -1214,9 +1171,8 @@ display_event_callback(void)
 
 	// Create the player window.
 
-	hardware_acceleration = (acceleration_mode == TRY_HARDWARE);
 	if (!create_player_window()) {
-		// TODO: Quit the app?
+		fatal_error("Display resolution changed", "Flatland failed to reinitialize after the display resolution changed.");
 	}
 
 	// Reset the title, and label if there is one.

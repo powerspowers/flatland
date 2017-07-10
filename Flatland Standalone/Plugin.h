@@ -12,11 +12,6 @@
 #define OPERA				3
 #define ACTIVEX_CONTROL		4
 
-// Acceleration modes.
-
-#define TRY_HARDWARE		0
-#define TRY_SOFTWARE		1
-
 // Minimum, maximum and default move rates (world units per second), and the
 // delta move rate.
 
@@ -47,9 +42,8 @@ extern string curr_spot_file_path;
 extern string cache_file_path;
 extern string new_rover_file_path;
 
-// Acceleration mode and hardware acceleration flag.
+// Hardware acceleration flag.
 
-extern int acceleration_mode;
 extern bool hardware_acceleration;
 
 // Variables used to request a URL.

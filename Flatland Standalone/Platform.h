@@ -26,9 +26,8 @@
 #define OK_BUTTON						0
 #define	CANCEL_BUTTON					1
 #define DOWNLOAD_SOUNDS_CHECKBOX		2
-#define ENABLE_3D_ACCELERATION_CHECKBOX	3
-#define	VISIBLE_RADIUS_EDITBOX			4
-#define	DEBUG_LEVEL_OPTION				5
+#define	VISIBLE_RADIUS_EDITBOX			3
+#define	DEBUG_LEVEL_OPTION				4
 
 // Command menu item IDs.
 

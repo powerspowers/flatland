@@ -3158,23 +3158,20 @@ create_main_window(void (*key_callback)(byte key_code, bool key_down),
 	resize_callback_ptr = resize_callback;
 	display_callback_ptr = display_callback;
 
-	// If requested, attempt to start up the hardware accelerated renderer,
-	// and if this fails, shut it down and disable hardware acceleration.
+	// Attempt to start up the hardware accelerated renderer, and if this fails,
+	// start up the software renderer.  If this also fails, the app is going to have
+	// to exit.
 
-	if (hardware_acceleration) {
-		if (!start_up_hardware_renderer()) {
-			shut_down_hardware_renderer();
-			hardware_acceleration = false;
-			failed_to("start up 3D accelerated renderer--trying software renderer instead");
+	hardware_acceleration = true;
+	if (!start_up_hardware_renderer()) {
+		shut_down_hardware_renderer();
+		hardware_acceleration = false;
+		failed_to("start up 3D accelerated renderer--trying software renderer instead");
+		if (!start_up_software_renderer()) {
+			fatal_error("Flatland cannot start up", "Flatland was unable to initialize Direct3D or "
+				"DirectDraw. Please make sure you have DirectX 11 installed.");
+			return(false);
 		}
-	}
-
-	// If hardware acceleration is not enabled, then start up the software 
-	// renderer.  If this fails, there is nothing more we can do.
-
-	if (!hardware_acceleration && !start_up_software_renderer()) {
-		failed_to("start up software renderer");
-		return(false);
 	}
 
 	// The texture pixel format is 1555 ARGB.
@@ -3939,13 +3936,6 @@ handle_options_event(HWND window_handle, UINT message, WPARAM wParam,
 					(*options_callback_ptr)(DOWNLOAD_SOUNDS_CHECKBOX, 1);
 				else
 					(*options_callback_ptr)(DOWNLOAD_SOUNDS_CHECKBOX, 0);
-				break;
-			case IDB_3D_ACCELERATION:
-				if (SendMessage(control_handle, BM_GETCHECK, 0, 0) ==
-					BST_CHECKED)
-					(*options_callback_ptr)(ENABLE_3D_ACCELERATION_CHECKBOX, 1);
-				else
-					(*options_callback_ptr)(ENABLE_3D_ACCELERATION_CHECKBOX, 0);
 				break;
 			case IDB_BE_SILENT:
 				(*options_callback_ptr)(DEBUG_LEVEL_OPTION, BE_SILENT);

@@ -4777,11 +4777,8 @@ load_config_file(void)
 	FILE *fp;
 	char line[80];
 	char name[80], value[80];
-	int acceleration_mode_value;
 	int download_sounds_value;
 	int visible_block_radius_value;
-	int prev_process_ID;
-	int use_reflections;
 	float curr_move_rate_value, curr_rotate_rate_value;
 	int prev_window_width, prev_window_height;
 	int user_debug_level_value;
@@ -4789,8 +4786,6 @@ load_config_file(void)
 
 	// Initialise the configuration options with their default values.
 
-	acceleration_mode_value = true;
-	acceleration_mode = TRY_HARDWARE;
 	download_sounds_value = 1;
 	visible_block_radius_value = 20;
 	curr_move_rate_value = DEFAULT_MOVE_RATE;
@@ -4809,11 +4804,7 @@ load_config_file(void)
 			!_strnicmp(line, "Flatland Rover configuration:", 29))
 			while (read_string(fp, line, 80)) {
 				read_config_line(line, name, value);
-				if (!_stricmp(name, "3D acceleration")) {
-					read_config_bool(value, &acceleration_mode_value);
-					acceleration_mode = acceleration_mode_value ? TRY_HARDWARE :
-						TRY_SOFTWARE;
-				} else if (!_stricmp(name, "download sounds"))
+				if (!_stricmp(name, "download sounds"))
 					read_config_bool(value, &download_sounds_value);
 				else if (!_stricmp(name, "viewing distance"))
 					read_config_int(value, &visible_block_radius_value);
@@ -4835,7 +4826,10 @@ load_config_file(void)
 				else if (!_stricmp(name, "brightness"))
 					read_config_float(value, &brightness_value);
 			}
-		else
+		else {
+			int acceleration_mode;
+			int prev_process_ID;
+			int use_reflections;
 			sscanf(line, "%d %d %d %d %d %f %f %d %d %d %d", 
 				&acceleration_mode, &download_sounds_value, 
 				&visible_block_radius_value, &prev_process_ID, 
@@ -4843,12 +4837,12 @@ load_config_file(void)
 				&curr_rotate_rate_value, &prev_window_width, 
 				&prev_window_height, &min_blockset_update_period, 
 				&user_debug_level_value);
+		}
 		fclose(fp);
 	}
 
 	// Initialise any global variables affected by the configuration file.
 
-	hardware_acceleration = (acceleration_mode == TRY_HARDWARE);
 	download_sounds.set(download_sounds_value ? true : false);
 	visible_block_radius.set(visible_block_radius_value);
 	curr_move_rate.set(curr_move_rate_value);
@@ -4905,15 +4899,10 @@ save_config_file(void)
 {
 	FILE *fp;
 
-	// Attempt to open the config file and write the acceleration mode flag, 
-	// download sounds flag, visible block radius, current process ID 
-	// (deprecated), reflections enabled flag (deprecated),  current move rate,
-	// current rotate rate, previous window width and height (deprecated),
-	// minium blockset update period, and user debug level.
+	// Attempt to open the config file and write the various configuration values.
 
 	if ((fp = fopen(config_file_path, "w")) != NULL) {
 		fprintf(fp, "Flatland Rover configuration:\n");
-		write_config_bool(fp, "3D acceleration", hardware_acceleration);
 		write_config_bool(fp, "download sounds", download_sounds.get());
 		write_config_int(fp, "viewing distance", visible_block_radius.get(),
 			"blocks");
