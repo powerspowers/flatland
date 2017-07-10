@@ -308,8 +308,8 @@ struct hardware_fog_constant_buffer {
 	int fog_style;
 	float fog_start;
 	float fog_end;
-	XMFLOAT4 fog_colour;
 	float fog_density;
+	XMFLOAT4 fog_colour;
 };
 
 struct hardware_matrix_constant_buffer {
@@ -340,8 +340,8 @@ char *colour_vertex_shader_source =
 	"	int fog_style;\n"
 	"	float fog_start;\n"
 	"	float fog_end;\n"
-	"	float4 fog_colour;\n"
 	"	float fog_density;\n"
+	"	float4 fog_colour;\n"
 	"};\n"
 	"cbuffer matrix_constant_buffer : register(b1) {\n"
 	"	matrix projection;\n"
@@ -371,8 +371,8 @@ char *colour_pixel_shader_source =
 	"	int fog_style;\n"
 	"	float fog_start;\n"
 	"	float fog_end;\n"
-	"	float4 fog_colour;\n"
 	"	float fog_density;\n"
+	"	float4 fog_colour;\n"
 	"};\n"
 	"struct PS_INPUT {\n"
 	"	float4 pos : SV_POSITION;\n"
@@ -381,7 +381,7 @@ char *colour_pixel_shader_source =
 	"};\n"
 	"float4 PS(PS_INPUT input) : SV_Target {\n"
 	"   if (fog_style) {\n"
-	"		return input.fog_factor * input.colour + (1.0 - input.fog_factor) * fog_colour;\n"
+	"		return (input.fog_factor * input.colour) + ((1.0 - input.fog_factor) * fog_colour);\n"
 	"	}\n"
 	"	return input.colour;\n"
 	"}\n";
@@ -438,7 +438,7 @@ char *texture_pixel_shader_source =
 	"float4 PS(PS_INPUT input) : SV_Target {\n"
 	"	float4 texture_colour = tx_diffuse.Sample(sam_linear, input.tex) * input.colour;\n"
 	"   if (fog_style) {\n"
-	"		return input.fog_factor * texture_colour + (1.0 - input.fog_factor) * fog_colour;\n"
+	"		return (input.fog_factor * texture_colour) + ((1.0 - input.fog_factor) * fog_colour);\n"
 	"	}\n"
 	"	return texture_colour;\n"
 	"}\n";
@@ -7745,8 +7745,8 @@ hardware_update_fog_settings(bool enabled, fog *fog_ptr)
 	constant_buffer.fog_style = enabled ? fog_ptr->style + 1 : 0;
 	constant_buffer.fog_start = fog_ptr->start_radius == 0.0f ? 1.0f : fog_ptr->start_radius;
 	constant_buffer.fog_end = fog_ptr->end_radius == 0.0f ? visible_radius : fog_ptr->end_radius;
-	constant_buffer.fog_colour = XMFLOAT4(fog_ptr->colour.red, fog_ptr->colour.green, fog_ptr->colour.blue, 1.0f);
 	constant_buffer.fog_density = fog_ptr->density;
+	constant_buffer.fog_colour = XMFLOAT4(fog_ptr->colour.red, fog_ptr->colour.green, fog_ptr->colour.blue, 1.0f);
 	d3d_device_context_ptr->UpdateSubresource(d3d_constant_buffer_list[0], 0, nullptr, &constant_buffer, 0, 0);
 }
 
