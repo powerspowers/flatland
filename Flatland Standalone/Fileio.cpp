@@ -1875,7 +1875,7 @@ parse_placeholder_tag(blockset *blockset_ptr)
 	// If the download fails, we won't use a placeholder texture.
 
 	if ((texture_ptr = load_texture(blockset_ptr, placeholder_texture, false)) == NULL || 
-		(texture_ptr->blockset_ptr == NULL && (!download_URL(texture_ptr->URL, NULL) ||
+		(texture_ptr->blockset_ptr == NULL && (!download_URL(texture_ptr->URL, NULL, false) ||
 		 !load_image(texture_ptr->URL, curr_file_path, texture_ptr)))) {
 		warning("Unable to download placeholder texture from %s", 
 			placeholder_texture);
@@ -3854,7 +3854,7 @@ parse_next_create_tag(int tag_token, tag_def *create_tag_list,
 		
 			// Download and open the file specified in the HREF attribute.
 
-			if (!download_URL(import_href, NULL))
+			if (!download_URL(import_href, NULL, true))
 				error("Unable to import file from URL %s", import_href);
 			if (!push_file(curr_file_path, import_href, true))
 				error("Unable to open file %s", curr_file_path);
@@ -4063,7 +4063,7 @@ parse_next_body_tag(int tag_token, bool allow_import_tag)
 		
 			// Download and open the file specified in the HREF attribute.
 
-			if (!download_URL(import_href, NULL))
+			if (!download_URL(import_href, NULL, true))
 				error("Unable to import file from URL %s", import_href);
 			if (!push_file(curr_file_path, import_href, true))
 				error("Unable to open file %s", curr_file_path);
@@ -5322,7 +5322,7 @@ check_for_blockset_update(const char *version_file_URL,
 	// version is up to date.
 
 	requested_blockset_name = (char *)NULL;
-	if (!download_URL(version_file_URL, version_file_path) ||
+	if (!download_URL(version_file_URL, version_file_path, true) ||
 		!push_file(version_file_path, version_file_URL, true))
 		return(false);
 

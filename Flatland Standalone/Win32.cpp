@@ -29,6 +29,7 @@
 #include <objbase.h>
 #include <cguid.h>
 #include <Urlmon.h>
+#include <Wininet.h>
 
 #include <d3d11.h>
 #include <DirectXColors.h>
@@ -3591,13 +3592,24 @@ public:
 };
 
 bool
-download_URL_to_file(const char *URL, char *file_path_buffer, int buffer_size)
+download_URL_to_file(const char *URL, char *file_path_buffer, bool no_cache)
 {
 	download_progress progress(URL);
 
-	if (*file_path_buffer == '\0') {
-		return URLDownloadToCacheFile(NULL, URL, file_path_buffer, buffer_size, 0, &progress) == S_OK;
+	// If no caching was requested, delete the cache entry if it exists.
+
+	if (no_cache) {
+		DeleteUrlCacheEntry(URL);
 	}
+
+	// If no file path was provided, download to the cache and return its name.
+
+	if (*file_path_buffer == '\0') {
+		return URLDownloadToCacheFile(NULL, URL, file_path_buffer, _MAX_PATH, 0, &progress) == S_OK;
+	}
+
+	// If a file path was provided, download directly to that file.
+
 	return URLDownloadToFile(NULL, URL, file_path_buffer, 0, &progress) == S_OK;
 }
 

@@ -411,7 +411,7 @@ check_for_rover_update(int update_type)
 
 	// Download the version file.  If this fails, we can't do an update.
 
-	if (!download_URL(VERSION_URL, version_file_path)) {
+	if (!download_URL(VERSION_URL, version_file_path, true)) {
 		if (update_type == USER_REQUESTED_UPDATE)
 			fatal_error("Error checking for new version of Flatland",
 				"Unable to determine whether or not there is a new version of "
@@ -437,7 +437,7 @@ check_for_rover_update(int update_type)
 				"Version %s of Flatland is available.\n"
 				"Would you like to download it from our web site?", 
 				version_number_to_string(version_number)))
-				request_URL(ROVER_DOWNLOAD_URL, NULL, "_self");
+				request_URL(ROVER_DOWNLOAD_URL, NULL, "_self", true);
 			break;
 
 		// If the spot requested the update and the minimum version of the spot
@@ -457,7 +457,7 @@ check_for_rover_update(int update_type)
 					"from our web site?", min_rover_version_str, 
 					version_number_to_string(ROVER_VERSION_NUMBER),
 					version_number_str))
-					request_URL(ROVER_DOWNLOAD_URL, NULL, "_self");
+					request_URL(ROVER_DOWNLOAD_URL, NULL, "_self", true);
 			}
 		}
 	}
@@ -1094,7 +1094,7 @@ start_up_spot(void)
 		if (curr_time - last_spot_dir_update > SECONDS_PER_DAY) {
 			last_spot_dir_update = curr_time;
 			save_config_file();
-			if (download_URL(DIRECTORY_URL, new_directory_file_path)) {
+			if (download_URL(DIRECTORY_URL, new_directory_file_path, true)) {
 				remove(directory_file_path);
 				rename(new_directory_file_path, directory_file_path);
 			} else
@@ -1410,7 +1410,7 @@ handle_exit(const char *exit_URL, const char *exit_target, bool is_spot_URL)
 			// was downloading, then return with a success status to allow the
 			// display of the current spot to continue.
 
-			if (!download_URL(spot_URL, NULL)) {
+			if (!download_URL(spot_URL, NULL, true)) {
 				fatal_error("Unable to download 3DML document", 
 					"Unable to download 3DML document from %s", spot_URL);
 				mouse_clicked.reset_event();
@@ -1450,9 +1450,9 @@ handle_exit(const char *exit_URL, const char *exit_target, bool is_spot_URL)
 
 		else {
 			if (exit_target != NULL && strlen(exit_target) != 0)
-				request_URL(URL, NULL, exit_target);
+				request_URL(URL, NULL, exit_target, true);
 			else
-				request_URL(URL, NULL, "_blank");
+				request_URL(URL, NULL, "_blank", true);
 		}
 	}
 

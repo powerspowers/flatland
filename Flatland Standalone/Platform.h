@@ -278,7 +278,7 @@ void
 open_URL_in_default_app(const char *URL);
 
 bool
-download_URL_to_file(const char *URL, char *file_path_buffer, int buffer_size);
+download_URL_to_file(const char *URL, char *file_path_buffer, bool no_cache);
 
 // Open file and URL dialogs.
 

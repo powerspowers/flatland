@@ -51,8 +51,9 @@ bool hardware_acceleration;
 // Variables used to request a URL.
 
 string requested_URL;
-string requested_target;
 string requested_file_path;
+string requested_target;
+bool requested_no_cache;
 string requested_blockset_name;			// Set if requesting a blockset.
 
 // Downloaded URL and file path.
@@ -1234,7 +1235,7 @@ downloader_thread(void *arg_list)
 
 		if (URL_download_requested.event_sent()) {
 			bool result;
-			char file_path[256];
+			char file_path[_MAX_PATH];
 
 			// If a target window was requested, simply open the URL in the default app.
 
@@ -1242,14 +1243,13 @@ downloader_thread(void *arg_list)
 				open_URL_in_default_app(requested_URL);
 			}
 
-			// Reset the URL_was_opened flag, and send off the URL request to the
-			// browser.
+			// Reset the URL_was_opened flag, and send off the URL request.
 
 			else {
 				URL_was_opened.reset_event();
 				URL_was_opened.send_event(true);
 				strcpy(file_path, (char *)requested_file_path);
-				result = download_URL_to_file(requested_URL, file_path, 256);
+				result = download_URL_to_file(requested_URL, file_path, requested_no_cache);
 				downloaded_URL.set(requested_URL);
 				downloaded_file_path.set(file_path);
 				URL_was_downloaded.send_event(result);

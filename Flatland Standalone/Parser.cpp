@@ -998,7 +998,7 @@ download_blockset(const char *URL, const char *name)
 	// Download the blockset URL to the cache file path.
 
 	requested_blockset_name = name;
-	if (!download_URL(URL, cache_file_path))
+	if (!download_URL(URL, cache_file_path, true))
 		return(NULL);
 
 	// Determine the size of the blockset.

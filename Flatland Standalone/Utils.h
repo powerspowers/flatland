@@ -127,10 +127,10 @@ void
 init_spot(void);
 
 void
-request_URL(const char *URL, const char *file_path, const char *target);
+request_URL(const char *URL, const char *file_path, const char *target, bool no_cache);
 
 bool
-download_URL(const char *URL, const char *file_path);
+download_URL(const char *URL, const char *file_path, bool no_cache);
 
 void
 update_texture_dependancies(texture *custom_texture_ptr);

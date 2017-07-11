@@ -49,8 +49,9 @@ extern bool hardware_acceleration;
 // Variables used to request a URL.
 
 extern string requested_URL;
-extern string requested_target;
 extern string requested_file_path;
+extern string requested_target;
+extern bool requested_no_cache;
 extern string requested_blockset_name;
 
 // Downloaded URL and file path.

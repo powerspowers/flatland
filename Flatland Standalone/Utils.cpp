@@ -2442,11 +2442,12 @@ loading_message(const char *URL)
 //------------------------------------------------------------------------------
 // Request that a URL be downloaded into the given file path, or the given
 // window target (but not both).  If both the file path and target are NULL,
-// the URL will be downloaded into the browser cache.
+// the URL will be downloaded into a temporary file.  If you don't want the
+// URL to be retrieved from the internet cache, set no_cache to true.
 //------------------------------------------------------------------------------
 
 void
-request_URL(const char *URL, const char *file_path, const char *target)
+request_URL(const char *URL, const char *file_path, const char *target, bool no_cache)
 {
 	// Display a loading message on the toolbar, but only if there is no
 	// file path and target specified.
@@ -2460,8 +2461,9 @@ request_URL(const char *URL, const char *file_path, const char *target)
 
 	// Request that the given URL be downloaded to the given target.
 
-	requested_target = target;
 	requested_file_path = file_path;
+	requested_target = target;
+	requested_no_cache = no_cache;
 	URL_download_requested.send_event(true);
 
 	// Reset the URL opened flag.
@@ -2528,18 +2530,19 @@ URL_downloaded(void)
 }
 
 //------------------------------------------------------------------------------
-// Download a URL to the given file path, or to a file in the browser cache if
-// the file path is NULL.
+// Download a URL to the given file path, or to a temporary file if the file 
+// path is NULL.  If you don't want the URL retrieved from the internet cache,
+// set no_cache to true.
 //------------------------------------------------------------------------------
 
 bool
-download_URL(const char *URL, const char *file_path)
+download_URL(const char *URL, const char *file_path, bool no_cache)
 {
 	int result;
 
 	// Request that the URL be downloaded.
 
-	request_URL(URL, file_path, NULL);
+	request_URL(URL, file_path, NULL, no_cache);
 
 	// Wait until the browser sends an event indicating that a URL was
 	// or was not downloaded.
@@ -2614,9 +2617,9 @@ initiate_next_download(void)
 
 	if (curr_custom_texture_ptr != NULL && (curr_custom_wave_ptr == NULL || 
 		curr_custom_texture_ptr->load_index < curr_custom_wave_ptr->load_index))
-		request_URL(curr_custom_texture_ptr->URL, NULL, NULL);
+		request_URL(curr_custom_texture_ptr->URL, NULL, NULL, false);
 	else
-		request_URL(curr_custom_wave_ptr->URL, NULL, NULL);
+		request_URL(curr_custom_wave_ptr->URL, NULL, NULL, false);
 
 	// Indicate the download has not yet completed.
 
