@@ -88,7 +88,7 @@ static float half_texel_v;
 // Texture coordinate scaling list.
 
 static float uv_scale_list[IMAGE_SIZES] = {
-	1.0f, 2.0f, 4.0f, 8.0f, 16.0f, 32.0f, 64.0f, 128.0f, 256.0f, 512.0f
+	1.0f, 1.0f, 1.0f, 2.0f, 4.0f, 8.0f, 16.0f, 32.0f, 64.0f, 128.0f
 };
 
 // One over texture dimensions list.
@@ -784,8 +784,8 @@ scale_tvertex_texture_interpolants(pixmap *pixmap_ptr, tvertex *tvertex_list, in
 	float u_scale, v_scale;
 
 	// Scale u and v in each screen point by the ratio of the pixmap size to the cached image size.
-	// If the pixmap is tiled, then scale by the ratio of the maximum pixmap size
-	// to the cached image size; if there is no pixmap, don't scale at all.
+	// If the pixmap is tiled, then scale by the ratio of 256 pixels to the cached image size for pixmaps
+	// smaller than 256 pixels, otherwise just use a 1:1 ratio; if there is no pixmap, don't scale at all.
 
 	if (pixmap_ptr == NULL) {
 		u_scale = 1.0f;
@@ -821,10 +821,15 @@ scale_spoint_texture_interpolants(pixmap *pixmap_ptr, int texture_style)
 	float u_scale, v_scale;
 	
 	// Scale u/tz and v/tz in each screen point by the size of the pixmap.
-	// If there is no pixmap or it is tiled, then use the maximum pixmap size.
+	// If there is no pixmap or it is tiled, then use 256x256 for any pixmap
+	// smaller than that, otherwise use the cached image size.
 
-	if (pixmap_ptr == NULL || texture_style == TILED_TEXTURE) {
-		u_scale = (float)max_texture_size;
+	if (pixmap_ptr == NULL) {
+		u_scale = 256.0f;
+		v_scale = 256.0f;
+	} else if (texture_style == TILED_TEXTURE) {
+		int image_dimensions = image_dimensions_list[pixmap_ptr->size_index];
+		u_scale = image_dimensions < 256 ? 256.0f : image_dimensions;
 		v_scale = u_scale;
 	} else {
 		u_scale = (float)pixmap_ptr->width;
