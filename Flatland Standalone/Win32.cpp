@@ -625,6 +625,8 @@ static void (*light_callback_ptr)(float brightness, bool window_closed);
 
 static HWND options_window_handle;
 static HWND viewing_distance_spin_control_handle;
+static HWND move_rate_spin_control_handle;
+static HWND turn_rate_spin_control_handle;
 static void (*options_callback_ptr)(int option_ID, int option_value);
 
 // About and help window data.
@@ -1875,10 +1877,8 @@ init_spin_control(HWND spin_control_handle, HWND edit_control_handle,
 				  int initial_value)
 {
 	SendMessage(edit_control_handle, EM_SETLIMITTEXT, max_digits, 0);
-	SendMessage(spin_control_handle, UDM_SETBUDDY, (WPARAM)edit_control_handle,
-		0);
-	SendMessage(spin_control_handle, UDM_SETRANGE, 0, 
-		MAKELONG(max_value, min_value));
+	SendMessage(spin_control_handle, UDM_SETBUDDY, (WPARAM)edit_control_handle, 0);
+	SendMessage(spin_control_handle, UDM_SETRANGE, 0, MAKELONG(max_value, min_value));
 	SendMessage(spin_control_handle, UDM_SETPOS, 0, MAKELONG(initial_value, 0));
 }
 
@@ -3943,11 +3943,16 @@ handle_options_event(HWND window_handle, UINT message, WPARAM wParam,
 				(*options_callback_ptr)(CANCEL_BUTTON, 1);
 				break;
 			case IDB_DOWNLOAD_SOUNDS:
-				if (SendMessage(control_handle, BM_GETCHECK, 0, 0) ==
-					BST_CHECKED)
+				if (SendMessage(control_handle, BM_GETCHECK, 0, 0) == BST_CHECKED)
 					(*options_callback_ptr)(DOWNLOAD_SOUNDS_CHECKBOX, 1);
 				else
 					(*options_callback_ptr)(DOWNLOAD_SOUNDS_CHECKBOX, 0);
+				break;
+			case IDB_CLASSIC_CONTROLS:
+				if (SendMessage(control_handle, BM_GETCHECK, 0, 0) == BST_CHECKED)
+					(*options_callback_ptr)(CLASSIC_CONTROLS_CHECKBOX, 1);
+				else
+					(*options_callback_ptr)(CLASSIC_CONTROLS_CHECKBOX, 0);
 				break;
 			case IDB_BE_SILENT:
 				(*options_callback_ptr)(DEBUG_LEVEL_OPTION, BE_SILENT);
@@ -3959,21 +3964,37 @@ handle_options_event(HWND window_handle, UINT message, WPARAM wParam,
 				(*options_callback_ptr)(DEBUG_LEVEL_OPTION, SHOW_ERRORS_ONLY);
 				break;
 			case IDB_SHOW_ERRORS_AND_WARNINGS:
-				(*options_callback_ptr)(DEBUG_LEVEL_OPTION, 
-					SHOW_ERRORS_AND_WARNINGS);
+				(*options_callback_ptr)(DEBUG_LEVEL_OPTION, SHOW_ERRORS_AND_WARNINGS);
 				break;
 			}
 			break;
 		case EN_CHANGE:
-			(*options_callback_ptr)(VISIBLE_RADIUS_EDITBOX,
-				LOWORD(SendMessage(viewing_distance_spin_control_handle, 
-				UDM_GETPOS, 0, 0)));
+			switch(LOWORD(wParam)) {
+			case IDC_EDIT_VIEWING_DISTANCE:
+				(*options_callback_ptr)(VISIBLE_RADIUS_EDITBOX, LOWORD(SendMessage(viewing_distance_spin_control_handle, UDM_GETPOS, 0, 0)));
+				break;
+			case IDC_EDIT_MOVE_RATE:
+				(*options_callback_ptr)(MOVE_RATE_EDITBOX, LOWORD(SendMessage(move_rate_spin_control_handle, UDM_GETPOS, 0, 0)));
+				break;
+			case IDC_EDIT_TURN_RATE:
+				(*options_callback_ptr)(TURN_RATE_EDITBOX, LOWORD(SendMessage(turn_rate_spin_control_handle, UDM_GETPOS, 0, 0)));
+				break;
+			}
+
 		}
 		return(TRUE);
 	case WM_VSCROLL:
-		(*options_callback_ptr)(VISIBLE_RADIUS_EDITBOX,
-			LOWORD(SendMessage(viewing_distance_spin_control_handle, 
-			UDM_GETPOS, 0, 0)));
+		switch(LOWORD(wParam)) {
+		case IDC_EDIT_VIEWING_DISTANCE:
+			(*options_callback_ptr)(VISIBLE_RADIUS_EDITBOX, LOWORD(SendMessage(viewing_distance_spin_control_handle, UDM_GETPOS, 0, 0)));
+			break;
+		case IDC_EDIT_MOVE_RATE:
+			(*options_callback_ptr)(MOVE_RATE_EDITBOX, LOWORD(SendMessage(move_rate_spin_control_handle, UDM_GETPOS, 0, 0)));
+			break;
+		case IDC_EDIT_TURN_RATE:
+			(*options_callback_ptr)(TURN_RATE_EDITBOX, LOWORD(SendMessage(turn_rate_spin_control_handle, UDM_GETPOS, 0, 0)));
+			break;
+		}
 		return(TRUE);
 	default:
 		return(FALSE);
@@ -3985,8 +4006,8 @@ handle_options_event(HWND window_handle, UINT message, WPARAM wParam,
 //------------------------------------------------------------------------------
 
 void
-open_options_window(bool download_sounds_value, int visible_radius_value,
-					int user_debug_level_value, 
+open_options_window(bool download_sounds_value, int viewing_distance_value, bool use_classic_controls_value,
+					int move_rate_value, int turn_rate_value, int user_debug_level_value,
 					void (*options_callback)(int option_ID, int option_value))
 {
 	HWND control_handle;
@@ -4002,31 +4023,38 @@ open_options_window(bool download_sounds_value, int visible_radius_value,
 
 	// Create the options window.
 
-	options_window_handle = CreateDialog(app_instance_handle,
-		MAKEINTRESOURCE(IDD_OPTIONS), main_window_handle,
-		handle_options_event);
+	options_window_handle = CreateDialog(app_instance_handle, MAKEINTRESOURCE(IDD_OPTIONS), main_window_handle, handle_options_event);
 
 	// Initialise the "download sounds" check box.
 
 	control_handle = GetDlgItem(options_window_handle, IDB_DOWNLOAD_SOUNDS);
-	SendMessage(control_handle, BM_SETCHECK, download_sounds_value ? 
-		BST_CHECKED : BST_UNCHECKED, 0);
+	SendMessage(control_handle, BM_SETCHECK, download_sounds_value ? BST_CHECKED : BST_UNCHECKED, 0);
 	if (!sound_available)
 		EnableWindow(control_handle, false);
-
-	// Initialise the "enable 3D acceleration" check box.
-
-	control_handle = GetDlgItem(options_window_handle, IDB_3D_ACCELERATION);
-	SendMessage(control_handle, BM_SETCHECK, hardware_acceleration ? 
-		BST_CHECKED : BST_UNCHECKED, 0);
 	
 	// Initialise the "viewing distance" edit box and spin control.
 
-	viewing_distance_spin_control_handle = GetDlgItem(options_window_handle,
-		IDC_SPIN_VIEWING_DISTANCE);
-	init_spin_control(viewing_distance_spin_control_handle,
-		GetDlgItem(options_window_handle, IDC_EDIT_VIEWING_DISTANCE),
-		3, 1, 100, visible_radius_value);
+	control_handle = GetDlgItem(options_window_handle, IDC_EDIT_VIEWING_DISTANCE);
+	viewing_distance_spin_control_handle = GetDlgItem(options_window_handle, IDC_SPIN_VIEWING_DISTANCE);
+	init_spin_control(viewing_distance_spin_control_handle, control_handle, 3, 1, 100, viewing_distance_value);
+
+	// Initialize the "classic controls" check box.
+
+	control_handle = GetDlgItem(options_window_handle, IDB_CLASSIC_CONTROLS);
+	SendMessage(control_handle, BM_SETCHECK, use_classic_controls_value ? BST_CHECKED : BST_UNCHECKED, 0);
+
+	// Initialize the "move rate" edit box and spin control.
+
+	control_handle = GetDlgItem(options_window_handle, IDC_EDIT_MOVE_RATE);
+	move_rate_spin_control_handle = GetDlgItem(options_window_handle, IDC_SPIN_MOVE_RATE);
+	init_spin_control(move_rate_spin_control_handle, control_handle, 3, 
+		(int)(MIN_MOVE_RATE / UNITS_PER_BLOCK), (int)(MAX_MOVE_RATE / UNITS_PER_BLOCK), move_rate_value);
+
+	// Initialize the "turn rate" edit box and spin control.
+
+	control_handle = GetDlgItem(options_window_handle, IDC_EDIT_TURN_RATE);
+	turn_rate_spin_control_handle = GetDlgItem(options_window_handle, IDC_SPIN_TURN_RATE);
+	init_spin_control(turn_rate_spin_control_handle, control_handle, 3, (int)MIN_TURN_RATE, (int)MAX_TURN_RATE, turn_rate_value);
 
 	// Initialise the "debug option" radio box.
 
@@ -4038,12 +4066,10 @@ open_options_window(bool download_sounds_value, int visible_radius_value,
 		control_handle = GetDlgItem(options_window_handle, IDB_LET_SPOT_DECIDE);
 		break;
 	case SHOW_ERRORS_ONLY:
-		control_handle = GetDlgItem(options_window_handle, 
-			IDB_SHOW_ERRORS_ONLY);
+		control_handle = GetDlgItem(options_window_handle, IDB_SHOW_ERRORS_ONLY);
 		break;
 	case SHOW_ERRORS_AND_WARNINGS:
-		control_handle = GetDlgItem(options_window_handle, 
-			IDB_SHOW_ERRORS_AND_WARNINGS);
+		control_handle = GetDlgItem(options_window_handle, IDB_SHOW_ERRORS_AND_WARNINGS);
 	}
 	SendMessage(control_handle, BM_SETCHECK, BST_CHECKED, 0);
 

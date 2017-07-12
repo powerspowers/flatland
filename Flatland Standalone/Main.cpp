@@ -3097,19 +3097,15 @@ render_next_frame(void)
 		curr_look_delta.set(0.0f);
 	} else {
 		if (enable_player_translation) {
-			move_delta = curr_move_delta.get() * curr_move_rate.get() * 
-				elapsed_time;
-			side_delta = curr_side_delta.get() * curr_move_rate.get() * 
-				elapsed_time;
+			move_delta = curr_move_delta.get() * curr_move_rate.get() * elapsed_time;
+			side_delta = curr_side_delta.get() * curr_move_rate.get() * elapsed_time;
 		} else {
 			move_delta = 0.0f;
 			side_delta = 0.0f;
 		}
 		if (enable_player_rotation) {
-			turn_delta = curr_turn_delta.get() * curr_rotate_rate.get() * 
-				elapsed_time;
-			look_delta = curr_look_delta.get() * curr_rotate_rate.get() * 
-				elapsed_time;
+			turn_delta = curr_turn_delta.get() * curr_turn_rate.get() * elapsed_time;
+			look_delta = curr_look_delta.get() * curr_turn_rate.get() * elapsed_time;
 		} else {
 			turn_delta = 0.0f;
 			look_delta = 0.0f;

@@ -12,21 +12,19 @@
 #define OPERA				3
 #define ACTIVEX_CONTROL		4
 
-// Minimum, maximum and default move rates (world units per second), and the
-// delta move rate.
+// Minimum, maximum and default move rates (world units per second), and the delta move rate.
 
-#define MIN_MOVE_RATE				3.2f
-#define MAX_MOVE_RATE				12.8f
-#define DEFAULT_MOVE_RATE			9.6f
-#define DELTA_MOVE_RATE				0.8f
+#define MIN_MOVE_RATE				UNITS_PER_BLOCK
+#define MAX_MOVE_RATE				(10 * UNITS_PER_BLOCK)
+#define DEFAULT_MOVE_RATE			(3 * UNITS_PER_BLOCK)
+#define DELTA_MOVE_RATE				UNITS_PER_BLOCK
 
-// Minimum, maximum and default rotation rates (degrees per second), and the
-// delta rotation rate.
+// Minimum, maximum and default turn rates (degrees per second), and the delta turn rate.
 
-#define MIN_ROTATE_RATE				30.0f
-#define MAX_ROTATE_RATE				60.0f
-#define DEFAULT_ROTATE_RATE			45.0f
-#define DELTA_ROTATE_RATE			10.0f
+#define MIN_TURN_RATE				30.0f
+#define MAX_TURN_RATE				180.0f
+#define DEFAULT_TURN_RATE			120.0f
+#define DELTA_TURN_RATE				10.0f
 
 // Important directories and file paths.
 
@@ -112,9 +110,10 @@ extern semaphore<float> curr_turn_delta;
 extern semaphore<float> curr_look_delta;
 extern semaphore<float> curr_jump_delta;
 extern semaphore<float> curr_move_rate;
-extern semaphore<float> curr_rotate_rate;
+extern semaphore<float> curr_turn_rate;
 extern semaphore<float> master_brightness;
 extern semaphore<bool> download_sounds;
+extern semaphore<bool> use_classic_controls;
 extern semaphore<int> visible_block_radius;
 extern semaphore<bool> snapshot_in_progress;
 

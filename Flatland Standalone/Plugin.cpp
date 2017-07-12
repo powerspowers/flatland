@@ -114,9 +114,10 @@ semaphore<float> curr_turn_delta;
 semaphore<float> curr_look_delta;
 semaphore<float> curr_jump_delta;
 semaphore<float> curr_move_rate;
-semaphore<float> curr_rotate_rate;
+semaphore<float> curr_turn_rate;
 semaphore<float> master_brightness;
 semaphore<bool> download_sounds;
+semaphore<bool> use_classic_controls;
 semaphore<int> visible_block_radius;
 semaphore<bool> snapshot_in_progress;
 
@@ -155,12 +156,15 @@ static bool disable_cursor_changes;
 static bool player_active;
 static bool player_window_created;
 static bool app_window_minimised;
-static float prev_move_rate, prev_rotate_rate;
+static float prev_move_rate, prev_turn_rate;
 static bool sidle_mode_enabled;
 static bool fast_mode_enabled;
 static int curr_button_status;
 static bool movement_enabled;
-static bool download_sounds_flag;
+static bool old_download_sounds;
+static bool old_use_classic_controls;
+static float old_curr_move_rate;
+static float old_curr_turn_rate;
 static int old_visible_block_radius;
 static int old_user_debug_level;
 static float window_half_width;
@@ -474,13 +478,12 @@ update_motion_rates(int rate_dir)
 		new_move_rate = MAX_MOVE_RATE;
 	curr_move_rate.set(new_move_rate);
 
-	float new_rotate_rate = curr_rotate_rate.get() + rate_dir * 
-		DELTA_ROTATE_RATE;
-	if (new_rotate_rate < MIN_ROTATE_RATE)
-		new_rotate_rate = MIN_ROTATE_RATE;
-	else if (new_rotate_rate > MAX_ROTATE_RATE)
-		new_rotate_rate = MAX_ROTATE_RATE;
-	curr_rotate_rate.set(new_rotate_rate);
+	float new_turn_rate = curr_turn_rate.get() + rate_dir * DELTA_MOVE_RATE;
+	if (new_turn_rate < MIN_TURN_RATE)
+		new_turn_rate = MIN_TURN_RATE;
+	else if (new_turn_rate > MAX_TURN_RATE)
+		new_turn_rate = MAX_TURN_RATE;
+	curr_turn_rate.set(new_turn_rate);
 }
 
 //==============================================================================
@@ -686,14 +689,14 @@ fast_mode(bool key_down)
 	if (key_down && !fast_mode_enabled) {
 		fast_mode_enabled = true;
 		prev_move_rate = curr_move_rate.get();
-		prev_rotate_rate = curr_rotate_rate.get();
+		prev_turn_rate = curr_turn_rate.get();
 		curr_move_rate.set(MAX_MOVE_RATE);
-		curr_rotate_rate.set(MAX_ROTATE_RATE);
+		curr_turn_rate.set(MAX_TURN_RATE);
 	} 
 	if (!key_down && fast_mode_enabled) {
 		fast_mode_enabled = false;
 		curr_move_rate.set(prev_move_rate);
-		curr_rotate_rate.set(prev_rotate_rate);
+		curr_turn_rate.set(prev_turn_rate);
 	}
 }
 
@@ -723,20 +726,32 @@ options_window_callback(int option_ID, int option_value)
 {
 	switch (option_ID) {
 	case OK_BUTTON:
-		download_sounds.set(download_sounds_flag);
 		close_options_window();
 		save_config_file();
 		break;
 	case CANCEL_BUTTON:
+		download_sounds.set(old_download_sounds);
 		visible_block_radius.set(old_visible_block_radius);
+		use_classic_controls.set(old_use_classic_controls);
+		curr_move_rate.set(old_curr_move_rate);
+		curr_turn_rate.set(old_curr_turn_rate);
 		user_debug_level.set(old_user_debug_level);
 		close_options_window();
 		break;
-	case DOWNLOAD_SOUNDS_CHECKBOX:
-		download_sounds_flag = option_value ? true : false;
-		break;
 	case VISIBLE_RADIUS_EDITBOX:
 		visible_block_radius.set(option_value);
+		break;
+	case DOWNLOAD_SOUNDS_CHECKBOX:
+		download_sounds.set(option_value ? true : false);
+		break;
+	case CLASSIC_CONTROLS_CHECKBOX:
+		use_classic_controls.set(option_value ? true : false);
+		break;
+	case MOVE_RATE_EDITBOX:
+		curr_move_rate.set((float)option_value * UNITS_PER_BLOCK);
+		break;
+	case TURN_RATE_EDITBOX:
+		curr_turn_rate.set((float)option_value);
 		break;
 	case DEBUG_LEVEL_OPTION:
 		user_debug_level.set(option_value);
@@ -828,10 +843,14 @@ key_event_callback(byte key_code, bool key_down)
 void
 show_options_window()
 {
-	download_sounds_flag = download_sounds.get();
+	old_download_sounds = download_sounds.get();
 	old_visible_block_radius = visible_block_radius.get();
+	old_use_classic_controls = use_classic_controls.get();
+	old_curr_move_rate = curr_move_rate.get();
+	old_curr_turn_rate = curr_turn_rate.get();
 	old_user_debug_level = user_debug_level.get();
-	open_options_window(download_sounds_flag, old_visible_block_radius,
+	open_options_window(old_download_sounds, old_visible_block_radius,
+		old_use_classic_controls, (int)(old_curr_move_rate / UNITS_PER_BLOCK), (int)old_curr_turn_rate,
 		old_user_debug_level, options_window_callback);
 }
 
@@ -1340,9 +1359,10 @@ run_app(void *instance_handle, int show_command, char *spot_file_path)
 	curr_look_delta.create_semaphore();
 	curr_jump_delta.create_semaphore();
 	curr_move_rate.create_semaphore();
-	curr_rotate_rate.create_semaphore();
+	curr_turn_rate.create_semaphore();
 	master_brightness.create_semaphore();
 	download_sounds.create_semaphore();
+	use_classic_controls.create_semaphore();
 	visible_block_radius.create_semaphore();
 	downloaded_URL.create_semaphore();
 	downloaded_file_path.create_semaphore();
@@ -1476,9 +1496,10 @@ shut_down_app()
 	curr_look_delta.destroy_semaphore();
 	curr_jump_delta.destroy_semaphore();
 	curr_move_rate.destroy_semaphore();
-	curr_rotate_rate.destroy_semaphore();
+	curr_turn_rate.destroy_semaphore();
 	master_brightness.destroy_semaphore();
 	download_sounds.destroy_semaphore();
+	use_classic_controls.destroy_semaphore();
 	visible_block_radius.destroy_semaphore();
 	downloaded_URL.destroy_semaphore();
 	downloaded_file_path.destroy_semaphore();

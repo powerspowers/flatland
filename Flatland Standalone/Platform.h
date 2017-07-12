@@ -26,8 +26,11 @@
 #define OK_BUTTON						0
 #define	CANCEL_BUTTON					1
 #define DOWNLOAD_SOUNDS_CHECKBOX		2
-#define	VISIBLE_RADIUS_EDITBOX			3
-#define	DEBUG_LEVEL_OPTION				4
+#define CLASSIC_CONTROLS_CHECKBOX		3
+#define	VISIBLE_RADIUS_EDITBOX			4
+#define MOVE_RATE_EDITBOX				5
+#define TURN_RATE_EDITBOX				6
+#define	DEBUG_LEVEL_OPTION				7
 
 // Command menu item IDs.
 
@@ -312,8 +315,8 @@ close_light_window(void);
 // Options window functions (called by the plugin thread only).
 
 void
-open_options_window(bool download_sounds_value, int visible_radius_value,
-					int user_debug_level_value,
+open_options_window(bool download_sounds_value, int viewing_distance_value, bool use_classic_controls_value,
+					int move_rate_value, int turn_rate_value, int user_debug_level_value,
 					void (*options_callback)(int option_ID, int option_value));
 
 void
