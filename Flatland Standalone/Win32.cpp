@@ -519,10 +519,6 @@ static cursor *crosshair_cursor_ptr;
 
 static cursor *curr_cursor_ptr;
 
-// Flag indicating if mouse has been captured.
-
-static bool mouse_captured;
-
 // DirectDraw data.
 
 static LPDIRECTDRAW ddraw_object_ptr;
@@ -2210,6 +2206,20 @@ LRESULT CALLBACK app_window_proc(HWND hWnd, UINT message, WPARAM wParam, LPARAM 
 			resize_main_window();
 		}
 		break;
+	case WM_CAPTURECHANGED:
+		mouse_look_mode.set(false);
+		debug_message("Lost mouse capture\n");
+		break;
+	case WM_MOUSEMOVE:
+	case WM_LBUTTONDOWN:
+	case WM_LBUTTONUP:
+	case WM_RBUTTONDOWN:
+	case WM_RBUTTONUP:
+		if (mouse_look_mode.get()) {
+			SendMessage(main_window_handle, message, wParam, lParam);
+			return 0;
+		}
+		return DefWindowProc(hWnd, message, wParam, lParam);
 	case WM_DESTROY:
 		quit_callback_ptr();
 		PostQuitMessage(0);
@@ -2970,7 +2980,7 @@ handle_main_window_event(HWND window_handle, UINT message, WPARAM wParam,
 		HANDLE_KEYUP_MSG(window_handle, message, handle_key_event);
 		break;
 	case WM_MOUSEMOVE:
-		if (mouse_captured) {
+		if (mouse_look_mode.get()) {
 			RECT rect;
 			GetWindowRect(window_handle, &rect);
 			SetCursorPos(rect.left + (int)half_window_width, rect.top + (int)half_window_height);
@@ -2990,7 +3000,7 @@ handle_main_window_event(HWND window_handle, UINT message, WPARAM wParam,
 		break;
 
 	case WM_INPUT:
-		if (mouse_captured) {
+		if (mouse_look_mode.get()) {
 			static RAWINPUT *raw_input_ptr = NULL;
 			static UINT prev_raw_input_size = 0;
 			UINT raw_input_size;
@@ -8680,23 +8690,27 @@ set_crosshair_cursor(void)
 }
 
 //------------------------------------------------------------------------------
-// Capture the mouse.
+// Enable mouse look mode.
 //------------------------------------------------------------------------------
 
 void
-capture_mouse(void)
+enable_mouse_look_mode(void)
 {
-	mouse_captured = true;
+	SetCapture(app_window_handle);
+	mouse_look_mode.set(true);
+	debug_message("Captured mouse\n");
 }
 
 //------------------------------------------------------------------------------
-// Release the mouse.
+// Disable mouse look mode.
 //------------------------------------------------------------------------------
 
 void
-release_mouse(void)
+disable_mouse_look_mode(void)
 {
-	mouse_captured = false;
+	ReleaseCapture();
+	mouse_look_mode.set(false);
+	debug_message("Released mouse\n");
 }
 
 //------------------------------------------------------------------------------

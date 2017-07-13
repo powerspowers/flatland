@@ -193,6 +193,7 @@ static void go_slower(bool key_down);
 static void sidle_mode(bool key_down);
 static void fast_mode(bool key_down);
 static void jump(bool key_down);
+static void exit_mouse_look_mode(bool key_down);
 
 // Key code to function table.
 
@@ -215,6 +216,7 @@ static key_code_to_func new_key_func_table[] = {
 	{'S', 0, move_back},
 	{'A', 0, sidle_left},
 	{'D', 0, sidle_right},
+	{ESC_KEY, 0, exit_mouse_look_mode},
 	{0, 0, NULL}
 };
 
@@ -365,6 +367,8 @@ update_mouse_cursor(int x, int y)
 {
 	float delta_x, delta_y, angle;
 
+	debug_message("Updating mouse cursor\n");
+
 	// Set the current mouse position, and get the value of the selection active
 	// flag.
 
@@ -442,6 +446,7 @@ set_mouse_cursor(void)
 	// pointing at.
 
 	case MOUSE_MOVE_ONLY:
+		debug_message("Setting mouse cursor\n");
 		if (inside_3D_window && selection_active_flag)
 			set_hand_cursor();
 		else if (inside_3D_window && use_classic_controls.get())
@@ -698,25 +703,14 @@ fast_mode(bool key_down)
 }
 
 //------------------------------------------------------------------------------
-// Function to enable or disable mouse look mode.
+// Disable mouse look mode.
 //------------------------------------------------------------------------------
 
 static void
-set_mouse_look_mode(bool enabled)
+exit_mouse_look_mode(bool key_down)
 {
-	// Set the mouse look mode flag, and clear the motion deltas.
-
-	mouse_look_mode.set(enabled);
-	curr_turn_delta.set(0.0f);
-	curr_look_delta.set(0.0f);
-
-	// If enabling the mouse look mode, capture the mouse.  
-	// Otherwise release the mouse.
-
-	if (enabled) {
-		capture_mouse();
-	} else {
-		release_mouse();
+	if (key_down) {
+		disable_mouse_look_mode();
 	}
 }
 
@@ -748,7 +742,6 @@ options_window_callback(int option_ID, int option_value)
 	case OK_BUTTON:
 		close_options_window();
 		save_config_file();
-		//set_mouse_look_mode(!use_classic_controls.get());
 		break;
 	case CANCEL_BUTTON:
 		download_sounds.set(old_download_sounds);
@@ -891,18 +884,21 @@ mouse_event_callback(int x, int y, int button_code)
 
 	close_light_window();
 
+	// If mouse look mode is enabled, compute a player rotation that is
+	// proportional to the distance the mouse has travelled since the last mouse
+	// event (x and y are relative values in this case), and add it to the
+	// current turn or look delta.  Then update x and y with the absolute mouse
+	// position.
+
+	if (mouse_look_mode.get() && button_code == MOUSE_MOVE_ONLY) {
+		curr_turn_delta.set((float)x / 5.0f);
+		curr_look_delta.set((float)y / 5.0f);
+		get_mouse_position(&x, &y, true);
+	} 
+
 	// Update the mouse cursor.
 
 	update_mouse_cursor(x, y);
-
-	// If mouse look mode is enabled, compute a player rotation that is
-	// proportional to the distance the mouse has travelled since the last mouse
-	// event, and add it to the current turn or look delta.
-
-	if (mouse_look_mode.get() && button_code == MOUSE_MOVE_ONLY) {
-		curr_turn_delta.set(x);
-		curr_look_delta.set(y);
-	}
 
 	// Handle the button code...
 
@@ -916,16 +912,15 @@ mouse_event_callback(int x, int y, int button_code)
 
 		curr_button_status = LEFT_BUTTON_DOWN;
 
-		// If inside the 3D window, there is no selection active, and we're using classic controls,
-		// then enable movement based on which cursor is active.  Otherwise reset the motion deltas.
+		// If inside the 3D window and there is no selection active, then either enable movement based on which cursor is active
+		// (if using classic controls), or enable mouse look mode.
 
-		if (inside_3D_window && !selection_active_flag && use_classic_controls.get())
-			movement_enabled = true;
-		else {
-			movement_enabled = false;
-			curr_move_delta.set(0.0f);
-			curr_side_delta.set(0.0f);
-			curr_turn_delta.set(0.0f);
+		if (inside_3D_window && !selection_active_flag) {
+			if (use_classic_controls.get()) {
+				movement_enabled = true;
+			} else {
+				enable_mouse_look_mode();
+			}
 		}
 		break;
 
@@ -937,11 +932,10 @@ mouse_event_callback(int x, int y, int button_code)
 
 		curr_button_status = RIGHT_BUTTON_DOWN;
 
-		// If using classic controls, enable mouse look mode, and set the cursor
-		// to a crosshair.
+		// If using classic controls, enable mouse look mode, and set the cursor to a crosshair.
 
 		if (use_classic_controls.get()) {
-			set_mouse_look_mode(true);
+			enable_mouse_look_mode();
 			set_crosshair_cursor();
 		}
 		break;
@@ -950,12 +944,11 @@ mouse_event_callback(int x, int y, int button_code)
 
 	case LEFT_BUTTON_UP:
 
-		// Set the button status to indicate mouse movement only, and release the mouse.
+		// Set the button status to indicate mouse movement only.
 
 		curr_button_status = MOUSE_MOVE_ONLY;
 
-		// Send an event to the player thread if an active link has been 
-		// selected.
+		// Send an event to the player thread if an active link has been selected.
 		
 		if (inside_3D_window && selection_active_flag && !movement_enabled)
 			mouse_clicked.send_event(true);
@@ -978,7 +971,7 @@ mouse_event_callback(int x, int y, int button_code)
 		// If using classic controls, disable mouse look mode.
 
 		if (use_classic_controls.get()) {
-			set_mouse_look_mode(false);
+			disable_mouse_look_mode();
 		}
 	}
 
@@ -1395,7 +1388,6 @@ run_app(void *instance_handle, int show_command, char *spot_file_path)
 
 	// Initialise other variables.
 
-	//set_mouse_look_mode(!use_classic_controls.get());
 	movement_enabled = false;
 	sidle_mode_enabled = false;
 	fast_mode_enabled = false;

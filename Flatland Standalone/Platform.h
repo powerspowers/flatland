@@ -543,10 +543,10 @@ void
 set_arrow_cursor(void);
 
 void
-capture_mouse(void);
+enable_mouse_look_mode(void);
 
 void
-release_mouse(void);
+disable_mouse_look_mode(void);
 
 // Time function.
 
