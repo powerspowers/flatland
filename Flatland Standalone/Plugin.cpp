@@ -105,7 +105,7 @@ event polygon_info_requested;
 semaphore<int> user_debug_level;
 semaphore<bool> spot_loaded;
 semaphore<bool> selection_active;
-semaphore<bool> absolute_motion;
+semaphore<bool> mouse_look_mode;
 semaphore<int> curr_mouse_x;
 semaphore<int> curr_mouse_y;
 semaphore<float> curr_move_delta;
@@ -182,7 +182,9 @@ struct key_code_to_func {
 
 static void move_forward(bool key_down);
 static void move_back(bool key_down);
+static void sidle_left(bool key_down);
 static void move_left(bool key_down);
+static void sidle_right(bool key_down);
 static void move_right(bool key_down);
 static void look_up(bool key_down);
 static void look_down(bool key_down);
@@ -194,8 +196,7 @@ static void jump(bool key_down);
 
 // Key code to function table.
 
-#define KEY_FUNCTIONS 11
-static key_code_to_func key_func_table[KEY_FUNCTIONS] = {
+static key_code_to_func classic_key_func_table[] = {
 	{UP_KEY, 0, move_forward},
 	{DOWN_KEY, 0, move_back},
 	{LEFT_KEY, 0, move_left},
@@ -206,17 +207,16 @@ static key_code_to_func key_func_table[KEY_FUNCTIONS] = {
 	{CONTROL_KEY, 0, fast_mode},
 	{NUMPAD_ADD_KEY, 0, go_faster},
 	{NUMPAD_SUBTRACT_KEY, 0, go_slower},
-	{'J', 0, jump}
+	{'J', 0, jump},
+	{0, 0, NULL}
 };
-
-// Key function set event, and related data that requires synchronised access.
-
-static event set_key_function;
-static event get_key_function;
-static event key_function_request_completed;
-static int key_function;
-static byte key_code;
-static byte alt_key_code;
+static key_code_to_func new_key_func_table[] = {
+	{'W', 0, move_forward},
+	{'S', 0, move_back},
+	{'A', 0, sidle_left},
+	{'D', 0, sidle_right},
+	{0, 0, NULL}
+};
 
 // Flag indicating if Rover started up successfully.
 
@@ -412,8 +412,7 @@ update_mouse_cursor(int x, int y)
 
 	// Determine whether or not the mouse is inside the 3D window.
 
-	inside_3D_window = x >= 0 && x < window_width && y >= 0 &&
-		y < window_height;
+	inside_3D_window = x >= 0 && x < window_width && y >= 0 && y < window_height;
 }
 
 //------------------------------------------------------------------------------
@@ -443,24 +442,24 @@ set_mouse_cursor(void)
 	// pointing at.
 
 	case MOUSE_MOVE_ONLY:
-		if (!inside_3D_window)
-			set_arrow_cursor();
-		else if (selection_active_flag)
+		if (inside_3D_window && selection_active_flag)
 			set_hand_cursor();
-		else 
+		else if (inside_3D_window && use_classic_controls.get())
 			set_movement_cursor(movement_arrow);
+		else
+			set_arrow_cursor();
 		break;
 
-	// If the left moust button is down, set the mouse cursor according to where
+	// If the left mouse button is down, set the mouse cursor according to where
 	// it is pointing and whether movement is enabled.
 
 	case LEFT_BUTTON_DOWN:
-		if (!inside_3D_window)
-			set_arrow_cursor();
-		else if (selection_active_flag && !movement_enabled)
+		if (inside_3D_window && selection_active_flag && !movement_enabled)
 			set_hand_cursor();
-		else
+		else if (inside_3D_window && use_classic_controls.get())
 			set_movement_cursor(movement_arrow);
+		else
+			set_arrow_cursor();
 	}
 }
 
@@ -491,34 +490,6 @@ update_motion_rates(int rate_dir)
 //==============================================================================
 
 //------------------------------------------------------------------------------
-// Set the key codes for a given key function.
-//------------------------------------------------------------------------------
-
-void
-set_key_codes(int key_func, int *key_codes)
-{
-	key_function = key_func;
-	key_code = key_codes[0];
-	alt_key_code = key_codes[1];
-	set_key_function.send_event(true);
-	key_function_request_completed.wait_for_event();
-}
-
-//------------------------------------------------------------------------------
-// Get the key codes for a given key function.
-//------------------------------------------------------------------------------
-
-void
-get_key_codes(int key_func, int *key_codes)
-{
-	key_function = key_func;
-	get_key_function.send_event(true);
-	key_function_request_completed.wait_for_event();
-	key_codes[0] = key_code;
-	key_codes[1] = alt_key_code;
-}
-
-//------------------------------------------------------------------------------
 // Start or stop forward motion.
 //------------------------------------------------------------------------------
 
@@ -529,17 +500,17 @@ move_forward(bool key_down)
 		curr_move_delta.set(1.0f);
 		if (player_block_ptr != NULL) {
 			if (player_block_ptr->current_loop == -1) {
-			player_block_ptr->current_loop = 1;
-			player_block_ptr->current_repeat = true;
+				player_block_ptr->current_loop = 1;
+				player_block_ptr->current_repeat = true;
 			} 
 		}
 	}
 	else {
 		curr_move_delta.set(0.0f);
 		if (player_block_ptr != NULL) {
-		player_block_ptr->current_repeat = false;
-		player_block_ptr->next_repeat = false;
-		player_block_ptr->next_loop = -1;
+			player_block_ptr->current_repeat = false;
+			player_block_ptr->next_repeat = false;
+			player_block_ptr->next_loop = -1;
 		}
 	}
 }
@@ -551,7 +522,7 @@ move_forward(bool key_down)
 static void
 jump(bool key_down)
 {
-	if (key_down ) { //&& curr_jump_delta.get() <= (float)0.0) {
+	if (key_down ) {
 		curr_jump_delta.set((float)1.5);
 	}
 }
@@ -570,20 +541,49 @@ move_back(bool key_down)
 }
 
 //------------------------------------------------------------------------------
+// Sidle left.
+//------------------------------------------------------------------------------
+
+static void
+sidle_left(bool key_down)
+{
+	if (key_down) {
+		curr_side_delta.set(-1.0f);
+		curr_turn_delta.set(0.0f);
+	} else {
+		curr_side_delta.set(0.0f);
+		curr_turn_delta.set(0.0f);
+	}
+}
+
+//------------------------------------------------------------------------------
 // Starts or stop anti-clockwise turn, or left sidle.
 //------------------------------------------------------------------------------
 
 static void
 move_left(bool key_down)
 {
+	if (sidle_mode_enabled && use_classic_controls.get()) {
+		sidle_left(key_down);
+	} else if (key_down) {
+		curr_side_delta.set(0.0f);
+		curr_turn_delta.set(-1.0f);
+	} else {
+		curr_side_delta.set(0.0f);
+		curr_turn_delta.set(0.0f);
+	}
+}
+
+//------------------------------------------------------------------------------
+// Sidle right.
+//------------------------------------------------------------------------------
+
+static void
+sidle_right(bool key_down)
+{
 	if (key_down) {
-		if (sidle_mode_enabled) {
-			curr_side_delta.set(-1.0f);
-			curr_turn_delta.set(0.0f);
-		} else {
-			curr_side_delta.set(0.0f);
-			curr_turn_delta.set(-1.0f);
-		}
+		curr_side_delta.set(1.0f);
+		curr_turn_delta.set(0.0f);
 	} else {
 		curr_side_delta.set(0.0f);
 		curr_turn_delta.set(0.0f);
@@ -597,14 +597,11 @@ move_left(bool key_down)
 static void
 move_right(bool key_down)
 {
-	if (key_down) {
-		if (sidle_mode_enabled) {
-			curr_side_delta.set(1.0f);
-			curr_turn_delta.set(0.0f);
-		} else {
-			curr_side_delta.set(0.0f);
-			curr_turn_delta.set(1.0f);
-		}
+	if (sidle_mode_enabled && use_classic_controls.get()) {
+		sidle_right(key_down);
+	} else if (key_down) {
+		curr_side_delta.set(0.0f);
+		curr_turn_delta.set(1.0f);
 	} else {
 		curr_side_delta.set(0.0f);
 		curr_turn_delta.set(0.0f);
@@ -700,6 +697,29 @@ fast_mode(bool key_down)
 	}
 }
 
+//------------------------------------------------------------------------------
+// Function to enable or disable mouse look mode.
+//------------------------------------------------------------------------------
+
+static void
+set_mouse_look_mode(bool enabled)
+{
+	// Set the mouse look mode flag, and clear the motion deltas.
+
+	mouse_look_mode.set(enabled);
+	curr_turn_delta.set(0.0f);
+	curr_look_delta.set(0.0f);
+
+	// If enabling the mouse look mode, capture the mouse.  
+	// Otherwise release the mouse.
+
+	if (enabled) {
+		capture_mouse();
+	} else {
+		release_mouse();
+	}
+}
+
 //==============================================================================
 // Callback functions.
 //==============================================================================
@@ -728,6 +748,7 @@ options_window_callback(int option_ID, int option_value)
 	case OK_BUTTON:
 		close_options_window();
 		save_config_file();
+		//set_mouse_look_mode(!use_classic_controls.get());
 		break;
 	case CANCEL_BUTTON:
 		download_sounds.set(old_download_sounds);
@@ -788,7 +809,6 @@ snapshot_window_callback(int width, int height, int position)
 static void
 key_event_callback(byte key_code, bool key_down)
 {
-	int index;
 	key_code_to_func *key_func_ptr;
 
 	// If a spot is not currently loaded, don't process any key events.
@@ -815,13 +835,13 @@ key_event_callback(byte key_code, bool key_down)
 	// Check whether the key is a recognised function key, and if so execute
 	// it's function.
 
-	for (index = 0; index < KEY_FUNCTIONS; index++) {
-		key_func_ptr = &key_func_table[index];
-		if (key_code == key_func_ptr->key_code ||
-			key_code == key_func_ptr->alt_key_code) {
+	key_func_ptr = use_classic_controls.get() ? classic_key_func_table : new_key_func_table;
+	while (key_func_ptr->key_code != 0) {
+		if (key_code == key_func_ptr->key_code || key_code == key_func_ptr->alt_key_code) {
 			(*key_func_ptr->func_ptr)(key_down);
 			break;
 		}
+		key_func_ptr++;
 	}
 
 	// Add this key event to the queue, provided it is not full.
@@ -875,18 +895,31 @@ mouse_event_callback(int x, int y, int button_code)
 
 	update_mouse_cursor(x, y);
 
+	// If mouse look mode is enabled, compute a player rotation that is
+	// proportional to the distance the mouse has travelled since the last mouse
+	// event, and add it to the current turn or look delta.
+
+	if (mouse_look_mode.get() && button_code == MOUSE_MOVE_ONLY) {
+		curr_turn_delta.set(x);
+		curr_look_delta.set(y);
+	}
+
 	// Handle the button code...
 
 	switch (button_code) {
 
-	// If the left mouse button was pressed, set the button status to reflect
-	// this and determine whether movement should be enabled according to where
-	// the mouse is pointing; if not, reset the motion deltas.  Then capture
-	// the mouse.
+	// If the left mouse button was pressed...
 
 	case LEFT_BUTTON_DOWN:
+
+		// Set the button status.
+
 		curr_button_status = LEFT_BUTTON_DOWN;
-		if (inside_3D_window && !selection_active_flag)
+
+		// If inside the 3D window, there is no selection active, and we're using classic controls,
+		// then enable movement based on which cursor is active.  Otherwise reset the motion deltas.
+
+		if (inside_3D_window && !selection_active_flag && use_classic_controls.get())
 			movement_enabled = true;
 		else {
 			movement_enabled = false;
@@ -894,35 +927,32 @@ mouse_event_callback(int x, int y, int button_code)
 			curr_side_delta.set(0.0f);
 			curr_turn_delta.set(0.0f);
 		}
-		capture_mouse();
 		break;
 
 	// If the right mouse button was pressed...
 
 	case RIGHT_BUTTON_DOWN:
 
-		// Set the button status and absolute motion flag, and reset the motion
-		// deltas.
+		// Set the button status.
 
 		curr_button_status = RIGHT_BUTTON_DOWN;
-		absolute_motion.set(true);
-		curr_turn_delta.set(0.0f);
-		curr_look_delta.set(0.0f);
 
-		// Initialise the last mouse position.
+		// If using classic controls, enable mouse look mode, and set the cursor
+		// to a crosshair.
 
-		last_x = x;
-		last_y = y;
-
-		// Set the cursor to a crosshair and capture the mouse.
-
-		set_crosshair_cursor();
-		capture_mouse();
+		if (use_classic_controls.get()) {
+			set_mouse_look_mode(true);
+			set_crosshair_cursor();
+		}
 		break;
 
 	// If the left mouse button was released...
 
 	case LEFT_BUTTON_UP:
+
+		// Set the button status to indicate mouse movement only, and release the mouse.
+
+		curr_button_status = MOUSE_MOVE_ONLY;
 
 		// Send an event to the player thread if an active link has been 
 		// selected.
@@ -930,25 +960,26 @@ mouse_event_callback(int x, int y, int button_code)
 		if (inside_3D_window && selection_active_flag && !movement_enabled)
 			mouse_clicked.send_event(true);
 
-		// Set the current button status, reset the motion deltas, and release
-		// the mouse if it was captured.
-
-		curr_button_status = MOUSE_MOVE_ONLY;
+		// Reset the motion deltas.
+		
 		curr_move_delta.set(0.0f);
 		curr_side_delta.set(0.0f);
 		curr_turn_delta.set(0.0f);
-		release_mouse();
 		break;
 
-	// If the right mouse button was released, set the button status, reset the
-	// motion deltas, and release the mouse if it was captured.
+	// If the right mouse button was released...
 
 	case RIGHT_BUTTON_UP:
+
+		// Set the button status to mouse move only.
+
 		curr_button_status = MOUSE_MOVE_ONLY;
-		absolute_motion.set(false);
-		curr_turn_delta.set(0.0f);
-		curr_look_delta.set(0.0f);
-		release_mouse();
+
+		// If using classic controls, disable mouse look mode.
+
+		if (use_classic_controls.get()) {
+			set_mouse_look_mode(false);
+		}
 	}
 
 	// Set the mouse cursor.
@@ -1010,17 +1041,6 @@ mouse_event_callback(int x, int y, int button_code)
 			}
 		} 
 		break;
-
-	// If the right mouse button is down, compute a player rotation that is
-	// proportional to the distance the mouse has travelled since the last mouse
-	// event (current one pixel = one degree), and add it to the current turn
-	// or look delta.
-
-	case RIGHT_BUTTON_DOWN:
-		curr_turn_delta.set(curr_turn_delta.get() + x - last_x);
-		curr_look_delta.set(curr_look_delta.get() + y - last_y);
-		last_x = x;
-		last_y = y;
 	}
 }
 
@@ -1093,20 +1113,6 @@ timer_event_callback(void)
 			fatal_error("Unable to display 3DML document", "One or more errors "
 				"in the 3DML document has prevented Flatland from "
 				"displaying it.");
-	}
-
-	// Check to see whether a set or get key function request has been
-	// signalled by the player thread, and if so perform that request and then
-	// signal that it is complete.
-
-	if (set_key_function.event_sent()) {
-		key_func_table[key_function].key_code = key_code;
-		key_func_table[key_function].alt_key_code = alt_key_code;
-		key_function_request_completed.send_event(true);
-	} else if (get_key_function.event_sent()) {
-		key_code = key_func_table[key_function].key_code;
-		alt_key_code = key_func_table[key_function].alt_key_code;
-		key_function_request_completed.send_event(true);
 	}
 }
 
@@ -1308,8 +1314,6 @@ run_app(void *instance_handle, int show_command, char *spot_file_path)
 	player_window_shut_down.create_event();
 	show_spot_directory.create_event();
 	display_error.create_event();
-	set_key_function.create_event();
-	get_key_function.create_event();
 
 	// Create the events sent by the plugin thread.
 
@@ -1333,7 +1337,6 @@ run_app(void *instance_handle, int show_command, char *spot_file_path)
 #ifdef _DEBUG
 	polygon_info_requested.create_event();
 #endif
-	key_function_request_completed.create_event();
 	snapshot_requested.create_event();
 
 	// Create the semaphores which are protecting multiple data structures.
@@ -1350,7 +1353,7 @@ run_app(void *instance_handle, int show_command, char *spot_file_path)
 	user_debug_level.create_semaphore();
 	spot_loaded.create_semaphore();
 	selection_active.create_semaphore();
-	absolute_motion.create_semaphore();
+	mouse_look_mode.create_semaphore();
 	curr_mouse_x.create_semaphore();
 	curr_mouse_y.create_semaphore();
 	curr_move_delta.create_semaphore();
@@ -1392,6 +1395,7 @@ run_app(void *instance_handle, int show_command, char *spot_file_path)
 
 	// Initialise other variables.
 
+	//set_mouse_look_mode(!use_classic_controls.get());
 	movement_enabled = false;
 	sidle_mode_enabled = false;
 	fast_mode_enabled = false;
@@ -1487,7 +1491,7 @@ shut_down_app()
 	user_debug_level.destroy_semaphore();
 	spot_loaded.destroy_semaphore();
 	selection_active.destroy_semaphore();
-	absolute_motion.destroy_semaphore();
+	mouse_look_mode.destroy_semaphore();
 	curr_mouse_x.destroy_semaphore();
 	curr_mouse_y.destroy_semaphore();
 	curr_move_delta.destroy_semaphore();
@@ -1514,8 +1518,6 @@ shut_down_app()
 	player_window_shut_down.destroy_event();
 	show_spot_directory.destroy_event();
 	display_error.destroy_event();
-	set_key_function.destroy_event();
-	get_key_function.destroy_event();
 
 	// Destroy the events sent by the plugin thread.
 
@@ -1539,7 +1541,6 @@ shut_down_app()
 #ifdef _DEBUG
 	polygon_info_requested.destroy_event();
 #endif
-	key_function_request_completed.destroy_event();
 	snapshot_requested.destroy_event();
 
 	// Shut down the platform API.

@@ -3081,11 +3081,19 @@ render_next_frame(void)
 	mouse_x = curr_mouse_x.get();
 	mouse_y = curr_mouse_y.get();
 
-	// Determine the motion deltas.
+	// Determine the movement deltas.
 
-	if (absolute_motion.get()) {
+	if (enable_player_translation) {
+		move_delta = curr_move_delta.get() * curr_move_rate.get() * elapsed_time;
+		side_delta = curr_side_delta.get() * curr_move_rate.get() * elapsed_time;
+	} else {
 		move_delta = 0.0f;
 		side_delta = 0.0f;
+	}
+
+	// Determine the turn and look deltas based on whether mouse look mode is enabled or not.
+
+	if (mouse_look_mode.get()) {
 		if (enable_player_rotation) {
 			turn_delta = curr_turn_delta.get();
 			look_delta = curr_look_delta.get();
@@ -3096,13 +3104,6 @@ render_next_frame(void)
 		curr_turn_delta.set(0.0f);
 		curr_look_delta.set(0.0f);
 	} else {
-		if (enable_player_translation) {
-			move_delta = curr_move_delta.get() * curr_move_rate.get() * elapsed_time;
-			side_delta = curr_side_delta.get() * curr_move_rate.get() * elapsed_time;
-		} else {
-			move_delta = 0.0f;
-			side_delta = 0.0f;
-		}
 		if (enable_player_rotation) {
 			turn_delta = curr_turn_delta.get() * curr_turn_rate.get() * elapsed_time;
 			look_delta = curr_look_delta.get() * curr_turn_rate.get() * elapsed_time;

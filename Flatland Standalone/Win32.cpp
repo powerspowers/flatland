@@ -519,6 +519,10 @@ static cursor *crosshair_cursor_ptr;
 
 static cursor *curr_cursor_ptr;
 
+// Flag indicating if mouse has been captured.
+
+static bool mouse_captured;
+
 // DirectDraw data.
 
 static LPDIRECTDRAW ddraw_object_ptr;
@@ -2200,20 +2204,10 @@ LRESULT CALLBACK app_window_proc(HWND hWnd, UINT message, WPARAM wParam, LPARAM 
 			}
 		}
 		break;
-	case WM_PAINT:
-		{
-			PAINTSTRUCT ps;
-			HDC hdc = BeginPaint(hWnd, &ps);
-			// TODO: Add any drawing code that uses hdc here...
-			EndPaint(hWnd, &ps);
-		}
-		break;
 	case WM_SIZE:
-		{
-			SendMessage(status_bar_handle, WM_SIZE, wParam, lParam);
-			if (wParam == SIZE_MAXIMIZED || wParam == SIZE_RESTORED) {
-				resize_main_window();
-			}
+		SendMessage(status_bar_handle, WM_SIZE, wParam, lParam);
+		if (wParam == SIZE_MAXIMIZED || wParam == SIZE_RESTORED) {
+			resize_main_window();
 		}
 		break;
 	case WM_DESTROY:
@@ -2976,6 +2970,14 @@ handle_main_window_event(HWND window_handle, UINT message, WPARAM wParam,
 		HANDLE_KEYUP_MSG(window_handle, message, handle_key_event);
 		break;
 	case WM_MOUSEMOVE:
+		if (mouse_captured) {
+			RECT rect;
+			GetWindowRect(window_handle, &rect);
+			SetCursorPos(rect.left + (int)half_window_width, rect.top + (int)half_window_height);
+		} else {
+			HANDLE_MOUSE_MSG(window_handle, message, handle_mouse_event);
+		}
+		break;
 	case WM_LBUTTONDOWN:
 	case WM_RBUTTONDOWN:
 	case WM_LBUTTONUP:
@@ -2986,6 +2988,28 @@ handle_main_window_event(HWND window_handle, UINT message, WPARAM wParam,
 		if (timer_callback_ptr != NULL)
 			(*timer_callback_ptr)();
 		break;
+
+	case WM_INPUT:
+		if (mouse_captured) {
+			static RAWINPUT *raw_input_ptr = NULL;
+			static UINT prev_raw_input_size = 0;
+			UINT raw_input_size;
+			GetRawInputData((HRAWINPUT)lParam, RID_INPUT, NULL, &raw_input_size, sizeof(RAWINPUTHEADER));
+			if (raw_input_size != prev_raw_input_size) {
+				if (raw_input_ptr != NULL) {
+					delete [](BYTE *)raw_input_ptr;
+				}
+				raw_input_ptr = (RAWINPUT *)new BYTE[raw_input_size];
+				prev_raw_input_size = raw_input_size;
+			}
+			if (raw_input_ptr && GetRawInputData((HRAWINPUT)lParam, RID_INPUT, raw_input_ptr, &raw_input_size, sizeof(RAWINPUTHEADER)) == raw_input_size &&
+				raw_input_ptr->header.dwType == RIM_TYPEMOUSE) {
+				(*mouse_callback_ptr)(raw_input_ptr->data.mouse.lLastX, raw_input_ptr->data.mouse.lLastY, MOUSE_MOVE_ONLY);
+			}
+			return 0;
+		}
+		break;
+
 	case WM_SIZE:
 		if (resize_callback_ptr != NULL)
 			(*resize_callback_ptr)(window_handle, LOWORD(lParam),
@@ -3145,8 +3169,7 @@ create_main_window(void (*key_callback)(byte key_code, bool key_down),
 
 	set_main_window_size(main_window_rect.right - main_window_rect.left, main_window_rect.bottom - main_window_rect.top);
 
-	// Set the input focus to the main window, and set a timer to go off 33
-	// times a second.
+	// Set the input focus to the main window, and set a timer to go off 33 times a second.
 
 	SetFocus(main_window_handle);
 	SetTimer(main_window_handle, 1, 30, NULL);
@@ -3158,6 +3181,16 @@ create_main_window(void (*key_callback)(byte key_code, bool key_down),
 	timer_callback_ptr = timer_callback;
 	resize_callback_ptr = resize_callback;
 	display_callback_ptr = display_callback;
+
+	// Register the mouse as a raw input device for the main window, so we can do a Minecraft-style
+	// mouse look without needing to capture the mouse.
+
+	RAWINPUTDEVICE raw_input_device;
+	raw_input_device.usUsagePage = 1;
+	raw_input_device.usUsage = 2;
+	raw_input_device.dwFlags = 0;
+	raw_input_device.hwndTarget = main_window_handle;
+	RegisterRawInputDevices(&raw_input_device, 1, sizeof(raw_input_device));
 
 	// Attempt to start up the hardware accelerated renderer, and if this fails,
 	// start up the software renderer.  If this also fails, the app is going to have
@@ -8653,7 +8686,7 @@ set_crosshair_cursor(void)
 void
 capture_mouse(void)
 {
-	SetCapture(main_window_handle);
+	mouse_captured = true;
 }
 
 //------------------------------------------------------------------------------
@@ -8663,7 +8696,7 @@ capture_mouse(void)
 void
 release_mouse(void)
 {
-	ReleaseCapture();
+	mouse_captured = false;
 }
 
 //------------------------------------------------------------------------------

@@ -2683,98 +2683,6 @@ parse_key_code(int *key_code_ptr, bool generate_error)
 }
 
 //------------------------------------------------------------------------------
-// Parse current file token as one or two key codes, seperated by a comma.
-//------------------------------------------------------------------------------
-
-static bool
-parse_key_code_list(int *key_code_list, bool generate_error)
-{
-	// If the key code is "[none]", set both key codes to zero.
-
-	if (token_in_value_is("[none]", false)) {
-		key_code_list[0] = 0;
-		key_code_list[1] = 0;
-		return(true);
-	}
-
-	// Parse the first key code.
-
-	if (!parse_key_code(&key_code_list[0], generate_error))
-		return(false);
-
-	// If a comma is present, parse the second key code, otherwise set it to
-	// zero.
-
-	if (token_in_value_is(",", false)) {
-		if (!parse_key_code(&key_code_list[1], generate_error))
-			return(false);
-	} else
-		key_code_list[1] = 0;
-
-	// Indicate success.
-
-	return(true);
-}
-
-//------------------------------------------------------------------------------
-// Parse the given attribute value as one or two key codes, seperated by a 
-// comma.
-//------------------------------------------------------------------------------
-
-bool
-parse_key_code_list(char *attr_value, int *key_code_list)
-{
-	start_parsing_value(TOKEN_NONE, TOKEN_NONE, attr_value, false);
-	return(parse_key_code_list(key_code_list, false) && 
-		stop_parsing_value(false));
-}
-
-//------------------------------------------------------------------------------
-// Return the string associated with a given key code pair.
-//------------------------------------------------------------------------------
-
-string
-key_codes_to_string(int *key_code_list)
-{
-	string key_code_str;
-
-	// If both key codes are zero, return "[none]".
-
-	if (key_code_list[0] == 0 && key_code_list[1] == 0)
-		return("[none]");
-
-	// Convert the first key code to a string.
-
-	if (isalnum(key_code_list[0]))
-		key_code_str = (char)key_code_list[0];
-	else {
-		key_code_str = "[";
-		key_code_str += get_value_str_from_list(key_code_list[0],
-			key_code_value_list, KEY_CODE_VALUES);
-		key_code_str += "]";
-	}
-
-	// If the second key code is not zero, convert it to a string and add it
-	// to the first key code string.
-
-	if (key_code_list[1] != 0) {
-		key_code_str += ",";
-		if (isalnum(key_code_list[1]))
-			key_code_str += (char)key_code_list[1];
-		else {
-			key_code_str += "[";
-			key_code_str += get_value_str_from_list(key_code_list[1],
-				key_code_value_list, KEY_CODE_VALUES);
-			key_code_str += "]";
-		}
-	}
-
-	// Return the string created.
-
-	return(key_code_str);
-}
-
-//------------------------------------------------------------------------------
 // Parse current file token as map coordinates, and convert to zero based
 // coordinates, taking the existence of the ground level and empty top level
 // into account.
@@ -4101,9 +4009,6 @@ parse_attribute_value(int value_type, void *value_ptr)
 
 	case VALUE_KEY_CODE:
 		return(parse_key_code((int *)value_ptr, true));
-
-	case VALUE_KEY_CODE_LIST:
-		return(parse_key_code_list((int *)value_ptr, true));
 
 	case VALUE_MAP_COORDS:
 		return(parse_map_coordinates((mapcoords *)value_ptr));

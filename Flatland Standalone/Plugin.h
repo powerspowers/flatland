@@ -101,7 +101,7 @@ extern event polygon_info_requested;
 extern semaphore<int> user_debug_level;
 extern semaphore<bool> spot_loaded;
 extern semaphore<bool> selection_active;
-extern semaphore<bool> absolute_motion;
+extern semaphore<bool> mouse_look_mode;
 extern semaphore<int> curr_mouse_x;
 extern semaphore<int> curr_mouse_y;
 extern semaphore<float> curr_move_delta;
@@ -162,15 +162,6 @@ display_file_as_web_page(const char *file_path);
 
 void
 display_web_page(const char *URL);
-
-// Function to set and get the key codes for a specific key function (called by
-// the player thread only).
-
-extern void
-set_key_codes(int key_func, int *key_codes);
-
-extern void
-get_key_codes(int key_func, int *key_codes);
 
 // Key event structure.
 

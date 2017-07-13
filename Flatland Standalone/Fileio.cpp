@@ -3577,31 +3577,6 @@ parse_player_tag(void)
 		player_camera_offset.dy = 0.0f;
 		player_camera_offset.dz = -10.0f;
 	}
-
-	// If key functions have been given, set them.
-
-	if (parsed_attribute[PLAYER_MOVE_FORWARD])
-		set_key_codes(MOVE_FORWARD, player_move_forward);
-	if (parsed_attribute[PLAYER_MOVE_BACK])
-		set_key_codes(MOVE_BACK, player_move_back);
-	if (parsed_attribute[PLAYER_MOVE_LEFT])
-		set_key_codes(MOVE_LEFT, player_move_left);
-	if (parsed_attribute[PLAYER_MOVE_RIGHT])
-		set_key_codes(MOVE_RIGHT, player_move_right);
-	if (parsed_attribute[PLAYER_LOOK_UP])
-		set_key_codes(LOOK_UP, player_look_up);
-	if (parsed_attribute[PLAYER_LOOK_DOWN])
-		set_key_codes(LOOK_DOWN, player_look_down);
-	if (parsed_attribute[PLAYER_GO_FASTER])
-		set_key_codes(GO_FASTER, player_go_faster);
-	if (parsed_attribute[PLAYER_GO_SLOWER])
-		set_key_codes(GO_SLOWER, player_go_slower);
-	if (parsed_attribute[PLAYER_SIDLE_MODE])
-		set_key_codes(SIDLE_MODE, player_sidle_mode);
-	if (parsed_attribute[PLAYER_FAST_MODE])
-		set_key_codes(FAST_MODE, player_fast_mode);
-	if (parsed_attribute[PLAYER_JUMP])
-		set_key_codes(JUMP, player_jump);
 }
 
 //------------------------------------------------------------------------------

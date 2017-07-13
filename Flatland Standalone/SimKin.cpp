@@ -2510,8 +2510,6 @@ public:
 bool 
 player_simkin_object::getValue(const skString& field, const skString& attribute, skRValue& value)
 {
-	int key_code_list[2];
-
 	// If the field is "location" and the attribute is "column", "row" or
 	// "level", or "x", "y" or "z", return the approapiate coordinate of the 
 	// player
@@ -2598,56 +2596,6 @@ player_simkin_object::getValue(const skString& field, const skString& attribute,
 			return(false);
 	}
 
-	// If the field is "move_forward", "move_back", "move_left", "move_right",
-	// "look_up", "look_down", "sidle_mode", "fast_mode", "go_faster" or
-	// "go_slower", get the key codes for the associated key function.
-
-	else if (field == "move_forward") {
-		get_key_codes(MOVE_FORWARD, key_code_list);
-		skString value_str(key_codes_to_string(key_code_list));
-		value = value_str;
-	} else if (field == "move_back") {
-		get_key_codes(MOVE_BACK, key_code_list);
-		skString value_str(key_codes_to_string(key_code_list));
-		value = value_str;
-	} else if (field == "move_left") {
-		get_key_codes(MOVE_LEFT, key_code_list);
-		skString value_str(key_codes_to_string(key_code_list));
-		value = value_str;
-	} else if (field == "move_right") {
-		get_key_codes(MOVE_RIGHT, key_code_list);
-		skString value_str(key_codes_to_string(key_code_list));
-		value = value_str;
-	} else if (field == "look_up") {
-		get_key_codes(LOOK_UP, key_code_list);
-		skString value_str(key_codes_to_string(key_code_list));
-		value = value_str;
-	} else if (field == "look_down") {
-		get_key_codes(LOOK_DOWN, key_code_list);
-		skString value_str(key_codes_to_string(key_code_list));
-		value = value_str;
-	} else if (field == "sidle_mode") {
-		get_key_codes(SIDLE_MODE, key_code_list);
-		skString value_str(key_codes_to_string(key_code_list));
-		value = value_str;
-	} else if (field == "fast_mode") {
-		get_key_codes(FAST_MODE, key_code_list);
-		skString value_str(key_codes_to_string(key_code_list));
-		value = value_str;
-	} else if (field == "go_faster") {
-		get_key_codes(GO_FASTER, key_code_list);
-		skString value_str(key_codes_to_string(key_code_list));
-		value = value_str;
-	} else if (field == "go_slower") {
-		get_key_codes(GO_SLOWER, key_code_list);
-		skString value_str(key_codes_to_string(key_code_list));
-		value = value_str;
-	} else if (field == "jump") {
-		get_key_codes(JUMP, key_code_list);
-		skString value_str(key_codes_to_string(key_code_list));
-		value = value_str;
-	}
-
 	// Indicate success.
 
 	return(true);
@@ -2658,8 +2606,6 @@ player_simkin_object::getValue(const skString& field, const skString& attribute,
 bool 
 player_simkin_object::setValue(const skString& field, const skString& attribute, const skRValue& value)
 {
-	int key_code_list[2];
-
 	// If the field is "location", the attribute is "x", "y" or "z", and the
 	// block is movable, set the approapiate coordinate of the player.
 
@@ -2722,67 +2668,6 @@ player_simkin_object::setValue(const skString& field, const skString& attribute,
 		// Update the player collision box and step height.
 
 		set_player_size();
-	}
-
-	// If the field is "move_forward", "move_back", "move_left", "move_right",
-	// "look_up", "look_down", "sidle_mode", "fast_mode", "go_faster" or
-	// "go_slower", set the key codes for the associated key function.
-
-	else if (field == "move_forward") {
-		if (!parse_key_code_list((char *)(const char *)value.str(), 
-			key_code_list))
-			return(false);
-		set_key_codes(MOVE_FORWARD, key_code_list);
-	} else if (field == "move_back") {
-		if (!parse_key_code_list((char *)(const char *)value.str(), 
-			key_code_list))
-			return(false);
-		set_key_codes(MOVE_BACK, key_code_list);
-	} else if (field == "move_left") {
-		if (!parse_key_code_list((char *)(const char *)value.str(), 
-			key_code_list))
-			return(false);
-		set_key_codes(MOVE_LEFT, key_code_list);
-	} else if (field == "move_right") {
-		if (!parse_key_code_list((char *)(const char *)value.str(), 
-			key_code_list))
-			return(false);
-		set_key_codes(MOVE_RIGHT, key_code_list);
-	} else if (field == "look_up") {
-		if (!parse_key_code_list((char *)(const char *)value.str(), 
-			key_code_list))
-			return(false);
-		set_key_codes(LOOK_UP, key_code_list);
-	} else if (field == "look_down") {
-		if (!parse_key_code_list((char *)(const char *)value.str(), 
-			key_code_list))
-			return(false);
-		set_key_codes(LOOK_DOWN, key_code_list);
-	} else if (field == "sidle_mode") {
-		if (!parse_key_code_list((char *)(const char *)value.str(), 
-			key_code_list))
-			return(false);
-		set_key_codes(SIDLE_MODE, key_code_list);
-	} else if (field == "fast_mode") {
-		if (!parse_key_code_list((char *)(const char *)value.str(), 
-			key_code_list))
-			return(false);
-		set_key_codes(FAST_MODE, key_code_list);
-	} else if (field == "go_faster") {
-		if (!parse_key_code_list((char *)(const char *)value.str(), 
-			key_code_list))
-			return(false);
-		set_key_codes(GO_FASTER, key_code_list);
-	} else if (field == "go_slower") {
-		if (!parse_key_code_list((char *)(const char *)value.str(), 
-			key_code_list))
-			return(false);
-		set_key_codes(GO_SLOWER, key_code_list);
-	} else if (field == "jump") {
-		if (!parse_key_code_list((char *)(const char *)value.str(), 
-			key_code_list))
-			return(false);
-		set_key_codes(JUMP, key_code_list);
 	}
 
 	// All other fields are errors.

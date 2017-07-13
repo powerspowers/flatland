@@ -181,12 +181,6 @@ bool
 parse_float_in_value(float *float_ptr);
 
 bool
-parse_key_code_list(char *attr_value, int *key_code_list);
-
-string
-key_codes_to_string(int *key_code_list);
-
-bool
 parse_playback_mode(char *attr_value, int *playback_mode_ptr);
 
 bool

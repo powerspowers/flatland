@@ -593,47 +593,14 @@ static attr_def placeholder_attr_list[PLACEHOLDER_ATTRIBUTES] = {
 #define PLAYER_BLOCK			0
 #define PLAYER_SIZE				1
 #define PLAYER_CAMERA			2
-#define PLAYER_MOVE_FORWARD		3
-#define PLAYER_MOVE_BACK		4
-#define PLAYER_MOVE_LEFT		5
-#define PLAYER_MOVE_RIGHT		6
-#define PLAYER_LOOK_UP			7
-#define PLAYER_LOOK_DOWN		8
-#define PLAYER_GO_FASTER		9
-#define PLAYER_GO_SLOWER		10
-#define PLAYER_SIDLE_MODE		11
-#define PLAYER_FAST_MODE		12
-#define PLAYER_JUMP				13
 static word player_block;
 static vertex player_size;
 static float player_eye_level;
 static vertex player_camera;
-static int player_move_forward[2];
-static int player_move_back[2];
-static int player_move_left[2];
-static int player_move_right[2];
-static int player_look_up[2];
-static int player_look_down[2];
-static int player_go_faster[2];
-static int player_go_slower[2];
-static int player_sidle_mode[2];
-static int player_fast_mode[2];
-static int player_jump[2];
 static attr_def player_attr_list[PLAYER_ATTRIBUTES] = {
 	{TOKEN_BLOCK, VALUE_SYMBOL, &player_block, false},
 	{TOKEN_SIZE, VALUE_VERTEX_COORDS, &player_size, false},
 	{TOKEN_CAMERA, VALUE_VERTEX_COORDS, &player_camera, false},
-	{TOKEN_MOVE_FORWARD, VALUE_KEY_CODE_LIST, player_move_forward, false},
-	{TOKEN_MOVE_BACK, VALUE_KEY_CODE_LIST, player_move_back, false},
-	{TOKEN_MOVE_LEFT, VALUE_KEY_CODE_LIST, player_move_left, false},
-	{TOKEN_MOVE_RIGHT, VALUE_KEY_CODE_LIST, player_move_right, false},
-	{TOKEN_LOOK_UP, VALUE_KEY_CODE_LIST, player_look_up, false},
-	{TOKEN_LOOK_DOWN, VALUE_KEY_CODE_LIST, player_look_down, false},
-	{TOKEN_GO_FASTER, VALUE_KEY_CODE_LIST, player_go_faster, false},
-	{TOKEN_GO_SLOWER, VALUE_KEY_CODE_LIST, player_go_slower, false},
-	{TOKEN_SIDLE_MODE, VALUE_KEY_CODE_LIST, player_sidle_mode, false},
-	{TOKEN_FAST_MODE, VALUE_KEY_CODE_LIST, player_fast_mode, false},
-	{TOKEN_JUMP, VALUE_KEY_CODE_LIST, player_jump, false}
 };
 
 // POINT_LIGHT tag (block and spot files).
