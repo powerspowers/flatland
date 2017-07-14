@@ -367,8 +367,6 @@ update_mouse_cursor(int x, int y)
 {
 	float delta_x, delta_y, angle;
 
-	debug_message("Updating mouse cursor\n");
-
 	// Set the current mouse position, and get the value of the selection active
 	// flag.
 
@@ -438,34 +436,16 @@ set_mouse_cursor(void)
 		return;
 	}
 
-	// Otherwise...
+	// Otherwise set the cursor according to what the mouse is pointing at.
 
-	switch (curr_button_status) {
-
-	// If both buttons are up, set the cursor according to what the mouse is
-	// pointing at.
-
-	case MOUSE_MOVE_ONLY:
-		debug_message("Setting mouse cursor\n");
-		if (inside_3D_window && selection_active_flag)
-			set_hand_cursor();
-		else if (inside_3D_window && use_classic_controls.get())
-			set_movement_cursor(movement_arrow);
-		else
-			set_arrow_cursor();
-		break;
-
-	// If the left mouse button is down, set the mouse cursor according to where
-	// it is pointing and whether movement is enabled.
-
-	case LEFT_BUTTON_DOWN:
-		if (inside_3D_window && selection_active_flag && !movement_enabled)
-			set_hand_cursor();
-		else if (inside_3D_window && use_classic_controls.get())
-			set_movement_cursor(movement_arrow);
-		else
-			set_arrow_cursor();
-	}
+	if (inside_3D_window && selection_active_flag)
+		set_hand_cursor();
+	else if (mouse_look_mode.get())
+		set_crosshair_cursor();
+	else if (inside_3D_window && use_classic_controls.get())
+		set_movement_cursor(movement_arrow);
+	else
+		set_arrow_cursor();
 }
 
 //------------------------------------------------------------------------------
@@ -884,15 +864,14 @@ mouse_event_callback(int x, int y, int button_code)
 
 	close_light_window();
 
-	// If mouse look mode is enabled, compute a player rotation that is
+	// If mouse look mode is enabled, compute a player turn and look delta that is
 	// proportional to the distance the mouse has travelled since the last mouse
-	// event (x and y are relative values in this case), and add it to the
-	// current turn or look delta.  Then update x and y with the absolute mouse
-	// position.
+	// event (x and y are relative values in this case).  Then replace x and y with
+	// the absolute mouse position.
 
 	if (mouse_look_mode.get() && button_code == MOUSE_MOVE_ONLY) {
-		curr_turn_delta.set((float)x / 5.0f);
-		curr_look_delta.set((float)y / 5.0f);
+		curr_turn_delta.set((float)x / horz_pixels_per_degree);
+		curr_look_delta.set((float)y / vert_pixels_per_degree);
 		get_mouse_position(&x, &y, true);
 	} 
 
@@ -932,11 +911,10 @@ mouse_event_callback(int x, int y, int button_code)
 
 		curr_button_status = RIGHT_BUTTON_DOWN;
 
-		// If using classic controls, enable mouse look mode, and set the cursor to a crosshair.
+		// If using classic controls, enable mouse look mode.
 
 		if (use_classic_controls.get()) {
 			enable_mouse_look_mode();
-			set_crosshair_cursor();
 		}
 		break;
 
@@ -953,8 +931,9 @@ mouse_event_callback(int x, int y, int button_code)
 		if (inside_3D_window && selection_active_flag && !movement_enabled)
 			mouse_clicked.send_event(true);
 
-		// Reset the motion deltas.
+		// Disable movement based on which cursor is active, and reset the motion deltas.
 		
+		movement_enabled = false;
 		curr_move_delta.set(0.0f);
 		curr_side_delta.set(0.0f);
 		curr_turn_delta.set(0.0f);

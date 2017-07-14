@@ -2208,7 +2208,6 @@ LRESULT CALLBACK app_window_proc(HWND hWnd, UINT message, WPARAM wParam, LPARAM 
 		break;
 	case WM_CAPTURECHANGED:
 		mouse_look_mode.set(false);
-		debug_message("Lost mouse capture\n");
 		break;
 	case WM_MOUSEMOVE:
 	case WM_LBUTTONDOWN:
@@ -8698,7 +8697,6 @@ enable_mouse_look_mode(void)
 {
 	SetCapture(app_window_handle);
 	mouse_look_mode.set(true);
-	debug_message("Captured mouse\n");
 }
 
 //------------------------------------------------------------------------------
@@ -8710,7 +8708,6 @@ disable_mouse_look_mode(void)
 {
 	ReleaseCapture();
 	mouse_look_mode.set(false);
-	debug_message("Released mouse\n");
 }
 
 //------------------------------------------------------------------------------

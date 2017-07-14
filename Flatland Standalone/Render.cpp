@@ -1266,7 +1266,6 @@ add_tvertex_to_tpolygon(tpolygon *tpolygon_ptr, int tvertex_index, polygon_def *
 	new_tvertex_ptr->v = vertex_def_ptr->v;
 	new_tvertex_ptr->colour = vertex_colour_list[tvertex_index];
 	new_tvertex_ptr->next_tvertex_ptr = NULL;
-	//debug_message("Transformed vertex %d is (%f, %f, %f)\n", tvertex_index, new_tvertex_ptr->x, new_tvertex_ptr->y, new_tvertex_ptr->z);
 	if (last_tvertex_ptr) {
 		last_tvertex_ptr->next_tvertex_ptr = new_tvertex_ptr;
 	} else {
@@ -1448,9 +1447,6 @@ render_polygon(polygon *polygon_ptr, float turn_angle)
 		// Determine whether the polygon has been selected by the mouse.
 
 		polygon_selected = !found_selection && mouse_intersects_with_polygon((float)mouse_x, (float)mouse_y, &camera_direction, tpolygon_ptr);
-		if (polygon_selected) {
-			debug_message("Polygon selected\n");
-		}
 	} 
 	
 	// If hardware acceleration is not enabled... 
