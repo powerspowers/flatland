@@ -4763,7 +4763,7 @@ load_config_file(void)
 
 	download_sounds_value = 1;
 	use_classic_controls_value = 0;
-	visible_block_radius_value = 20;
+	visible_block_radius_value = DEFAULT_VIEW_RADIUS;
 	curr_move_rate_value = DEFAULT_MOVE_RATE;
 	curr_turn_rate_value = DEFAULT_TURN_RATE;
 	min_blockset_update_period = SECONDS_PER_WEEK;
@@ -4783,11 +4783,11 @@ load_config_file(void)
 					read_config_bool(value, &download_sounds_value);
 				else if (!_stricmp(name, "use classic controls"))
 					read_config_bool(value, &use_classic_controls_value);
-				else if (!_stricmp(name, "viewing distance"))
+				else if (!_stricmp(name, "view radius"))
 					read_config_int(value, &visible_block_radius_value);
-				else if (!_stricmp(name, "move rate")) {
+				else if (!_stricmp(name, "move rate multiplier")) {
 					read_config_int(value, &curr_move_rate_value);
-				} else if (!_stricmp(name, "turn rate"))
+				} else if (!_stricmp(name, "turn rate multiplier"))
 					read_config_int(value, &curr_turn_rate_value);
 				else if (!_stricmp(name, "minimum blockset update period")) {
 					if (read_config_int(value, &min_blockset_update_period))
@@ -4870,9 +4870,9 @@ save_config_file(void)
 		fprintf(fp, "Flatland Rover configuration:\n");
 		write_config_bool(fp, "download sounds", download_sounds.get());
 		write_config_bool(fp, "use classic controls", use_classic_controls.get());
-		write_config_int(fp, "viewing distance", visible_block_radius.get(), "blocks");
-		write_config_int(fp, "move rate", curr_move_rate.get(), "blocks/second");
-		write_config_int(fp, "turn rate", curr_turn_rate.get(), "x 45 degrees/second or degrees/mouse movement");
+		write_config_int(fp, "view radius", visible_block_radius.get(), "blocks");
+		write_config_int(fp, "move rate multiplier", curr_move_rate.get(), "x blocks/second");
+		write_config_int(fp, "turn rate multiplier", curr_turn_rate.get(), "x degrees/second or degrees/mouse movement");
 		write_config_int(fp, "minimum blockset update period", min_blockset_update_period / SECONDS_PER_DAY, "days");
 		write_config_time_t(fp, "last Rover update", last_rover_update, "seconds since epoch");
 		write_config_time_t(fp, "last spot directory update", last_spot_dir_update, "seconds since epoch");

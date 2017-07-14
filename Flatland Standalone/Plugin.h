@@ -12,6 +12,10 @@
 #define OPERA				3
 #define ACTIVEX_CONTROL		4
 
+// Default view radius.
+
+#define DEFAULT_VIEW_RADIUS			50
+
 // Minimum, maximum and default move rates (in units of blocks).
 
 #define MIN_MOVE_RATE				1
