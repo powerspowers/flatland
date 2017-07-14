@@ -3084,8 +3084,8 @@ render_next_frame(void)
 	// Determine the movement deltas.
 
 	if (enable_player_translation) {
-		move_delta = curr_move_delta.get() * curr_move_rate.get() * elapsed_time;
-		side_delta = curr_side_delta.get() * curr_move_rate.get() * elapsed_time;
+		move_delta = curr_move_delta.get() * curr_move_rate.get() * UNITS_PER_BLOCK * elapsed_time;
+		side_delta = curr_side_delta.get() * curr_move_rate.get() * UNITS_PER_BLOCK * elapsed_time;
 	} else {
 		move_delta = 0.0f;
 		side_delta = 0.0f;
@@ -3095,8 +3095,8 @@ render_next_frame(void)
 
 	if (mouse_look_mode.get()) {
 		if (enable_player_rotation) {
-			turn_delta = curr_turn_delta.get();
-			look_delta = curr_look_delta.get();
+			turn_delta = curr_turn_delta.get() * curr_turn_rate.get();
+			look_delta = curr_look_delta.get() * curr_turn_rate.get();
 		} else {
 			turn_delta = 0.0f;
 			look_delta = 0.0f;
@@ -3105,8 +3105,8 @@ render_next_frame(void)
 		curr_look_delta.set(0.0f);
 	} else {
 		if (enable_player_rotation) {
-			turn_delta = curr_turn_delta.get() * curr_turn_rate.get() * elapsed_time;
-			look_delta = curr_look_delta.get() * curr_turn_rate.get() * elapsed_time;
+			turn_delta = curr_turn_delta.get() * curr_turn_rate.get() * DEGREES_PER_TURN_RATE * elapsed_time;
+			look_delta = curr_look_delta.get() * curr_turn_rate.get() * DEGREES_PER_TURN_RATE * elapsed_time;
 		} else {
 			turn_delta = 0.0f;
 			look_delta = 0.0f;

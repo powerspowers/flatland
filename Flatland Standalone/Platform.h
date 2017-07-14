@@ -6,7 +6,7 @@
 
 // Version string.
 
-#define ROVER_VERSION_NUMBER			0x03060009 // ff at the end usually unless beta
+#define ROVER_VERSION_NUMBER			0x0306000A // ff at the end usually unless beta
 
 // Activation status.
 
@@ -27,9 +27,9 @@
 #define	CANCEL_BUTTON					1
 #define DOWNLOAD_SOUNDS_CHECKBOX		2
 #define CLASSIC_CONTROLS_CHECKBOX		3
-#define	VISIBLE_RADIUS_EDITBOX			4
-#define MOVE_RATE_EDITBOX				5
-#define TURN_RATE_EDITBOX				6
+#define	VIEW_RADIUS_SLIDER				4
+#define MOVE_RATE_SLIDER				5
+#define TURN_RATE_SLIDER				6
 #define	DEBUG_LEVEL_OPTION				7
 
 // Command menu item IDs.

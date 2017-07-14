@@ -4755,8 +4755,7 @@ load_config_file(void)
 	int download_sounds_value;
 	int use_classic_controls_value;
 	int visible_block_radius_value;
-	float curr_move_rate_value, curr_turn_rate_value;
-	int prev_window_width, prev_window_height;
+	int curr_move_rate_value, curr_turn_rate_value;
 	int user_debug_level_value;
 	float brightness_value;
 
@@ -4773,8 +4772,7 @@ load_config_file(void)
 	user_debug_level_value = BE_SILENT;
 	brightness_value = 0.0f;
 
-	// First attempt to parse the configuration file in the new format.
-	// Otherwise attempt to parse it in the old format.
+	// First attempt to parse the configuration file.
 
 	if ((fp = fopen(config_file_path, "r")) != NULL) {
 		if (read_string(fp, line, 80) && 
@@ -4788,10 +4786,9 @@ load_config_file(void)
 				else if (!_stricmp(name, "viewing distance"))
 					read_config_int(value, &visible_block_radius_value);
 				else if (!_stricmp(name, "move rate")) {
-					if (read_config_float(value, &curr_move_rate_value))
-						curr_move_rate_value *= UNITS_PER_BLOCK;
+					read_config_int(value, &curr_move_rate_value);
 				} else if (!_stricmp(name, "turn rate"))
-					read_config_float(value, &curr_turn_rate_value);
+					read_config_int(value, &curr_turn_rate_value);
 				else if (!_stricmp(name, "minimum blockset update period")) {
 					if (read_config_int(value, &min_blockset_update_period))
 						min_blockset_update_period *= SECONDS_PER_DAY;
@@ -4805,18 +4802,6 @@ load_config_file(void)
 				else if (!_stricmp(name, "brightness"))
 					read_config_float(value, &brightness_value);
 			}
-		else {
-			int acceleration_mode;
-			int prev_process_ID;
-			int use_reflections;
-			sscanf(line, "%d %d %d %d %d %f %f %d %d %d %d", 
-				&acceleration_mode, &download_sounds_value, 
-				&visible_block_radius_value, &prev_process_ID, 
-				&use_reflections, &curr_move_rate_value, 
-				&curr_turn_rate_value, &prev_window_width, 
-				&prev_window_height, &min_blockset_update_period, 
-				&user_debug_level_value);
-		}
 		fclose(fp);
 	}
 
@@ -4886,8 +4871,8 @@ save_config_file(void)
 		write_config_bool(fp, "download sounds", download_sounds.get());
 		write_config_bool(fp, "use classic controls", use_classic_controls.get());
 		write_config_int(fp, "viewing distance", visible_block_radius.get(), "blocks");
-		write_config_float(fp, "move rate", curr_move_rate.get() / UNITS_PER_BLOCK, "blocks/second");
-		write_config_float(fp, "turn rate", curr_turn_rate.get(), "degrees/second");
+		write_config_int(fp, "move rate", curr_move_rate.get(), "blocks/second");
+		write_config_int(fp, "turn rate", curr_turn_rate.get(), "x 45 degrees/second or degrees/mouse movement");
 		write_config_int(fp, "minimum blockset update period", min_blockset_update_period / SECONDS_PER_DAY, "days");
 		write_config_time_t(fp, "last Rover update", last_rover_update, "seconds since epoch");
 		write_config_time_t(fp, "last spot directory update", last_spot_dir_update, "seconds since epoch");

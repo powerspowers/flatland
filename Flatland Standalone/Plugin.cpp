@@ -113,8 +113,8 @@ semaphore<float> curr_side_delta;
 semaphore<float> curr_turn_delta;
 semaphore<float> curr_look_delta;
 semaphore<float> curr_jump_delta;
-semaphore<float> curr_move_rate;
-semaphore<float> curr_turn_rate;
+semaphore<int> curr_move_rate;
+semaphore<int> curr_turn_rate;
 semaphore<float> master_brightness;
 semaphore<bool> download_sounds;
 semaphore<bool> use_classic_controls;
@@ -156,15 +156,15 @@ static bool disable_cursor_changes;
 static bool player_active;
 static bool player_window_created;
 static bool app_window_minimised;
-static float prev_move_rate, prev_turn_rate;
+static int prev_move_rate, prev_turn_rate;
 static bool sidle_mode_enabled;
 static bool fast_mode_enabled;
 static int curr_button_status;
 static bool movement_enabled;
 static bool old_download_sounds;
 static bool old_use_classic_controls;
-static float old_curr_move_rate;
-static float old_curr_turn_rate;
+static int old_curr_move_rate;
+static int old_curr_turn_rate;
 static int old_visible_block_radius;
 static int old_user_debug_level;
 static float window_half_width;
@@ -455,14 +455,14 @@ set_mouse_cursor(void)
 static void
 update_motion_rates(int rate_dir)
 {
-	float new_move_rate = curr_move_rate.get() + rate_dir * DELTA_MOVE_RATE;
+	int new_move_rate = curr_move_rate.get() + rate_dir;
 	if (new_move_rate < MIN_MOVE_RATE)
 		new_move_rate = MIN_MOVE_RATE;
 	else if (new_move_rate > MAX_MOVE_RATE)
 		new_move_rate = MAX_MOVE_RATE;
 	curr_move_rate.set(new_move_rate);
 
-	float new_turn_rate = curr_turn_rate.get() + rate_dir * DELTA_MOVE_RATE;
+	int new_turn_rate = curr_turn_rate.get() + rate_dir;
 	if (new_turn_rate < MIN_TURN_RATE)
 		new_turn_rate = MIN_TURN_RATE;
 	else if (new_turn_rate > MAX_TURN_RATE)
@@ -732,7 +732,7 @@ options_window_callback(int option_ID, int option_value)
 		user_debug_level.set(old_user_debug_level);
 		close_options_window();
 		break;
-	case VISIBLE_RADIUS_EDITBOX:
+	case VIEW_RADIUS_SLIDER:
 		visible_block_radius.set(option_value);
 		break;
 	case DOWNLOAD_SOUNDS_CHECKBOX:
@@ -741,11 +741,11 @@ options_window_callback(int option_ID, int option_value)
 	case CLASSIC_CONTROLS_CHECKBOX:
 		use_classic_controls.set(option_value ? true : false);
 		break;
-	case MOVE_RATE_EDITBOX:
-		curr_move_rate.set((float)option_value * UNITS_PER_BLOCK);
+	case MOVE_RATE_SLIDER:
+		curr_move_rate.set(option_value);
 		break;
-	case TURN_RATE_EDITBOX:
-		curr_turn_rate.set((float)option_value);
+	case TURN_RATE_SLIDER:
+		curr_turn_rate.set(option_value);
 		break;
 	case DEBUG_LEVEL_OPTION:
 		user_debug_level.set(option_value);
@@ -843,7 +843,7 @@ show_options_window()
 	old_curr_turn_rate = curr_turn_rate.get();
 	old_user_debug_level = user_debug_level.get();
 	open_options_window(old_download_sounds, old_visible_block_radius,
-		old_use_classic_controls, (int)(old_curr_move_rate / UNITS_PER_BLOCK), (int)old_curr_turn_rate,
+		old_use_classic_controls, old_curr_move_rate, old_curr_turn_rate,
 		old_user_debug_level, options_window_callback);
 }
 
@@ -873,7 +873,7 @@ mouse_event_callback(int x, int y, int button_code)
 		curr_turn_delta.set((float)x / horz_pixels_per_degree);
 		curr_look_delta.set((float)y / vert_pixels_per_degree);
 		get_mouse_position(&x, &y, true);
-	} 
+	}
 
 	// Update the mouse cursor.
 

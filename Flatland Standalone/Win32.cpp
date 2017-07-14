@@ -624,9 +624,9 @@ static void (*light_callback_ptr)(float brightness, bool window_closed);
 // Options window data.
 
 static HWND options_window_handle;
-static HWND viewing_distance_spin_control_handle;
-static HWND move_rate_spin_control_handle;
-static HWND turn_rate_spin_control_handle;
+static HWND view_radius_slider_handle;
+static HWND move_rate_slider_handle;
+static HWND turn_rate_slider_handle;
 static void (*options_callback_ptr)(int option_ID, int option_value);
 
 // About and help window data.
@@ -1880,6 +1880,18 @@ init_spin_control(HWND spin_control_handle, HWND edit_control_handle,
 	SendMessage(spin_control_handle, UDM_SETBUDDY, (WPARAM)edit_control_handle, 0);
 	SendMessage(spin_control_handle, UDM_SETRANGE, 0, MAKELONG(max_value, min_value));
 	SendMessage(spin_control_handle, UDM_SETPOS, 0, MAKELONG(initial_value, 0));
+}
+
+//------------------------------------------------------------------------------
+// Initialise a slider control.
+//------------------------------------------------------------------------------
+
+static void
+init_slider_control(HWND slider_control_handle, int min_value, int max_value, int initial_value, int tick_frequency)
+{
+	SendMessage(slider_control_handle, TBM_SETTICFREQ, tick_frequency, 0);
+	SendMessage(slider_control_handle, TBM_SETRANGE, TRUE, MAKELONG(min_value, max_value));
+	SendMessage(slider_control_handle, TBM_SETPOS, TRUE, initial_value);
 }
 
 //==============================================================================
@@ -4010,32 +4022,15 @@ handle_options_event(HWND window_handle, UINT message, WPARAM wParam,
 				break;
 			}
 			break;
-		case EN_CHANGE:
-			switch(LOWORD(wParam)) {
-			case IDC_EDIT_VIEWING_DISTANCE:
-				(*options_callback_ptr)(VISIBLE_RADIUS_EDITBOX, LOWORD(SendMessage(viewing_distance_spin_control_handle, UDM_GETPOS, 0, 0)));
-				break;
-			case IDC_EDIT_MOVE_RATE:
-				(*options_callback_ptr)(MOVE_RATE_EDITBOX, LOWORD(SendMessage(move_rate_spin_control_handle, UDM_GETPOS, 0, 0)));
-				break;
-			case IDC_EDIT_TURN_RATE:
-				(*options_callback_ptr)(TURN_RATE_EDITBOX, LOWORD(SendMessage(turn_rate_spin_control_handle, UDM_GETPOS, 0, 0)));
-				break;
-			}
-
 		}
 		return(TRUE);
-	case WM_VSCROLL:
-		switch(LOWORD(wParam)) {
-		case IDC_EDIT_VIEWING_DISTANCE:
-			(*options_callback_ptr)(VISIBLE_RADIUS_EDITBOX, LOWORD(SendMessage(viewing_distance_spin_control_handle, UDM_GETPOS, 0, 0)));
-			break;
-		case IDC_EDIT_MOVE_RATE:
-			(*options_callback_ptr)(MOVE_RATE_EDITBOX, LOWORD(SendMessage(move_rate_spin_control_handle, UDM_GETPOS, 0, 0)));
-			break;
-		case IDC_EDIT_TURN_RATE:
-			(*options_callback_ptr)(TURN_RATE_EDITBOX, LOWORD(SendMessage(turn_rate_spin_control_handle, UDM_GETPOS, 0, 0)));
-			break;
+	case WM_HSCROLL:
+		if (lParam == (LPARAM)view_radius_slider_handle) {
+			(*options_callback_ptr)(VIEW_RADIUS_SLIDER, LOWORD(SendMessage(view_radius_slider_handle, TBM_GETPOS, 0, 0)));
+		} else if (lParam == (LPARAM)move_rate_slider_handle) {
+			(*options_callback_ptr)(MOVE_RATE_SLIDER, LOWORD(SendMessage(move_rate_slider_handle, TBM_GETPOS, 0, 0)));
+		} else if (lParam == (LPARAM)turn_rate_slider_handle) {
+			(*options_callback_ptr)(TURN_RATE_SLIDER, LOWORD(SendMessage(turn_rate_slider_handle, TBM_GETPOS, 0, 0)));
 		}
 		return(TRUE);
 	default:
@@ -4073,30 +4068,26 @@ open_options_window(bool download_sounds_value, int viewing_distance_value, bool
 	SendMessage(control_handle, BM_SETCHECK, download_sounds_value ? BST_CHECKED : BST_UNCHECKED, 0);
 	if (!sound_available)
 		EnableWindow(control_handle, false);
-	
-	// Initialise the "viewing distance" edit box and spin control.
-
-	control_handle = GetDlgItem(options_window_handle, IDC_EDIT_VIEWING_DISTANCE);
-	viewing_distance_spin_control_handle = GetDlgItem(options_window_handle, IDC_SPIN_VIEWING_DISTANCE);
-	init_spin_control(viewing_distance_spin_control_handle, control_handle, 3, 1, 100, viewing_distance_value);
 
 	// Initialize the "classic controls" check box.
 
 	control_handle = GetDlgItem(options_window_handle, IDB_CLASSIC_CONTROLS);
 	SendMessage(control_handle, BM_SETCHECK, use_classic_controls_value ? BST_CHECKED : BST_UNCHECKED, 0);
+	
+	// Initialise the "viewing distance" edit box and spin control.
 
-	// Initialize the "move rate" edit box and spin control.
+	view_radius_slider_handle = GetDlgItem(options_window_handle, IDC_SLIDER_VIEW_RADIUS);
+	init_slider_control(view_radius_slider_handle, 10, 100, viewing_distance_value, 10);
 
-	control_handle = GetDlgItem(options_window_handle, IDC_EDIT_MOVE_RATE);
-	move_rate_spin_control_handle = GetDlgItem(options_window_handle, IDC_SPIN_MOVE_RATE);
-	init_spin_control(move_rate_spin_control_handle, control_handle, 3, 
-		(int)(MIN_MOVE_RATE / UNITS_PER_BLOCK), (int)(MAX_MOVE_RATE / UNITS_PER_BLOCK), move_rate_value);
+	// Initialize the "move rate" slider control.
 
-	// Initialize the "turn rate" edit box and spin control.
+	move_rate_slider_handle = GetDlgItem(options_window_handle, IDC_SLIDER_MOVE_RATE);
+	init_slider_control(move_rate_slider_handle, MIN_MOVE_RATE, MAX_MOVE_RATE, move_rate_value, 1);
 
-	control_handle = GetDlgItem(options_window_handle, IDC_EDIT_TURN_RATE);
-	turn_rate_spin_control_handle = GetDlgItem(options_window_handle, IDC_SPIN_TURN_RATE);
-	init_spin_control(turn_rate_spin_control_handle, control_handle, 3, (int)MIN_TURN_RATE, (int)MAX_TURN_RATE, turn_rate_value);
+	// Initialize the "turn rate" slider control.
+
+	turn_rate_slider_handle = GetDlgItem(options_window_handle, IDC_SLIDER_TURN_RATE);
+	init_slider_control(turn_rate_slider_handle, MIN_TURN_RATE, MAX_TURN_RATE, turn_rate_value, 1);
 
 	// Initialise the "debug option" radio box.
 
