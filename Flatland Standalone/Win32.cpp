@@ -962,83 +962,6 @@ blit_frame_buffer(void)
 }
 
 //------------------------------------------------------------------------------
-// Load a GIF resource.
-//------------------------------------------------------------------------------
-
-static texture *
-load_GIF_resource(int resource_ID)
-{
-	HRSRC resource_handle;
-	HGLOBAL GIF_handle;
-	LPVOID GIF_ptr;
-	texture *texture_ptr;
-
-	// Find the resource with the given ID.
-
-	if ((resource_handle = FindResource(app_instance_handle, 
-		MAKEINTRESOURCE(resource_ID), "GIF")) == NULL)
-		return(NULL);
-
-	// Load the resource.
-
-	if ((GIF_handle = LoadResource(app_instance_handle, resource_handle)) == NULL)
-		return(NULL);
-
-	// Lock the resource, obtaining a pointer to the raw data.
-
-	if ((GIF_ptr = LockResource(GIF_handle)) == NULL)
-		return(NULL);
-
-	// Open the raw data as if it were a file.
-
-	if (!push_buffer((const char *)GIF_ptr, 
-		SizeofResource(app_instance_handle, resource_handle)))
-		return(NULL);
-
-	// Load the raw data as a GIF.
-
-	if ((texture_ptr = load_GIF_image()) == NULL)
-		return(NULL);
-
-	// Close the raw data "file" and return a pointer to the texture.
-
-	pop_file();
-	return(texture_ptr);
-}
-
-//------------------------------------------------------------------------------
-// Load an icon.
-//------------------------------------------------------------------------------
-
-static icon *
-load_icon(int resource0_ID, int resource1_ID)
-{
-	icon *icon_ptr;
-
-	// Create the icon.
-
-	NEW(icon_ptr, icon);
-	if (icon_ptr == NULL)
-		return(NULL);
-
-	// Load the GIF resources as textures.  If the second resource ID is zero,
-	// there is no second texture for this icon.
-
-	if ((icon_ptr->texture0_ptr = load_GIF_resource(resource0_ID)) == NULL ||
-		(resource1_ID > 0 &&
-		 (icon_ptr->texture1_ptr = load_GIF_resource(resource1_ID)) == NULL)) {
-		DEL(icon_ptr, icon);
-		return(NULL);
-	}
-
-	// Initialise the size of the icon.
-
-	icon_ptr->width = icon_ptr->texture0_ptr->width;
-	icon_ptr->height = icon_ptr->texture0_ptr->height;
-	return(icon_ptr);
-}
-
-//------------------------------------------------------------------------------
 // Create an 8-bit bitmap of the given dimensions, using the given palette.
 //------------------------------------------------------------------------------
 
@@ -1101,41 +1024,6 @@ create_bitmap(int width, int height, int colours, RGBcolour *RGB_palette,
 	bitmap_ptr->RGB_palette = RGB_palette;
 	bitmap_ptr->palette = palette;
 	bitmap_ptr->transparent_index = transparent_index;
-	return(bitmap_ptr);
-}
-
-//------------------------------------------------------------------------------
-// Create a bitmap from a texture.
-//------------------------------------------------------------------------------
-
-static bitmap *
-texture_to_bitmap(texture *texture_ptr)
-{
-	pixmap *pixmap_ptr;
-	byte *old_image_ptr, *new_image_ptr;
-	int row, column, row_gap;
-	bitmap *bitmap_ptr;
-
-	// Create a bitmap large enough to store the GIF.
-
-	if ((bitmap_ptr = create_bitmap(texture_ptr->width, texture_ptr->height,
-		texture_ptr->colours, texture_ptr->RGB_palette, NULL, -1)) == NULL)
-		return(NULL);
-
-	// Copy the first pixmap of the texture to the bitmap.
-
-	pixmap_ptr = &texture_ptr->pixmap_list[0];
-	old_image_ptr = pixmap_ptr->image_ptr;
-	new_image_ptr = bitmap_ptr->pixels;
-	row_gap = bitmap_ptr->bytes_per_row - texture_ptr->width;
-	for (row = 0; row < texture_ptr->height; row++) {
-		for (column = 0; column < texture_ptr->width; column++)
-			*new_image_ptr++ = *old_image_ptr++;
-		new_image_ptr += row_gap;
-	}
-
-	// Return a pointer to the bitmap.
-
 	return(bitmap_ptr);
 }
 
@@ -4994,30 +4882,16 @@ end_3D_scene(void)
 
 //------------------------------------------------------------------------------
 // Lock the frame buffer and return it's address and the width of the frame
-// buffer in bytes.
+// buffer in bytes (software renderer only).
 //------------------------------------------------------------------------------
 
 bool
 lock_frame_buffer(byte *&fb_ptr, int &row_pitch)
 {
-	// If hardware acceleration is enabled, lock the entire rectangle.
-
-	if (hardware_acceleration) {
-		/*
-		D3DLOCKED_RECT locked_rect;
-
-		if (FAILED(d3d_framebuffer_surface_ptr->LockRect(&locked_rect, NULL,
-			D3DLOCK_NOSYSLOCK)))
-			return(false);
-		fb_ptr = (byte *)locked_rect.pBits;
-		row_pitch = locked_rect.Pitch;
-		*/
-	}
-
 	// Otherwise if the display depth is 8, return the 16-bit frame buffer 
 	// pointer and it's row pitch.
 
-	else if (display_depth == 8) {
+	if (display_depth == 8) {
 		fb_ptr = framebuffer_ptr;
 		row_pitch = display_width << 1;
 	}
@@ -5057,22 +4931,15 @@ lock_frame_buffer(byte *&fb_ptr, int &row_pitch)
 }
 
 //------------------------------------------------------------------------------
-// Unlock the frame buffer.
+// Unlock the frame buffer (software renderer only).
 //------------------------------------------------------------------------------
 
 void
 unlock_frame_buffer(void)
 {
-	// If hardware acceleration is active, unlock the frame buffer rectangle.
+	// If the display depth is 16, 24 or 32 and the frame buffer is locked, unlock it.
 
-	if (hardware_acceleration) {
-		//d3d_framebuffer_surface_ptr->UnlockRect();
-	}
-
-	// Otherwise if the display depth is 16, 24 or 32 and the frame buffer is 
-	// locked, unlock it.
-
-	else if (display_depth >= 16 && framebuffer_ptr != NULL) {
+	if (display_depth >= 16 && framebuffer_ptr != NULL) {
 		ddraw_framebuffer_surface_ptr->Unlock(framebuffer_ptr);
 		framebuffer_ptr = NULL;
 	}
@@ -5163,41 +5030,25 @@ display_frame_buffer(void)
 }
 
 //------------------------------------------------------------------------------
-// Method to clear a rectangle in the frame buffer.
+// Method to clear a rectangle in the frame buffer (software renderer only).
 //------------------------------------------------------------------------------
 
 void
 clear_frame_buffer(int x, int y, int width, int height)
 {
+	DDSURFACEDESC ddraw_surface_desc;
 	byte *fb_ptr;
 	int row_pitch;
 	int bytes_per_pixel;
 
-	if (hardware_acceleration)
-		return;
-
 	// Lock the frame buffer surface.
 
-	if (hardware_acceleration) {
-		/*
-		D3DLOCKED_RECT locked_rect;
-
-		if (FAILED(d3d_framebuffer_surface_ptr->LockRect(&locked_rect, NULL,
-			D3DLOCK_NOSYSLOCK)))
-			return;
-		fb_ptr = (byte *)locked_rect.pBits;
-		row_pitch = locked_rect.Pitch;
-		*/
-	} else {
-		DDSURFACEDESC ddraw_surface_desc;
-
-		ddraw_surface_desc.dwSize = sizeof(ddraw_surface_desc);
-		if (ddraw_framebuffer_surface_ptr->Lock(NULL, &ddraw_surface_desc,
-			DDLOCK_SURFACEMEMORYPTR | DDLOCK_WAIT, NULL) != DD_OK)
-			return;
-		fb_ptr = (byte *)ddraw_surface_desc.lpSurface;
-		row_pitch = ddraw_surface_desc.lPitch;
-	}
+	ddraw_surface_desc.dwSize = sizeof(ddraw_surface_desc);
+	if (ddraw_framebuffer_surface_ptr->Lock(NULL, &ddraw_surface_desc,
+		DDLOCK_SURFACEMEMORYPTR | DDLOCK_WAIT, NULL) != DD_OK)
+		return;
+	fb_ptr = (byte *)ddraw_surface_desc.lpSurface;
+	row_pitch = ddraw_surface_desc.lPitch;
 
 	// Calculate the bytes per pixel.
 
@@ -5212,92 +5063,7 @@ clear_frame_buffer(int x, int y, int width, int height)
 
 	// Unlock the frame buffer surface.
 
-	if (hardware_acceleration) {
-		//d3d_framebuffer_surface_ptr->UnlockRect();
-	} else
-		ddraw_framebuffer_surface_ptr->Unlock(fb_ptr);
-}
-
-//------------------------------------------------------------------------------
-// Save the frame buffer in the given 24-bit RGB image buffer, scaling it as 
-// required.
-//------------------------------------------------------------------------------
-
-bool
-save_frame_buffer(byte *image_buffer, int width, int height)
-{
-	byte *fb_ptr, *fb_row_ptr, *image_ptr;
-	int row_pitch;
-	float fb_width, fb_height;
-	float fb_row, fb_col, row, col;
-	float row_delta, col_delta;
-	byte red, green, blue;
-
-	// Determine the scaling factors.
-
-	fb_width = (float)window_width;
-	fb_height = (float)window_height;
-	row_delta = fb_height / (float)height;
- 	col_delta = fb_width / (float)width;
-
-	// Lock the frame buffer.
-
-	if (!lock_frame_buffer(fb_ptr, row_pitch))
-		return(false);
-
-	// Depending on the colour depth of the display, convert a 16-bit frame
-	// buffer to a 24-bit image, or simply copy the pixels from a 24-bit or
-	// 32-bit frame buffer.
-
-	image_ptr = image_buffer;
-	switch (display_depth) {
-	case 8:
-	case 16:
-		for (row = 0, fb_row = 0.0f; row < height && fb_row < fb_height; 
-			row++, fb_row += row_delta) {
-			fb_row_ptr = fb_ptr + (int)fb_row * row_pitch;
-			for (col = 0, fb_col = 0.0f; col < width && fb_col < fb_width; 
-				col++, fb_col += col_delta) {
-				display_pixel_to_RGB(*((word *)fb_row_ptr + (int)fb_col), 
-					&red, &green, &blue);
-				*image_ptr++ = red;
-				*image_ptr++ = green;
-				*image_ptr++ = blue;
-			}
-		}
-		break;
-	case 24:
-		for (row = 0, fb_row = 0.0f; row < height && fb_row < fb_height;
-			row++, fb_row += row_delta) {
-			fb_row_ptr = fb_ptr + (int)fb_row * row_pitch;
-			for (col = 0, fb_col = 0.0f; col < width && fb_col < fb_width; 
-				col++, fb_col += col_delta) {
-				fb_ptr = fb_row_ptr + (int)fb_col * 3;
-				*image_ptr++ = *fb_ptr++;
-				*image_ptr++ = *fb_ptr++;
-				*image_ptr++ = *fb_ptr++;
-			}
-		}
-		break;
-	case 32:
-		for (row = 0, fb_row = 0.0f; row < height && fb_row < fb_height;
-			row++, fb_row += row_delta) {
-			fb_row_ptr = fb_ptr + (int)fb_row * row_pitch;
-			for (col = 0, fb_col = 0.0f; col < width && fb_col < fb_width; 
-				col++, fb_col += col_delta) {
-				display_pixel_to_RGB(*((dword *)fb_ptr + (int)fb_col), 
-					&red, &green, &blue);
-				*image_ptr++ = red;
-				*image_ptr++ = green;
-				*image_ptr++ = blue;
-			}
-		}
-	}
-
-	// Unlock the frame buffer.
-
-	unlock_frame_buffer();
-	return(true);
+	ddraw_framebuffer_surface_ptr->Unlock(fb_ptr);
 }
 
 //==============================================================================

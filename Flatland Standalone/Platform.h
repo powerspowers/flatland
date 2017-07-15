@@ -406,9 +406,6 @@ display_frame_buffer(void);
 void
 clear_frame_buffer(int x, int y, int width, int height);
 
-bool
-save_frame_buffer(byte *image_buffer, int width, int height);
-
 // Software rendering functions (called by the player thread only).
 
 void

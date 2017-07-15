@@ -3889,7 +3889,9 @@ refresh_player_window(void)
 					player_window_shutdown_requested.send_event(true);
 					return(false);
 				}
-				clear_frame_buffer(0, 0, window_width, window_height);
+				if (!hardware_acceleration) {
+					clear_frame_buffer(0, 0, window_width, window_height);
+				}
 				display_frame_buffer();
 			}
 		}
@@ -4028,8 +4030,7 @@ take_snapshot(void)
 	// the frame buffer if necessary.
 
 	render_frame();
-	save_frame_buffer_to_JPEG(snapshot_width, snapshot_height,
-		snapshot_file_path);
+	// TODO: New save function needed.
 
 	// Restore the current view.
 
@@ -4129,9 +4130,10 @@ handle_spot_events(void)
 		return(false);
 
 	// If a snapshot is requested, handle it.
-
-	if (snapshot_requested.event_sent())
-		take_snapshot();
+	
+	if (snapshot_requested.event_sent()) {
+		//take_snapshot();
+	}
 
 	// Indicate the event loop should continue.
 	

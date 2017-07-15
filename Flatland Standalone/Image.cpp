@@ -262,6 +262,18 @@ image_memory_error(const char *object)
 // GIF loader functions.
 //==============================================================================
 
+static bool
+is_GIF_file()
+{
+	byte header[6];
+
+	// Read and verify the header.
+
+	return read_file(header, 6) == 6 && 
+		(!_strnicmp((char *)header, id87, 6) ||
+		 !_strnicmp((char *)header, id89, 6));
+}
+
 //------------------------------------------------------------------------------
 // Clear an image to either the transparent or background colour.
 //------------------------------------------------------------------------------
@@ -724,7 +736,6 @@ read_GIF_image(void)
 static void
 load_GIF(void)
 {
-	byte header[6];
 	bool has_global_colourmap;
 	int index;
 
@@ -739,13 +750,6 @@ load_GIF(void)
 
 	RGB_palette = (RGBcolour *)global_colourmap;
 
-	// Read and verify the header.
-
-	read_block(header, 6);
-	if (_strnicmp((char *)header, id87, 6) &&
-	    _strnicmp((char *)header, id89, 6))
-		image_error("Not a GIF file");
-	
 	// Read screen dimensions from GIF screen descriptor.
 
 	image_width = read_word();
@@ -1074,83 +1078,6 @@ load_JPEG(void)
 	pixmaps++;
 }
 
-//------------------------------------------------------------------------------
-// Save the frame buffer as a JPEG file of the given size.
-//------------------------------------------------------------------------------
-
-bool
-save_frame_buffer_to_JPEG(int width, int height, const char *file_path)
-{
-	struct jpeg_compress_struct cinfo;
-	struct jpeg_error_mgr jerr;
-	byte *image_buffer, *image_row_ptr;
-	JSAMPROW scan_line[1];
-	FILE *fp;
-	int row;
-
-	// Set up our own error handler for fatal errors.
-
-	cinfo.err = jpeg_std_error(&jerr);
-	jerr.error_exit = my_error_exit;
-	image_buffer = NULL;
-	try {
-
-		// Allocate and initialise a JPEG compression object.
-
-		jpeg_create_compress(&cinfo);
-
-		// Set the destination to be a standard file.
-
-		if ((fp = fopen(file_path, "wb")) == NULL)
-			error("Unable to open file %s for writing", file_path);
-		jpeg_stdio_dest(&cinfo, fp);
-
-		// Set the image info.
-
-		cinfo.image_width = width;
-		cinfo.image_height = height;
-		cinfo.input_components = 3;
-		cinfo.in_color_space = JCS_RGB;
-		jpeg_set_defaults(&cinfo);
-
-		// Allocate the image buffer.
-
-		NEWARRAY(image_buffer, byte, width * height * 3);
-		if (image_buffer == NULL)
-			memory_error("JPEG image"); 
-
-		// Convert the frame buffer into a 24-bit image buffer.
-
-		if (!save_frame_buffer(image_buffer, width, height))
-			error("Unable to take snapshot of frame buffer");
-
-		// Write the image buffer to the JPEG file.
-
-		jpeg_start_compress(&cinfo, TRUE);
-		image_row_ptr = image_buffer;
-		for (row = 0; row < height; row++) {
-			scan_line[0] = image_row_ptr;
-			image_row_ptr += width * 3;
-			jpeg_write_scanlines(&cinfo, scan_line, 1);
-		}
-
-		// Clean up after decompression.
-
-		jpeg_finish_compress(&cinfo);
-		jpeg_destroy_compress(&cinfo);
-		DELARRAY(image_buffer, byte, width * height * 3);
-		fclose(fp);
-		return(true);
-	}
-	catch (char *message) {
-		jpeg_destroy_compress(&cinfo);
-		if (image_buffer != NULL)
-			DELARRAY(image_buffer, byte, width * height * 3);
-		image_error(message);
-	}
-	return(false);
-}
-
 //==============================================================================
 // Load an image.
 //==============================================================================
@@ -1212,32 +1139,29 @@ load_image(const char *URL, const char *file_path, texture *texture_ptr)
 		}
 	}
 
-	// Attempt to load the file as a GIF image.  If this fails, rewind the file
-	// and attempt to load it as a JPG image.  If this also fails, generate a
-	// warning message and return a failure status.
+	// If the file begins with a GIF header, load the rest of the file as a GIF.
+	// Otherwise rewind the file and load the file as a JPEG.
 
 	try {
-		load_GIF();
-		texture_ptr->is_16_bit = false;
-	}
-	catch (char *) {
-		try {
+		if (is_GIF_file()) {
+			load_GIF();
+			texture_ptr->is_16_bit = false;
+		} else {
 			rewind_file();
 			load_JPEG();
 			texture_ptr->is_16_bit = true;
 		}
-		catch (char *) {
-			pop_file();
-			if (URL)
-				warning("URL %s is not a GIF or JPEG image", URL);
-			else
-				warning("File %s is not a GIF or JPEG image", file_path);
-			return(false);
-		}
+	}
+	catch (char *) {
+		pop_file();
+		if (URL)
+			warning("URL %s is not a GIF or JPEG image", URL);
+		else
+			warning("File %s is not a GIF or JPEG image", file_path);
+		return(false);
 	}
 
-	// Do everything else in a try block, so that we can catch errors and
-	// report them as warnings instead.
+	// Now process the image(s) read from the file.
 
 	try {
 
@@ -1291,8 +1215,7 @@ load_image(const char *URL, const char *file_path, texture *texture_ptr)
 		// either the texture palette or display palette.
 
 		if (!texture_ptr->is_16_bit) {
-			if (!texture_ptr->create_RGB_palette(colours, BRIGHTNESS_LEVELS, 
-				RGB_palette))
+			if (!texture_ptr->create_RGB_palette(colours, BRIGHTNESS_LEVELS, RGB_palette))
 				image_memory_error("texture RGB palette");
 			if (hardware_acceleration) {
 				if (!texture_ptr->create_texture_palette_list())
@@ -1319,73 +1242,5 @@ load_image(const char *URL, const char *file_path, texture *texture_ptr)
 		else
 			warning("Unable to load image file %s: %s", file_path, message);
 		return(false);
-	}
-}
-
-//------------------------------------------------------------------------------
-// Load a GIF image from the topmost open file, returning a new texture object.
-//------------------------------------------------------------------------------
-
-texture *
-load_GIF_image(void)
-{
-	texture *texture_ptr;
-
-	// Load the GIF.
-
-	texture_ptr = NULL;
-	try {
-		int index;
-		
-		// Load the GIF.
-
-		load_GIF();
-
-		// Create the texture object and initialise it.
-
-		NEW(texture_ptr, texture);
-		if (texture_ptr == NULL)
-			image_memory_error("texture");
-		texture_ptr->is_16_bit = false;
-		texture_ptr->width = image_width;
-		texture_ptr->height = image_height;
-		texture_ptr->pixmaps = pixmaps;
-		texture_ptr->colours = colours;
-		texture_ptr->transparent = transparent;
-		texture_ptr->loops = texture_loops;
-		texture_ptr->total_time_ms = total_time_ms;
-
-		// Create the pixmap list for the texture.
-
-		NEWARRAY(texture_ptr->pixmap_list, pixmap, pixmaps);
-		if (texture_ptr->pixmap_list == NULL)
-			image_memory_error("texture pixmap list");
-
-		// Copy the pixmaps into the texture object, then set the size indices
-		// for the pixmaps.
-
-		for (index = 0; index < pixmaps; index++) {
-			texture_ptr->pixmap_list[index] = pixmap_list[index];
-			pixmap_list[index].image_ptr = NULL;
-		}
-		set_size_indices(texture_ptr);
-
-		// Create the RGB palette.
-
-		if (!texture_ptr->create_RGB_palette(colours, 1, RGB_palette))
-			image_memory_error("texture RGB palette");
-
-		// Return the pointer to the texture.
-
-		return(texture_ptr);
-	}
-	
-	// If an error occurred, just delete the texture object if it exists and
-	// return a NULL pointer.
-
-	catch (char *) {
-		if (texture_ptr != NULL)
-			DEL(texture_ptr, texture);
-		return(NULL);
 	}
 }
