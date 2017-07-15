@@ -43,6 +43,12 @@
     <Filter Include="Source Files\Expat">
       <UniqueIdentifier>{b049ddbf-bf44-45a0-84e1-915f1567ba30}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Header Files\PNG">
+      <UniqueIdentifier>{21c54ac7-3369-4590-a762-7f0c9d2a1ac7}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\PNG">
+      <UniqueIdentifier>{5738980d-5e42-4883-a1c0-60ca2cb571d4}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <Text Include="ReadMe.txt" />
@@ -347,6 +353,27 @@
     </ClInclude>
     <ClInclude Include="Simkin\skStackFrame.h">
       <Filter>Header Files\Simkin</Filter>
+    </ClInclude>
+    <ClInclude Include="LibPNG\png.h">
+      <Filter>Header Files\PNG</Filter>
+    </ClInclude>
+    <ClInclude Include="LibPNG\pngconf.h">
+      <Filter>Header Files\PNG</Filter>
+    </ClInclude>
+    <ClInclude Include="LibPNG\pngdebug.h">
+      <Filter>Header Files\PNG</Filter>
+    </ClInclude>
+    <ClInclude Include="LibPNG\pnginfo.h">
+      <Filter>Header Files\PNG</Filter>
+    </ClInclude>
+    <ClInclude Include="LibPNG\pngpriv.h">
+      <Filter>Header Files\PNG</Filter>
+    </ClInclude>
+    <ClInclude Include="LibPNG\pngstruct.h">
+      <Filter>Header Files\PNG</Filter>
+    </ClInclude>
+    <ClInclude Include="LibPNG\pnglibconf.h">
+      <Filter>Header Files\PNG</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
@@ -685,6 +712,39 @@
     </ClCompile>
     <ClCompile Include="Simkin\skStackFrame.cpp">
       <Filter>Source Files\Simkin</Filter>
+    </ClCompile>
+    <ClCompile Include="LibPNG\png.c">
+      <Filter>Source Files\PNG</Filter>
+    </ClCompile>
+    <ClCompile Include="LibPNG\pngerror.c">
+      <Filter>Source Files\PNG</Filter>
+    </ClCompile>
+    <ClCompile Include="LibPNG\pngget.c">
+      <Filter>Source Files\PNG</Filter>
+    </ClCompile>
+    <ClCompile Include="LibPNG\pngmem.c">
+      <Filter>Source Files\PNG</Filter>
+    </ClCompile>
+    <ClCompile Include="LibPNG\pngpread.c">
+      <Filter>Source Files\PNG</Filter>
+    </ClCompile>
+    <ClCompile Include="LibPNG\pngread.c">
+      <Filter>Source Files\PNG</Filter>
+    </ClCompile>
+    <ClCompile Include="LibPNG\pngrio.c">
+      <Filter>Source Files\PNG</Filter>
+    </ClCompile>
+    <ClCompile Include="LibPNG\pngrtran.c">
+      <Filter>Source Files\PNG</Filter>
+    </ClCompile>
+    <ClCompile Include="LibPNG\pngrutil.c">
+      <Filter>Source Files\PNG</Filter>
+    </ClCompile>
+    <ClCompile Include="LibPNG\pngset.c">
+      <Filter>Source Files\PNG</Filter>
+    </ClCompile>
+    <ClCompile Include="LibPNG\pngtrans.c">
+      <Filter>Source Files\PNG</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
