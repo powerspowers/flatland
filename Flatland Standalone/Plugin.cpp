@@ -212,9 +212,9 @@ static key_code_to_func classic_key_func_table[] = {
 	{0, 0, NULL}
 };
 static key_code_to_func new_key_func_table[] = {
-	{'W', 0, move_forward},
+	{'W', 'Z', move_forward},
 	{'S', 0, move_back},
-	{'A', 0, sidle_left},
+	{'A', 'Q', sidle_left},
 	{'D', 0, sidle_right},
 	{ESC_KEY, 0, exit_mouse_look_mode},
 	{0, 0, NULL}
@@ -507,8 +507,8 @@ move_forward(bool key_down)
 static void
 jump(bool key_down)
 {
-	if (key_down ) {
-		curr_jump_delta.set((float)1.5);
+	if (key_down) {
+		curr_jump_delta.set(1.5f);
 	}
 }
 
@@ -534,10 +534,8 @@ sidle_left(bool key_down)
 {
 	if (key_down) {
 		curr_side_delta.set(-1.0f);
-		curr_turn_delta.set(0.0f);
 	} else {
 		curr_side_delta.set(0.0f);
-		curr_turn_delta.set(0.0f);
 	}
 }
 
@@ -551,10 +549,8 @@ move_left(bool key_down)
 	if (sidle_mode_enabled && use_classic_controls.get()) {
 		sidle_left(key_down);
 	} else if (key_down) {
-		curr_side_delta.set(0.0f);
 		curr_turn_delta.set(-1.0f);
 	} else {
-		curr_side_delta.set(0.0f);
 		curr_turn_delta.set(0.0f);
 	}
 }
@@ -568,10 +564,8 @@ sidle_right(bool key_down)
 {
 	if (key_down) {
 		curr_side_delta.set(1.0f);
-		curr_turn_delta.set(0.0f);
 	} else {
 		curr_side_delta.set(0.0f);
-		curr_turn_delta.set(0.0f);
 	}
 }
 
@@ -585,10 +579,8 @@ move_right(bool key_down)
 	if (sidle_mode_enabled && use_classic_controls.get()) {
 		sidle_right(key_down);
 	} else if (key_down) {
-		curr_side_delta.set(0.0f);
 		curr_turn_delta.set(1.0f);
 	} else {
-		curr_side_delta.set(0.0f);
 		curr_turn_delta.set(0.0f);
 	}
 }
@@ -654,10 +646,8 @@ sidle_mode(bool key_down)
 	float curr_turn_delta_value = curr_turn_delta.get();
 	if (FNE(curr_side_delta_value, 0.0f)) {
 		curr_turn_delta.set(curr_side_delta_value);
-		curr_side_delta.set(0.0f);
 	} else if (FNE(curr_turn_delta_value, 0.0f)) {
 		curr_side_delta.set(curr_turn_delta_value);
-		curr_turn_delta.set(0.0f);
 	}
 }
 

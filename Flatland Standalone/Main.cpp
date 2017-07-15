@@ -3185,15 +3185,13 @@ render_next_frame(void)
 		player_viewpoint.position = player_viewpoint.position + new_trajectory;
 	} while (FNE(trajectory.dx, 0.0f) || FNE(trajectory.dz, 0.0f));
 
-	// If the new trajectory is zero, adjust the look angle by the look delta.
+	// Adjust the look angle by the look delta.
 
-	if (!new_trajectory) {
-		player_viewpoint.look_angle = neg_adjust_angle(player_viewpoint.look_angle + look_delta);
-		if (FGT(player_viewpoint.look_angle, 90.0f))
-			player_viewpoint.look_angle = 90.0f;
-		else if (FLT(player_viewpoint.look_angle, -90.0f))
-			player_viewpoint.look_angle = -90.0f;
-	}
+	player_viewpoint.look_angle = neg_adjust_angle(player_viewpoint.look_angle + look_delta);
+	if (FGT(player_viewpoint.look_angle, 90.0f))
+		player_viewpoint.look_angle = 90.0f;
+	else if (FLT(player_viewpoint.look_angle, -90.0f))
+		player_viewpoint.look_angle = -90.0f;
 
 	// Compute the normal and inverse of the player turn and look angles, in radians.
 
