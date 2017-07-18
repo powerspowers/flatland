@@ -22,12 +22,6 @@
     <Filter Include="Source Files\Collision">
       <UniqueIdentifier>{bc7f9ef7-7fc5-4e74-9af5-cafdfc7b6428}</UniqueIdentifier>
     </Filter>
-    <Filter Include="Header Files\Unzip">
-      <UniqueIdentifier>{3355978a-1680-49fe-bbf8-e4012c1c57b4}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="Source Files\Unzip">
-      <UniqueIdentifier>{e0f4f808-d9cf-4440-bfb5-921e8d36bcf8}</UniqueIdentifier>
-    </Filter>
     <Filter Include="Source Files\Jpeg">
       <UniqueIdentifier>{3c077a9c-b1ab-4630-be87-cc1b818abad3}</UniqueIdentifier>
     </Filter>
@@ -43,11 +37,23 @@
     <Filter Include="Source Files\Expat">
       <UniqueIdentifier>{b049ddbf-bf44-45a0-84e1-915f1567ba30}</UniqueIdentifier>
     </Filter>
-    <Filter Include="Header Files\PNG">
+    <Filter Include="Header Files\LibPNG">
       <UniqueIdentifier>{21c54ac7-3369-4590-a762-7f0c9d2a1ac7}</UniqueIdentifier>
     </Filter>
-    <Filter Include="Source Files\PNG">
+    <Filter Include="Source Files\LibPNG">
       <UniqueIdentifier>{5738980d-5e42-4883-a1c0-60ca2cb571d4}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\Unzip">
+      <UniqueIdentifier>{b0c6999a-2653-400e-9d9a-a4a032767feb}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Header Files\Unzip">
+      <UniqueIdentifier>{7f9334ca-e3b3-4718-bf8d-eaf73edd45a7}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Header Files\zlib">
+      <UniqueIdentifier>{afd81aac-a45e-42b6-918b-b903bf5e26ea}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\zlib">
+      <UniqueIdentifier>{11640244-79bc-40d2-b2db-80a92919dc1c}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
   <ItemGroup>
@@ -116,36 +122,6 @@
     </ClInclude>
     <ClInclude Include="Collision\Vec.h">
       <Filter>Header Files\Collision</Filter>
-    </ClInclude>
-    <ClInclude Include="Unzip\INFBLOCK.H">
-      <Filter>Header Files\Unzip</Filter>
-    </ClInclude>
-    <ClInclude Include="Unzip\INFCODES.H">
-      <Filter>Header Files\Unzip</Filter>
-    </ClInclude>
-    <ClInclude Include="Unzip\INFFAST.H">
-      <Filter>Header Files\Unzip</Filter>
-    </ClInclude>
-    <ClInclude Include="Unzip\INFFIXED.H">
-      <Filter>Header Files\Unzip</Filter>
-    </ClInclude>
-    <ClInclude Include="Unzip\INFTREES.H">
-      <Filter>Header Files\Unzip</Filter>
-    </ClInclude>
-    <ClInclude Include="Unzip\INFUTIL.H">
-      <Filter>Header Files\Unzip</Filter>
-    </ClInclude>
-    <ClInclude Include="Unzip\UNZIP.H">
-      <Filter>Header Files\Unzip</Filter>
-    </ClInclude>
-    <ClInclude Include="Unzip\ZCONF.H">
-      <Filter>Header Files\Unzip</Filter>
-    </ClInclude>
-    <ClInclude Include="Unzip\ZLIB.H">
-      <Filter>Header Files\Unzip</Filter>
-    </ClInclude>
-    <ClInclude Include="Unzip\ZUTIL.H">
-      <Filter>Header Files\Unzip</Filter>
     </ClInclude>
     <ClInclude Include="Jpeg\JCHUFF.H">
       <Filter>Header Files\Jpeg</Filter>
@@ -355,25 +331,70 @@
       <Filter>Header Files\Simkin</Filter>
     </ClInclude>
     <ClInclude Include="LibPNG\png.h">
-      <Filter>Header Files\PNG</Filter>
+      <Filter>Header Files\LibPNG</Filter>
     </ClInclude>
     <ClInclude Include="LibPNG\pngconf.h">
-      <Filter>Header Files\PNG</Filter>
+      <Filter>Header Files\LibPNG</Filter>
     </ClInclude>
     <ClInclude Include="LibPNG\pngdebug.h">
-      <Filter>Header Files\PNG</Filter>
+      <Filter>Header Files\LibPNG</Filter>
     </ClInclude>
     <ClInclude Include="LibPNG\pnginfo.h">
-      <Filter>Header Files\PNG</Filter>
+      <Filter>Header Files\LibPNG</Filter>
     </ClInclude>
     <ClInclude Include="LibPNG\pngpriv.h">
-      <Filter>Header Files\PNG</Filter>
+      <Filter>Header Files\LibPNG</Filter>
     </ClInclude>
     <ClInclude Include="LibPNG\pngstruct.h">
-      <Filter>Header Files\PNG</Filter>
+      <Filter>Header Files\LibPNG</Filter>
     </ClInclude>
     <ClInclude Include="LibPNG\pnglibconf.h">
-      <Filter>Header Files\PNG</Filter>
+      <Filter>Header Files\LibPNG</Filter>
+    </ClInclude>
+    <ClInclude Include="Unzip\crypt.h">
+      <Filter>Header Files\Unzip</Filter>
+    </ClInclude>
+    <ClInclude Include="Unzip\ioapi.h">
+      <Filter>Header Files\Unzip</Filter>
+    </ClInclude>
+    <ClInclude Include="Unzip\unzip.h">
+      <Filter>Header Files\Unzip</Filter>
+    </ClInclude>
+    <ClInclude Include="Unzip\zip.h">
+      <Filter>Header Files\Unzip</Filter>
+    </ClInclude>
+    <ClInclude Include="zlib\crc32.h">
+      <Filter>Header Files\zlib</Filter>
+    </ClInclude>
+    <ClInclude Include="zlib\deflate.h">
+      <Filter>Header Files\zlib</Filter>
+    </ClInclude>
+    <ClInclude Include="zlib\gzguts.h">
+      <Filter>Header Files\zlib</Filter>
+    </ClInclude>
+    <ClInclude Include="zlib\inffast.h">
+      <Filter>Header Files\zlib</Filter>
+    </ClInclude>
+    <ClInclude Include="zlib\inffixed.h">
+      <Filter>Header Files\zlib</Filter>
+    </ClInclude>
+    <ClInclude Include="zlib\inflate.h">
+      <Filter>Header Files\zlib</Filter>
+    </ClInclude>
+    <ClInclude Include="zlib\inftrees.h">
+      <Filter>Header Files\zlib</Filter>
+    </ClInclude>
+    <ClInclude Include="zlib\trees.h">
+      <Filter>Header Files\zlib</Filter>
+    </ClInclude>
+    <ClInclude Include="zlib\zconf.h">
+      <Filter>Header Files\zlib</Filter>
+    </ClInclude>
+    <ClInclude Include="zlib\zlib.h">
+      <Filter>Header Files\zlib</Filter>
+    </ClInclude>
+    <ClInclude Include="zlib\zutil.h">
+      <Filter>Header Files\zlib</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
@@ -430,42 +451,6 @@
     </ClCompile>
     <ClCompile Include="Collision\Vec.cpp">
       <Filter>Source Files\Collision</Filter>
-    </ClCompile>
-    <ClCompile Include="Unzip\ADLER32.C">
-      <Filter>Source Files\Unzip</Filter>
-    </ClCompile>
-    <ClCompile Include="Unzip\CRC32.C">
-      <Filter>Source Files\Unzip</Filter>
-    </ClCompile>
-    <ClCompile Include="Unzip\INFBLOCK.C">
-      <Filter>Source Files\Unzip</Filter>
-    </ClCompile>
-    <ClCompile Include="Unzip\INFCODES.C">
-      <Filter>Source Files\Unzip</Filter>
-    </ClCompile>
-    <ClCompile Include="Unzip\INFFAST.C">
-      <Filter>Source Files\Unzip</Filter>
-    </ClCompile>
-    <ClCompile Include="Unzip\INFLATE.C">
-      <Filter>Source Files\Unzip</Filter>
-    </ClCompile>
-    <ClCompile Include="Unzip\INFTREES.C">
-      <Filter>Source Files\Unzip</Filter>
-    </ClCompile>
-    <ClCompile Include="Unzip\INFUTIL.C">
-      <Filter>Source Files\Unzip</Filter>
-    </ClCompile>
-    <ClCompile Include="Unzip\MINIUNZ.C">
-      <Filter>Source Files\Unzip</Filter>
-    </ClCompile>
-    <ClCompile Include="Unzip\UNCOMPR.C">
-      <Filter>Source Files\Unzip</Filter>
-    </ClCompile>
-    <ClCompile Include="Unzip\UNZIP.C">
-      <Filter>Source Files\Unzip</Filter>
-    </ClCompile>
-    <ClCompile Include="Unzip\ZUTIL.C">
-      <Filter>Source Files\Unzip</Filter>
     </ClCompile>
     <ClCompile Include="Jpeg\JCAPIMIN.C">
       <Filter>Source Files\Jpeg</Filter>
@@ -714,37 +699,103 @@
       <Filter>Source Files\Simkin</Filter>
     </ClCompile>
     <ClCompile Include="LibPNG\png.c">
-      <Filter>Source Files\PNG</Filter>
+      <Filter>Source Files\LibPNG</Filter>
     </ClCompile>
     <ClCompile Include="LibPNG\pngerror.c">
-      <Filter>Source Files\PNG</Filter>
+      <Filter>Source Files\LibPNG</Filter>
     </ClCompile>
     <ClCompile Include="LibPNG\pngget.c">
-      <Filter>Source Files\PNG</Filter>
+      <Filter>Source Files\LibPNG</Filter>
     </ClCompile>
     <ClCompile Include="LibPNG\pngmem.c">
-      <Filter>Source Files\PNG</Filter>
+      <Filter>Source Files\LibPNG</Filter>
     </ClCompile>
     <ClCompile Include="LibPNG\pngpread.c">
-      <Filter>Source Files\PNG</Filter>
+      <Filter>Source Files\LibPNG</Filter>
     </ClCompile>
     <ClCompile Include="LibPNG\pngread.c">
-      <Filter>Source Files\PNG</Filter>
+      <Filter>Source Files\LibPNG</Filter>
     </ClCompile>
     <ClCompile Include="LibPNG\pngrio.c">
-      <Filter>Source Files\PNG</Filter>
+      <Filter>Source Files\LibPNG</Filter>
     </ClCompile>
     <ClCompile Include="LibPNG\pngrtran.c">
-      <Filter>Source Files\PNG</Filter>
+      <Filter>Source Files\LibPNG</Filter>
     </ClCompile>
     <ClCompile Include="LibPNG\pngrutil.c">
-      <Filter>Source Files\PNG</Filter>
+      <Filter>Source Files\LibPNG</Filter>
     </ClCompile>
     <ClCompile Include="LibPNG\pngset.c">
-      <Filter>Source Files\PNG</Filter>
+      <Filter>Source Files\LibPNG</Filter>
     </ClCompile>
     <ClCompile Include="LibPNG\pngtrans.c">
-      <Filter>Source Files\PNG</Filter>
+      <Filter>Source Files\LibPNG</Filter>
+    </ClCompile>
+    <ClCompile Include="LibPNG\pngwio.c">
+      <Filter>Source Files\LibPNG</Filter>
+    </ClCompile>
+    <ClCompile Include="LibPNG\pngwrite.c">
+      <Filter>Source Files\LibPNG</Filter>
+    </ClCompile>
+    <ClCompile Include="LibPNG\pngwtran.c">
+      <Filter>Source Files\LibPNG</Filter>
+    </ClCompile>
+    <ClCompile Include="LibPNG\pngwutil.c">
+      <Filter>Source Files\LibPNG</Filter>
+    </ClCompile>
+    <ClCompile Include="Unzip\ioapi.c">
+      <Filter>Source Files\Unzip</Filter>
+    </ClCompile>
+    <ClCompile Include="Unzip\unzip.c">
+      <Filter>Source Files\Unzip</Filter>
+    </ClCompile>
+    <ClCompile Include="Unzip\zip.c">
+      <Filter>Source Files\Unzip</Filter>
+    </ClCompile>
+    <ClCompile Include="zlib\adler32.c">
+      <Filter>Source Files\zlib</Filter>
+    </ClCompile>
+    <ClCompile Include="zlib\compress.c">
+      <Filter>Source Files\zlib</Filter>
+    </ClCompile>
+    <ClCompile Include="zlib\crc32.c">
+      <Filter>Source Files\zlib</Filter>
+    </ClCompile>
+    <ClCompile Include="zlib\deflate.c">
+      <Filter>Source Files\zlib</Filter>
+    </ClCompile>
+    <ClCompile Include="zlib\gzclose.c">
+      <Filter>Source Files\zlib</Filter>
+    </ClCompile>
+    <ClCompile Include="zlib\gzlib.c">
+      <Filter>Source Files\zlib</Filter>
+    </ClCompile>
+    <ClCompile Include="zlib\gzread.c">
+      <Filter>Source Files\zlib</Filter>
+    </ClCompile>
+    <ClCompile Include="zlib\gzwrite.c">
+      <Filter>Source Files\zlib</Filter>
+    </ClCompile>
+    <ClCompile Include="zlib\infback.c">
+      <Filter>Source Files\zlib</Filter>
+    </ClCompile>
+    <ClCompile Include="zlib\inffast.c">
+      <Filter>Source Files\zlib</Filter>
+    </ClCompile>
+    <ClCompile Include="zlib\inflate.c">
+      <Filter>Source Files\zlib</Filter>
+    </ClCompile>
+    <ClCompile Include="zlib\inftrees.c">
+      <Filter>Source Files\zlib</Filter>
+    </ClCompile>
+    <ClCompile Include="zlib\trees.c">
+      <Filter>Source Files\zlib</Filter>
+    </ClCompile>
+    <ClCompile Include="zlib\uncompr.c">
+      <Filter>Source Files\zlib</Filter>
+    </ClCompile>
+    <ClCompile Include="zlib\zutil.c">
+      <Filter>Source Files\zlib</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>

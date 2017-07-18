@@ -3105,17 +3105,17 @@ create_main_window(void (*key_callback)(byte key_code, bool key_down),
 	// start up the software renderer.  If this also fails, the app is going to have
 	// to exit.
 
-	hardware_acceleration = true;
-	if (!start_up_hardware_renderer()) {
-		shut_down_hardware_renderer();
+	//hardware_acceleration = true;
+	//if (!start_up_hardware_renderer()) {
+		//shut_down_hardware_renderer();
 		hardware_acceleration = false;
-		failed_to("start up 3D accelerated renderer--trying software renderer instead");
+		//failed_to("start up 3D accelerated renderer--trying software renderer instead");
 		if (!start_up_software_renderer()) {
 			fatal_error("Flatland cannot start up", "Flatland was unable to initialize Direct3D or "
 				"DirectDraw. Please make sure you have DirectX 11 installed.");
 			return(false);
 		}
-	}
+	//}
 
 	// The texture pixel format is 1555 ARGB.
 
@@ -7740,7 +7740,6 @@ hardware_set_texture(cache_entry *cache_entry_ptr)
 			// the new image.
 
 			mov ax, [ebx + ecx]
-			or ax, transparency_mask16
 			mov [edx], ax
 
 			// Increment the old image offset, wrapping back to zero if the 
@@ -8231,7 +8230,7 @@ display_pixel_to_RGB(pixel display_pixel, byte *red_ptr, byte *green_ptr,
 pixel
 RGB_to_texture_pixel(RGBcolour colour)
 {
-	pixel red, green, blue;
+	pixel red, green, blue, alpha;
 
 	// Compute the pixel for this RGB colour.
 
@@ -8244,7 +8243,8 @@ RGB_to_texture_pixel(RGBcolour colour)
 	blue = (pixel)colour.blue & texture_pixel_format.blue_mask;
 	blue >>= texture_pixel_format.blue_right_shift;
 	blue <<= texture_pixel_format.blue_left_shift;
-	return(red | green | blue);
+	alpha = hardware_acceleration && colour.alpha ? texture_pixel_format.alpha_comp_mask : 0;
+	return(red | green | blue | alpha);
 }
 
 //------------------------------------------------------------------------------

@@ -245,17 +245,22 @@
     <ClInclude Include="Tags.h" />
     <ClInclude Include="targetver.h" />
     <ClInclude Include="Tokens.h" />
-    <ClInclude Include="Unzip\INFBLOCK.H" />
-    <ClInclude Include="Unzip\INFCODES.H" />
-    <ClInclude Include="Unzip\INFFAST.H" />
-    <ClInclude Include="Unzip\INFFIXED.H" />
-    <ClInclude Include="Unzip\INFTREES.H" />
-    <ClInclude Include="Unzip\INFUTIL.H" />
-    <ClInclude Include="Unzip\UNZIP.H" />
-    <ClInclude Include="Unzip\ZCONF.H" />
-    <ClInclude Include="Unzip\ZLIB.H" />
-    <ClInclude Include="Unzip\ZUTIL.H" />
+    <ClInclude Include="Unzip\crypt.h" />
+    <ClInclude Include="Unzip\ioapi.h" />
+    <ClInclude Include="Unzip\unzip.h" />
+    <ClInclude Include="Unzip\zip.h" />
     <ClInclude Include="Utils.h" />
+    <ClInclude Include="zlib\crc32.h" />
+    <ClInclude Include="zlib\deflate.h" />
+    <ClInclude Include="zlib\gzguts.h" />
+    <ClInclude Include="zlib\inffast.h" />
+    <ClInclude Include="zlib\inffixed.h" />
+    <ClInclude Include="zlib\inflate.h" />
+    <ClInclude Include="zlib\inftrees.h" />
+    <ClInclude Include="zlib\trees.h" />
+    <ClInclude Include="zlib\zconf.h" />
+    <ClInclude Include="zlib\zlib.h" />
+    <ClInclude Include="zlib\zutil.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Classes.cpp" />
@@ -329,6 +334,10 @@
     <ClCompile Include="LibPNG\pngrutil.c" />
     <ClCompile Include="LibPNG\pngset.c" />
     <ClCompile Include="LibPNG\pngtrans.c" />
+    <ClCompile Include="LibPNG\pngwio.c" />
+    <ClCompile Include="LibPNG\pngwrite.c" />
+    <ClCompile Include="LibPNG\pngwtran.c" />
+    <ClCompile Include="LibPNG\pngwutil.c" />
     <ClCompile Include="Light.cpp" />
     <ClCompile Include="Main.cpp" />
     <ClCompile Include="Memory.cpp" />
@@ -372,20 +381,26 @@
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Create</PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Create</PrecompiledHeader>
     </ClCompile>
-    <ClCompile Include="Unzip\ADLER32.C" />
-    <ClCompile Include="Unzip\CRC32.C" />
-    <ClCompile Include="Unzip\INFBLOCK.C" />
-    <ClCompile Include="Unzip\INFCODES.C" />
-    <ClCompile Include="Unzip\INFFAST.C" />
-    <ClCompile Include="Unzip\INFLATE.C" />
-    <ClCompile Include="Unzip\INFTREES.C" />
-    <ClCompile Include="Unzip\INFUTIL.C" />
-    <ClCompile Include="Unzip\MINIUNZ.C" />
-    <ClCompile Include="Unzip\UNCOMPR.C" />
-    <ClCompile Include="Unzip\UNZIP.C" />
-    <ClCompile Include="Unzip\ZUTIL.C" />
+    <ClCompile Include="Unzip\ioapi.c" />
+    <ClCompile Include="Unzip\unzip.c" />
+    <ClCompile Include="Unzip\zip.c" />
     <ClCompile Include="Utils.cpp" />
     <ClCompile Include="Win32.cpp" />
+    <ClCompile Include="zlib\adler32.c" />
+    <ClCompile Include="zlib\compress.c" />
+    <ClCompile Include="zlib\crc32.c" />
+    <ClCompile Include="zlib\deflate.c" />
+    <ClCompile Include="zlib\gzclose.c" />
+    <ClCompile Include="zlib\gzlib.c" />
+    <ClCompile Include="zlib\gzread.c" />
+    <ClCompile Include="zlib\gzwrite.c" />
+    <ClCompile Include="zlib\infback.c" />
+    <ClCompile Include="zlib\inffast.c" />
+    <ClCompile Include="zlib\inflate.c" />
+    <ClCompile Include="zlib\inftrees.c" />
+    <ClCompile Include="zlib\trees.c" />
+    <ClCompile Include="zlib\uncompr.c" />
+    <ClCompile Include="zlib\zutil.c" />
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="Flatland Standalone.rc" />

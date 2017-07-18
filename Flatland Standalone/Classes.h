@@ -317,12 +317,12 @@ public:
 //------------------------------------------------------------------------------
 
 struct RGBcolour {
-	float red, green, blue;			// Colour components.
+	float red, green, blue, alpha;	// Colour components.
 
 	RGBcolour();
 	~RGBcolour();
 	void set(RGBcolour colour);
-	void set_RGB(float new_red, float new_green, float new_blue);
+	void set_RGB(float red, float green, float blue, float alpha = 255.0f);
 	void clamp(void);
 	void adjust_brightness(float brightness);
 	void normalise(void);

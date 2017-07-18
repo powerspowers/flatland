@@ -41,6 +41,7 @@ extern "C" {
 #include "Jpeg\jinclude.h"
 #include "Jpeg\jpeglib.h"
 #include "Jpeg\jerror.h"
+#include "LibPNG\png.h"
 }
 
 #include "Classes.h"
@@ -263,15 +264,9 @@ image_memory_error(const char *object)
 //==============================================================================
 
 static bool
-is_GIF_file()
+is_GIF_file(byte *header, int header_size)
 {
-	byte header[6];
-
-	// Read and verify the header.
-
-	return read_file(header, 6) == 6 && 
-		(!_strnicmp((char *)header, id87, 6) ||
-		 !_strnicmp((char *)header, id89, 6));
+	return header_size == 6 && (!_strnicmp((char *)header, id87, 6) || !_strnicmp((char *)header, id89, 6));
 }
 
 //------------------------------------------------------------------------------
@@ -1046,11 +1041,9 @@ load_JPEG(void)
 			jpeg_read_scanlines(&cinfo, scan_line, 1);
 			for (col = 0; col < image_width; col++) {
 				if (cinfo.jpeg_color_space == JCS_GRAYSCALE)
-					colour.set_RGB(scan_line[0][col], scan_line[0][col],
-						scan_line[0][col]);
+					colour.set_RGB(scan_line[0][col], scan_line[0][col], scan_line[0][col]);
 				else
-					colour.set_RGB(scan_line[0][col * 3], 
-						scan_line[0][col * 3 + 1], scan_line[0][col * 3 + 2]);
+					colour.set_RGB(scan_line[0][col * 3], scan_line[0][col * 3 + 1], scan_line[0][col * 3 + 2]);
 				*(word *)image_ptr = RGB_to_texture_pixel(colour);
 				image_ptr += 2;
 			}
@@ -1074,8 +1067,172 @@ load_JPEG(void)
 	pixmap_list->width = image_width;
 	pixmap_list->height = image_height;
 	pixmap_list->transparent_index = -1;
-	pixmap_list->delay_ms = 1000;
+	pixmap_list->delay_ms = 1;
 	pixmaps++;
+}
+
+//==============================================================================
+// PNG loader functions.
+//==============================================================================
+
+void read_png_file(png_structp png_ptr, png_bytep data, png_size_t length)
+{
+	if (read_file(data, length) != length) {
+		png_error(png_ptr, "Unable to read PNG file\n");
+	}
+}
+
+void
+load_PNG()
+{
+	RGBcolour colour;
+
+	// Initialise the number of pixmaps loaded, the transparent flag, the loop flag, and the number of colours.
+
+	pixmaps = 0;
+	transparent = false;
+	texture_loops = false;
+	total_time_ms = 1;
+	colours = 0;
+
+	// Initialise the pointers to various structures.
+
+	png_structp png_ptr = NULL;
+	png_infop info_ptr = NULL;
+	png_infop end_info_ptr = NULL;
+	imagebyte *image_data = NULL;
+	png_bytep *row_pointers = NULL;
+
+	// Create the structures needed to read the PNG file.
+
+	png_ptr = png_create_read_struct(PNG_LIBPNG_VER_STRING, NULL, NULL, NULL);
+	if (!png_ptr) {
+		goto got_error;
+	}
+	info_ptr = png_create_info_struct(png_ptr);
+	if (!info_ptr) {
+		goto got_error;
+	}
+	end_info_ptr = png_create_info_struct(png_ptr);
+	if (!end_info_ptr) {
+		goto got_error;
+	}
+
+	// Create the error handler.
+
+	if (setjmp(png_jmpbuf(png_ptr))) {
+		goto got_error;
+	}
+
+	// Set up the read function.
+
+	png_set_read_fn(png_ptr, NULL, read_png_file);
+
+	// Tell libpng that we've already read the header.
+
+	png_set_sig_bytes(png_ptr, 8);
+
+	// Read the PNG image info.
+
+	png_read_info(png_ptr, info_ptr);
+	image_width = png_get_image_width(png_ptr, info_ptr);
+	image_height = png_get_image_height(png_ptr, info_ptr);
+	int colour_type = png_get_color_type(png_ptr, info_ptr);
+	int bit_depth = png_get_bit_depth(png_ptr, info_ptr);
+
+	// Set various transformations in order to obtain a 32-bit RGBA image.
+
+	if (bit_depth == 16) {
+		png_set_strip_16(png_ptr);
+	}
+	if (colour_type == PNG_COLOR_TYPE_PALETTE) {
+		png_set_palette_to_rgb(png_ptr);
+	}
+	if (colour_type == PNG_COLOR_TYPE_GRAY && bit_depth < 8) {
+		png_set_expand_gray_1_2_4_to_8(png_ptr);
+	}
+	if (png_get_valid(png_ptr, info_ptr, PNG_INFO_tRNS)) {
+		png_set_tRNS_to_alpha(png_ptr);
+	}
+	if (colour_type == PNG_COLOR_TYPE_RGB || colour_type == PNG_COLOR_TYPE_GRAY || colour_type == PNG_COLOR_TYPE_PALETTE) {
+		png_set_filler(png_ptr, 0xFF, PNG_FILLER_AFTER);
+	}
+	if (colour_type == PNG_COLOR_TYPE_GRAY || colour_type == PNG_COLOR_TYPE_GRAY_ALPHA) {
+		png_set_gray_to_rgb(png_ptr);
+	}
+	png_set_interlace_handling(png_ptr);
+	png_read_update_info(png_ptr, info_ptr);
+
+	// Create a buffer to hold the transformed image data, and an array of row pointers to point into the image data,
+	// then read the image.
+
+	int row_bytes = png_get_rowbytes(png_ptr, info_ptr);
+	NEWARRAY(image_data, imagebyte, image_width * image_height * 4);
+	if (image_data == NULL) {
+		goto got_error;
+	}
+	NEWARRAY(row_pointers, png_bytep, image_height);
+	if (row_pointers == NULL) {
+		goto got_error;
+	}
+	for (int y = 0; y < image_height; y++) {
+		row_pointers[y] = image_data + y * row_bytes;
+	}
+	png_read_image(png_ptr, row_pointers);
+
+	// Create a buffer to hold the 16-bit image, and perform that transformation.
+	// XXX -- We will eventually remove this step and use the 32-bit pixel image instead.
+
+	imagebyte *buffer_ptr;
+	NEWARRAY(buffer_ptr, imagebyte, image_width * image_height * 2);
+	if (buffer_ptr == NULL) {
+		goto got_error;
+	}
+	imagebyte *source_image_ptr = image_data;
+	imagebyte *target_image_ptr = buffer_ptr;
+	for (int row = 0; row < image_height; row++) {
+		for (int col = 0; col < image_width; col++) {
+			imagebyte red = *source_image_ptr++;
+			imagebyte green = *source_image_ptr++;
+			imagebyte blue = *source_image_ptr++;
+			imagebyte alpha = *source_image_ptr++;
+			colour.set_RGB(red, green, blue, alpha);
+			*(word *)target_image_ptr = RGB_to_texture_pixel(colour);
+			target_image_ptr += 2;
+		}
+	}
+
+	// Initialise a pixmap containing the image just read.
+
+	pixmap_list->image_is_16_bit = true;
+	pixmap_list->image_ptr = buffer_ptr;
+	pixmap_list->image_size = image_width * image_height * 2;
+	pixmap_list->width = image_width;
+	pixmap_list->height = image_height;
+	pixmap_list->transparent_index = -1;
+	pixmap_list->delay_ms = 1;
+	pixmaps++;
+
+	// Free all temporary data.
+
+	if (image_data) {
+		DELARRAY(image_data, imagebyte, image_width * image_height * 4);
+	}
+	if (row_pointers) {
+		DELARRAY(row_pointers, png_bytep, image_height);
+	}
+	png_destroy_read_struct(&png_ptr, &info_ptr, &end_info_ptr);
+	return;
+
+got_error:
+	if (image_data) {
+		DELARRAY(image_data, imagebyte, image_width * image_height * 4);
+	}
+	if (row_pointers) {
+		DELARRAY(row_pointers, png_bytep, image_height);
+	}
+	png_destroy_read_struct(&png_ptr, &info_ptr, &end_info_ptr);
+	image_error("Unable to read PNG file");
 }
 
 //==============================================================================
@@ -1140,24 +1297,34 @@ load_image(const char *URL, const char *file_path, texture *texture_ptr)
 	}
 
 	// If the file begins with a GIF header, load the rest of the file as a GIF.
-	// Otherwise rewind the file and load the file as a JPEG.
+	// If it begins with a PNG haeder, load the rest of the file as a PNG.
+	// Otherwise rewind the file and attmept to load the file as a JPEG.
 
 	try {
-		if (is_GIF_file()) {
+		byte header[8];
+		int header_size;
+
+		header_size = read_file(header, 6);
+		if (is_GIF_file(header, header_size)) {
 			load_GIF();
 			texture_ptr->is_16_bit = false;
 		} else {
-			rewind_file();
-			load_JPEG();
+			header_size += read_file(header + 6, 2);
+			if (!png_sig_cmp(header, 0, header_size)) {
+				load_PNG();
+			} else {
+				rewind_file();
+				load_JPEG();
+			}
 			texture_ptr->is_16_bit = true;
 		}
 	}
 	catch (char *) {
 		pop_file();
 		if (URL)
-			warning("URL %s is not a GIF or JPEG image", URL);
+			warning("URL %s is not a GIF, PNG or JPEG image", URL);
 		else
-			warning("File %s is not a GIF or JPEG image", file_path);
+			warning("File %s is not a GIF, PNG or JPEG image", file_path);
 		return(false);
 	}
 

@@ -264,6 +264,7 @@ RGBcolour::RGBcolour()
 	red = 0.0f;
 	green = 0.0f;
 	blue = 0.0f;
+	alpha = 0.0f;
 }
 
 // Default destructor does nothing.
@@ -280,16 +281,18 @@ RGBcolour::set(RGBcolour colour)
 	red = colour.red;
 	green = colour.green;
 	blue = colour.blue;
+	alpha = colour.alpha;
 }
 
 // Method to set colour components.
 
 void
-RGBcolour::set_RGB(float new_red, float new_green, float new_blue)
+RGBcolour::set_RGB(float red, float green, float blue, float alpha)
 {
-	red = new_red;
-	green = new_green;
-	blue = new_blue;
+	this->red = red;
+	this->green = green;
+	this->blue = blue;
+	this->alpha = alpha;
 }
 
 // Method to clamp the colour components to values between 0 and 255.
@@ -309,6 +312,10 @@ RGBcolour::clamp(void)
 		blue = 0.0f;
 	else if (FGT(blue, 255.0f))
 		blue = 255.0f;
+	if (FLT(alpha, 0.0f))
+		alpha = 0.0f;
+	else if (FGT(alpha, 255.0f))
+		alpha = 255.0f;
 }
 
 // Method to adjust brightness of colour components by the given positive 
@@ -338,6 +345,7 @@ RGBcolour::normalise(void)
 	red /= 255.0f;
 	green /= 255.0f;
 	blue /= 255.0f;
+	alpha /= 255.0f;
 }
 
 // Method to blend another colour with this one.  Both must be normalised
