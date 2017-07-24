@@ -436,7 +436,7 @@ insert_movable_span(span_row *span_row_ptr, span *prev_span_ptr,
 	span *span_ptr, *add_span_ptr;
 
 	// If we have a solid colour span (no texture) or the pixmap is opaque
-	// (no transparent colour index))...
+	// (no transparent colour index)...
 
 	if (pixmap_ptr == NULL || pixmap_ptr->transparent_index == -1) {
 

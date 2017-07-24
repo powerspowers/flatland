@@ -492,7 +492,7 @@ polygon_visible(polygon *polygon_ptr, float angle)
 	front_face_visible = FLT(dot_product, 0.0f);
 
 	// If the polygon is two-sided, translucent (hardware acceleration only),
-	// or transparent, it is visible  regardless of which face is being viewed.
+	// or transparent, it is visible regardless of which face is being viewed.
 	
 	texture_ptr = part_ptr->texture_ptr;
 	if (part_ptr->faces == 2 || 
@@ -2633,7 +2633,7 @@ render_textured_spans16(texture *texture_ptr)
 				if (span_ptr->is_popup)
 					render_popup_span16(span_ptr);
 				else
-					render_opaque_span16(span_ptr);
+					render_transparent_span16(span_ptr);
 				span_ptr = del_span(span_ptr);
 			}
 			pixmap_ptr->span_lists[index] = NULL;
@@ -2668,7 +2668,7 @@ render_textured_spans24(texture *texture_ptr)
 				if (span_ptr->is_popup)
 					render_popup_span24(span_ptr);
 				else
-					render_opaque_span24(span_ptr);
+					render_transparent_span24(span_ptr);
 				span_ptr = del_span(span_ptr);
 			}
 			pixmap_ptr->span_lists[index] = NULL;
@@ -2703,7 +2703,7 @@ render_textured_spans32(texture *texture_ptr)
 				if (span_ptr->is_popup)
 					render_popup_span32(span_ptr);
 				else
-					render_opaque_span32(span_ptr);
+					render_transparent_span32(span_ptr);
 				span_ptr = del_span(span_ptr);
 			}
 			pixmap_ptr->span_lists[index] = NULL;

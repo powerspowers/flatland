@@ -1196,20 +1196,25 @@ load_PNG()
 			imagebyte green = *source_image_ptr++;
 			imagebyte blue = *source_image_ptr++;
 			imagebyte alpha = *source_image_ptr++;
+			if (!alpha) {
+				transparent = true;
+			}
 			colour.set_RGB(red, green, blue, alpha);
 			*(word *)target_image_ptr = RGB_to_texture_pixel(colour);
 			target_image_ptr += 2;
 		}
 	}
 
-	// Initialise a pixmap containing the image just read.
+	// Initialise a pixmap containing the image just read.  If there was at least one
+	// transparent pixel, set a transparent index to ensure that the software renderer
+	// uses transparent spans.
 
 	pixmap_list->image_is_16_bit = true;
 	pixmap_list->image_ptr = buffer_ptr;
 	pixmap_list->image_size = image_width * image_height * 2;
 	pixmap_list->width = image_width;
 	pixmap_list->height = image_height;
-	pixmap_list->transparent_index = -1;
+	pixmap_list->transparent_index = transparent ? 0 : -1;
 	pixmap_list->delay_ms = 1;
 	pixmaps++;
 

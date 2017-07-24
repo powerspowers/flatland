@@ -826,7 +826,7 @@ const float fixed_shift = 65536.0;
 	__asm mov eax, image_ptr \
 	__asm mov ax, [eax + edi * 2] \
 	__asm test ax, transparency_mask16 \
-	__asm jnz label \
+	__asm jz label \
 	__asm mov [esi], ax \
 } __asm { \
 label: \
@@ -850,7 +850,7 @@ label: \
 	__asm mov eax, image_ptr \
 	__asm mov eax, [eax + edi * 4] \
 	__asm test eax, transparency_mask24 \
-	__asm jnz label \
+	__asm jz label \
 	__asm mov edi, [esi] \
 	__asm and edi, 0xff000000 \
 	__asm or edi, eax \
@@ -877,7 +877,7 @@ label: \
 	__asm mov eax, image_ptr \
 	__asm mov eax, [eax + edi * 4] \
 	__asm test eax, transparency_mask32 \
-	__asm jnz label \
+	__asm jz label \
 	__asm mov [esi], eax \
 } __asm { \
 label: \
@@ -3105,17 +3105,17 @@ create_main_window(void (*key_callback)(byte key_code, bool key_down),
 	// start up the software renderer.  If this also fails, the app is going to have
 	// to exit.
 
-	//hardware_acceleration = true;
-	//if (!start_up_hardware_renderer()) {
-		//shut_down_hardware_renderer();
+	hardware_acceleration = true;
+	if (!start_up_hardware_renderer()) {
+		shut_down_hardware_renderer();
 		hardware_acceleration = false;
-		//failed_to("start up 3D accelerated renderer--trying software renderer instead");
+		failed_to("start up 3D accelerated renderer--trying software renderer instead");
 		if (!start_up_software_renderer()) {
 			fatal_error("Flatland cannot start up", "Flatland was unable to initialize Direct3D or "
 				"DirectDraw. Please make sure you have DirectX 11 installed.");
 			return(false);
 		}
-	//}
+	}
 
 	// The texture pixel format is 1555 ARGB.
 
@@ -5165,10 +5165,10 @@ create_lit_image(cache_entry *cache_entry_ptr, int image_dimensions)
 				mov ax, [ebx + ecx]
 				mov ecx, palette_ptr
 				test ax, 0x8000
-				js transparent_pixel1
+				jnz opaque_pixel1
 				mov ax, [ecx + eax * 4]
 				jmp store_pixel1
-			transparent_pixel1:
+			opaque_pixel1:
 				and ax, 0x7fff
 				mov ax, [ecx + eax * 4]
 				or ax, transparency_mask16
@@ -5259,10 +5259,10 @@ create_lit_image(cache_entry *cache_entry_ptr, int image_dimensions)
 				mov ax, [ebx + ecx]
 				mov ecx, palette_ptr
 				test ax, 0x8000
-				jz transparent_pixel2
+				jnz opaque_pixel2
 				mov eax, [ecx + eax * 4]	
 				jmp store_pixel2
-			transparent_pixel2:
+			opaque_pixel2:
 				and ax, 0x7fff
 				mov eax, [ecx + eax * 4]
 				or eax, transparency_mask32
@@ -5351,18 +5351,18 @@ create_lit_image(cache_entry *cache_entry_ptr, int image_dimensions)
 
 				// Get the current 8-bit index from the old image, use it to
 				// obtain the 16-bit pixel, and store it in the new image.  If 
-				// the 8-bit index is the transparent index, mark the pixel as
-				// transparent by setting the tranparency bit.
+				// the 8-bit index is not the transparent index, mark the pixel as
+				// opaque by setting the transparency mask.
 
 				mov eax, 0
 				mov ecx, column_index
 				mov al, [ebx + ecx]
 				mov ecx, palette_ptr
 				cmp eax, transparent_index
-				je transparent_pixel3
+				jne opaque_pixel3
 				mov ax, [ecx + eax * 4]	
 				jmp store_pixel3
-			transparent_pixel3:
+			opaque_pixel3:
 				mov ax, [ecx + eax * 4]
 				or ax, transparency_mask16
 			store_pixel3:
@@ -5444,18 +5444,18 @@ create_lit_image(cache_entry *cache_entry_ptr, int image_dimensions)
 
 				// Get the current 8-bit index from the old image, use it to
 				// obtain the 24-bit pixel, and store it in the new image.  If 
-				// the 8-bit index is the transparent index, mark the pixel as
-				// transparent by setting the tranparency bit.
+				// the 8-bit index is not the transparent index, mark the pixel as
+				// opaque by setting the tranparency mask.
 
 				mov eax, 0
 				mov ecx, column_index
 				mov al, [ebx + ecx]
 				mov ecx, palette_ptr
 				cmp eax, transparent_index
-				je transparent_pixel4
+				jne opaque_pixel4
 				mov eax, [ecx + eax * 4]	
 				jmp store_pixel4
-			transparent_pixel4:
+			opaque_pixel4:
 				mov eax, [ecx + eax * 4]
 				or eax, transparency_mask32
 			store_pixel4:
@@ -7002,14 +7002,13 @@ render_linear_span16(bool image_is_16_bit, byte *image_ptr, byte *fb_ptr,
 
 		next_pixel16a:
 
-			// Load the 16-bit image pixel into EAX.  If it has the transparency
-			// mask set, skip it.
+			// Load the 16-bit image pixel into EAX.  If it's transparent, skip it.
 			
 			mov eax, 0
 			mov edi, image_ptr
 			mov ax, [edi + ebx]
 			test eax, transparency_mask32
-			jnz skip_pixel16a
+			jz skip_pixel16a
 
 			// Use the unlit 16-bit pixel as an index into the palette to obtain
 			// the lit 16-bit pixel, which we then store in the frame buffer.
@@ -7064,7 +7063,7 @@ render_linear_span16(bool image_is_16_bit, byte *image_ptr, byte *fb_ptr,
 			mov edi, image_ptr
 			mov al, [edi + ebx]
 			cmp eax, transparent_index
-			jz skip_pixel16b
+			je skip_pixel16b
 
 			// Use the 8-bit pixel as an index into the palette to obtain the 
 			// 16-bit pixel, which we then store in the frame buffer.
@@ -7126,7 +7125,7 @@ render_linear_span24(bool image_is_16_bit, byte *image_ptr, byte *fb_ptr,
 			mov edi, image_ptr
 			mov ax, [edi + ebx]
 			test eax, transparency_mask32
-			jnz skip_pixel24a
+			jz skip_pixel24a
 
 			// Use the 16-bit pixel as an index into the palette to obtain the 
 			// 24-bit pixel, which we then store in the frame buffer.
@@ -7182,7 +7181,7 @@ render_linear_span24(bool image_is_16_bit, byte *image_ptr, byte *fb_ptr,
 			mov edi, image_ptr
 			mov al, [edi + ebx]
 			cmp eax, transparent_index
-			jz skip_pixel24b
+			je skip_pixel24b
 
 			// Use the 8-bit pixel as an index into the palette to obtain the 
 			// 24-bit pixel, which we then store in the frame buffer.
@@ -7253,7 +7252,7 @@ render_linear_span32(bool image_is_16_bit, byte *image_ptr, byte *fb_ptr,
 			mov edi, image_ptr
 			mov ax, [edi + ebx]
 			test eax, transparency_mask32
-			jnz skip_pixel32a
+			jz skip_pixel32a
 
 			// Use the 16-bit pixel as an index into the palette to obtain the 
 			// 32-bit pixel, which we then store in the frame buffer.
@@ -7307,7 +7306,7 @@ render_linear_span32(bool image_is_16_bit, byte *image_ptr, byte *fb_ptr,
 			mov edi, image_ptr
 			mov al, [edi + ebx]
 			cmp eax, transparent_index
-			jz skip_pixel32b
+			je skip_pixel32b
 
 			// Use the 8-bit pixel as an index into the palette to obtain the 
 			// 24-bit pixel, which we then store in the frame buffer.
@@ -8243,7 +8242,7 @@ RGB_to_texture_pixel(RGBcolour colour)
 	blue = (pixel)colour.blue & texture_pixel_format.blue_mask;
 	blue >>= texture_pixel_format.blue_right_shift;
 	blue <<= texture_pixel_format.blue_left_shift;
-	alpha = hardware_acceleration && colour.alpha ? texture_pixel_format.alpha_comp_mask : 0;
+	alpha = colour.alpha ? texture_pixel_format.alpha_comp_mask : 0;
 	return(red | green | blue | alpha);
 }
 
