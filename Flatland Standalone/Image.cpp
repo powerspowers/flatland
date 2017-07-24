@@ -578,7 +578,7 @@ read_GIF_image(void)
 
 	pixmap_ptr->width = BufferWidth;
 	pixmap_ptr->height = BufferHeight;
-	pixmap_ptr->image_is_16_bit = false;
+	pixmap_ptr->bytes_per_pixel = 1;
 	pixmap_ptr->image_ptr = ImagePtr;
 	pixmap_ptr->image_size = ImageSize;
 
@@ -1061,7 +1061,7 @@ load_JPEG(void)
 
 	// Initialise a pixmap containing the image just read.
 
-	pixmap_list->image_is_16_bit = true;
+	pixmap_list->bytes_per_pixel = 2;
 	pixmap_list->image_ptr = buffer_ptr;
 	pixmap_list->image_size = buffer_size;
 	pixmap_list->width = image_width;
@@ -1209,7 +1209,7 @@ load_PNG()
 	// transparent pixel, set a transparent index to ensure that the software renderer
 	// uses transparent spans.
 
-	pixmap_list->image_is_16_bit = true;
+	pixmap_list->bytes_per_pixel = 2;
 	pixmap_list->image_ptr = buffer_ptr;
 	pixmap_list->image_size = image_width * image_height * 2;
 	pixmap_list->width = image_width;
@@ -1249,20 +1249,23 @@ scale_pixmap(pixmap *pixmap_ptr, int new_image_width, int new_image_height, floa
 {
 	// Allocate a new image, and copy a scaled version of the old image to it.
 
-	int new_image_size = new_image_width * new_image_height * (pixmap_ptr->image_is_16_bit ? 2 : 1);
+	int new_image_size = new_image_width * new_image_height * pixmap_ptr->bytes_per_pixel;
 	imagebyte *new_image;
 	NEWARRAY(new_image, imagebyte, new_image_size);
 	imagebyte *old_image_ptr = pixmap_ptr->image_ptr, *new_image_ptr = new_image;
 	float y = 0.0f;
 	for (int row = 0; row < new_image_height; row++, y += scale) {
-		imagebyte *row_ptr = old_image_ptr + (int)y * pixmap_ptr->width * (pixmap_ptr->image_is_16_bit ? 2 : 1);
+		imagebyte *row_ptr = old_image_ptr + (int)y * pixmap_ptr->width * pixmap_ptr->bytes_per_pixel;
 		float x = 0.0f;
 		for (int column = 0; column < new_image_width; column++, x += scale) {
-			if (pixmap_ptr->image_is_16_bit) {
+			switch (pixmap_ptr->bytes_per_pixel) {
+			case 1:
+				*new_image_ptr++ = *(row_ptr + (int)x);
+				break;
+			case 2:
 				*((word *)new_image_ptr) = *((word *)row_ptr + (int)x);
 				new_image_ptr += 2;
-			} else {
-				*new_image_ptr++ = *(row_ptr + (int)x);
+				break;
 			}
 		}
 	}
@@ -1312,7 +1315,7 @@ load_image(const char *URL, const char *file_path, texture *texture_ptr)
 		header_size = read_file(header, 6);
 		if (is_GIF_file(header, header_size)) {
 			load_GIF();
-			texture_ptr->is_16_bit = false;
+			texture_ptr->bytes_per_pixel = 1;
 		} else {
 			header_size += read_file(header + 6, 2);
 			if (!png_sig_cmp(header, 0, header_size)) {
@@ -1321,7 +1324,7 @@ load_image(const char *URL, const char *file_path, texture *texture_ptr)
 				rewind_file();
 				load_JPEG();
 			}
-			texture_ptr->is_16_bit = true;
+			texture_ptr->bytes_per_pixel = 2;
 		}
 	}
 	catch (char *) {
@@ -1386,7 +1389,7 @@ load_image(const char *URL, const char *file_path, texture *texture_ptr)
 		// If this is an 8-bit texture, create the RGB palette, and one of 
 		// either the texture palette or display palette.
 
-		if (!texture_ptr->is_16_bit) {
+		if (texture_ptr->bytes_per_pixel == 1) {
 			if (!texture_ptr->create_RGB_palette(colours, BRIGHTNESS_LEVELS, RGB_palette))
 				image_memory_error("texture RGB palette");
 			if (hardware_acceleration) {

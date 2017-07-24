@@ -811,7 +811,7 @@ struct cache {
 struct pixmap {
 	int width, height;				// Image dimensions.
 	int size_index;					// Size index.
-	bool image_is_16_bit;			// TRUE if image data is 16-bit.
+	int bytes_per_pixel;			// Number of bytes per pixel (1, 2 or 4).
 	imagebyte *image_ptr;			// Pointer to 8-bit or 16-bit image data.
 	int image_size;					// Size of image in bytes.
 	int colours;					// Number of colours in palette.
@@ -844,7 +844,7 @@ struct texture {
 	int load_index;					// Load index for this texture (if custom).
 	bool transparent;				// TRUE if at least 1 pixmap is transparent.
 	bool loops;						// TRUE if animation loops.
-	bool is_16_bit;					// TRUE if texture is 16-bit.
+	int bytes_per_pixel;			// Number of bytes per pixel (1, 2 or 4).
 	int width, height;				// Dimensions of largest image.
 	int pixmaps;					// Number of pixmaps.
 	pixmap *pixmap_list;			// Array of pixmaps.

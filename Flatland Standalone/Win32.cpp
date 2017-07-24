@@ -1044,7 +1044,7 @@ create_pixmap_for_text(texture *texture_ptr, int width, int height,
 	NEWARRAY(pixmap_ptr, pixmap, 1);
 	if (pixmap_ptr == NULL)
 		return(false);
-	pixmap_ptr->image_is_16_bit = false;
+	pixmap_ptr->bytes_per_pixel = 1;
 	pixmap_ptr->image_size = width * height;
 	pixmap_ptr->size_index = get_size_index(width, height);
 	NEWARRAY(pixmap_ptr->image_ptr, imagebyte, pixmap_ptr->image_size);
@@ -1067,7 +1067,7 @@ create_pixmap_for_text(texture *texture_ptr, int width, int height,
 
 	// Initialise the texture.
 
-	texture_ptr->is_16_bit = false;
+	texture_ptr->bytes_per_pixel = 1;
 	texture_ptr->transparent = (bg_colour_ptr == NULL);
 	texture_ptr->width = width;
 	texture_ptr->height = height;
@@ -5092,10 +5092,7 @@ create_lit_image(cache_entry *cache_entry_ptr, int image_dimensions)
 
 	pixmap_ptr = cache_entry_ptr->pixmap_ptr;
 	image_ptr = pixmap_ptr->image_ptr;
-	if (pixmap_ptr->image_is_16_bit)
-		image_width = pixmap_ptr->width * 2;
-	else
-		image_width = pixmap_ptr->width;
+	image_width = pixmap_ptr->width * pixmap_ptr->bytes_per_pixel;
 	image_height = pixmap_ptr->height;
 	end_image_ptr = image_ptr + image_width * image_height;
 
@@ -5103,7 +5100,7 @@ create_lit_image(cache_entry *cache_entry_ptr, int image_dimensions)
 	// can get to it, and get a pointer to the palette for the desired brightness
 	// index.
 
-	if (!pixmap_ptr->image_is_16_bit) {
+	if (pixmap_ptr->bytes_per_pixel == 1) {
 		transparent_index = pixmap_ptr->transparent_index;
 		palette_ptr = pixmap_ptr->display_palette_list +
 			cache_entry_ptr->brightness_index * pixmap_ptr->colours;
@@ -5117,7 +5114,7 @@ create_lit_image(cache_entry *cache_entry_ptr, int image_dimensions)
 
 	// If the pixmap is a 16-bit image...
 
-	if (pixmap_ptr->image_is_16_bit) {
+	if (pixmap_ptr->bytes_per_pixel == 2) {
 		switch (display_depth) {
 
 		// If the display depth is 8 or 16, convert the unlit image to a 16-bit
@@ -7363,7 +7360,7 @@ render_popup_span16(span *span_ptr)
 	// and the image width (in bytes).
 	
 	pixmap_ptr = span_ptr->pixmap_ptr;
-	if (pixmap_ptr->image_is_16_bit) {
+	if (pixmap_ptr->bytes_per_pixel == 2) {
 		palette_ptr = light_table[span_ptr->brightness_index];
 		transparency_mask32 = texture_pixel_format.alpha_comp_mask;
 		image_width = pixmap_ptr->width * 2;
@@ -7392,7 +7389,7 @@ render_popup_span16(span *span_ptr)
 
 	// Render the span
 
-	render_linear_span16(pixmap_ptr->image_is_16_bit, image_ptr, fb_ptr,
+	render_linear_span16(pixmap_ptr->bytes_per_pixel == 2, image_ptr, fb_ptr,
 		palette_ptr, transparent_index, transparency_mask32, image_width,
 		span_width, u);
 }
@@ -7422,7 +7419,7 @@ render_popup_span24(span *span_ptr)
 	// and the image width (in bytes).
 	
 	pixmap_ptr = span_ptr->pixmap_ptr;
-	if (pixmap_ptr->image_is_16_bit) {
+	if (pixmap_ptr->bytes_per_pixel == 2) {
 		palette_ptr = light_table[span_ptr->brightness_index];
 		transparency_mask32 = texture_pixel_format.alpha_comp_mask;
 		image_width = pixmap_ptr->width * 2;
@@ -7451,7 +7448,7 @@ render_popup_span24(span *span_ptr)
 
 	// Render the span.
 
-	render_linear_span24(pixmap_ptr->image_is_16_bit, image_ptr, fb_ptr,
+	render_linear_span24(pixmap_ptr->bytes_per_pixel == 2, image_ptr, fb_ptr,
 		palette_ptr, transparent_index, transparency_mask32, image_width,
 		span_width, u);
 }
@@ -7482,7 +7479,7 @@ render_popup_span32(span *span_ptr)
 	// and the image width (in bytes).
 	
 	pixmap_ptr = span_ptr->pixmap_ptr;
-	if (pixmap_ptr->image_is_16_bit) {
+	if (pixmap_ptr->bytes_per_pixel == 2) {
 		palette_ptr = light_table[span_ptr->brightness_index];
 		transparency_mask32 = texture_pixel_format.alpha_comp_mask;
 		image_width = pixmap_ptr->width * 2;
@@ -7511,7 +7508,7 @@ render_popup_span32(span *span_ptr)
 
 	// Render the span.
 
-	render_linear_span32(pixmap_ptr->image_is_16_bit, image_ptr, fb_ptr,
+	render_linear_span32(pixmap_ptr->bytes_per_pixel == 2, image_ptr, fb_ptr,
 		palette_ptr, transparent_index, transparency_mask32, image_width,
 		span_width, u);
 }
@@ -7690,10 +7687,7 @@ hardware_set_texture(cache_entry *cache_entry_ptr)
 
 	pixmap_ptr = cache_entry_ptr->pixmap_ptr;
 	image_ptr = pixmap_ptr->image_ptr;
-	if (pixmap_ptr->image_is_16_bit)
-		image_width = pixmap_ptr->width * 2;
-	else
-		image_width = pixmap_ptr->width;
+	image_width = pixmap_ptr->width * pixmap_ptr->bytes_per_pixel;
 	image_height = pixmap_ptr->height;
 	end_image_ptr = image_ptr + image_width * image_height;
 
@@ -7701,7 +7695,7 @@ hardware_set_texture(cache_entry *cache_entry_ptr)
 	// pointer in static variables so that the assembly code can get to them.
 	// Also put the transparency mask into a static variable.
 
-	if (!pixmap_ptr->image_is_16_bit) {
+	if (pixmap_ptr->bytes_per_pixel == 1) {
 		transparent_index = pixmap_ptr->transparent_index;
 		palette_ptr = pixmap_ptr->texture_palette_list;
 	}
@@ -7714,7 +7708,7 @@ hardware_set_texture(cache_entry *cache_entry_ptr)
 
 	// If the pixmap is a 16-bit image, simply copy it to the new image buffer.
 
-	if (pixmap_ptr->image_is_16_bit) {
+	if (pixmap_ptr->bytes_per_pixel == 2) {
 		__asm {
 		
 			// EBX: holds pointer to current row of old image.
@@ -8099,7 +8093,7 @@ draw_pixmap(pixmap *pixmap_ptr, int brightness_index, int x, int y, int width,
 	// 16-bit pixmaps, the image width must be doubled to give the width in
 	// bytes.
 
-	if (pixmap_ptr->image_is_16_bit) {
+	if (pixmap_ptr->bytes_per_pixel == 2) {
 		transparency_mask32 = texture_pixel_format.alpha_comp_mask;
 		palette_ptr = light_table[brightness_index];
 		image_width = pixmap_ptr->width * 2;
@@ -8127,7 +8121,7 @@ draw_pixmap(pixmap *pixmap_ptr, int brightness_index, int x, int y, int width,
 
 	switch (bytes_per_pixel) {
 	case 1:
-		if (!pixmap_ptr->image_is_16_bit) {
+		if (pixmap_ptr->bytes_per_pixel == 1) {
 			fb_row_gap = fb_bytes_per_row - clipped_width * bytes_per_pixel;	
 			image_row_gap = image_width - clipped_width;
 			palette_index_table = pixmap_ptr->palette_index_table;
@@ -8146,7 +8140,7 @@ draw_pixmap(pixmap *pixmap_ptr, int brightness_index, int x, int y, int width,
 		break;
 	case 2:
 		for (row = 0; row < clipped_height; row++) {
-			render_linear_span16(pixmap_ptr->image_is_16_bit, image_ptr, fb_ptr,
+			render_linear_span16(pixmap_ptr->bytes_per_pixel == 2, image_ptr, fb_ptr,
 				palette_ptr, transparent_index, transparency_mask32, image_width,
 				span_width, u);
 			fb_ptr += fb_bytes_per_row;
@@ -8155,7 +8149,7 @@ draw_pixmap(pixmap *pixmap_ptr, int brightness_index, int x, int y, int width,
 		break;
 	case 3:
 		for (row = 0; row < clipped_height; row++) {
-			render_linear_span24(pixmap_ptr->image_is_16_bit, image_ptr, fb_ptr,
+			render_linear_span24(pixmap_ptr->bytes_per_pixel == 2, image_ptr, fb_ptr,
 				palette_ptr, transparent_index, transparency_mask32, image_width,
 				span_width, u);
 			fb_ptr += fb_bytes_per_row;
@@ -8164,7 +8158,7 @@ draw_pixmap(pixmap *pixmap_ptr, int brightness_index, int x, int y, int width,
 		break;
 	case 4:
 		for (row = 0; row < clipped_height; row++) {
-			render_linear_span32(pixmap_ptr->image_is_16_bit, image_ptr, fb_ptr,
+			render_linear_span32(pixmap_ptr->bytes_per_pixel == 2, image_ptr, fb_ptr,
 				palette_ptr, transparent_index, transparency_mask32, image_width,
 				span_width, u);
 			fb_ptr += fb_bytes_per_row;
@@ -8349,7 +8343,7 @@ init_popup(popup *popup_ptr)
 	// background texture.  Otherwise use the popup's default size.
 
 	if ((bg_texture_ptr = popup_ptr->bg_texture_ptr) != NULL) {
-		if (!bg_texture_ptr->is_16_bit)
+		if (bg_texture_ptr->bytes_per_pixel == 1)
 			bg_texture_ptr->create_display_palette_list();
 		popup_width = bg_texture_ptr->width;
 		popup_height = bg_texture_ptr->height;

@@ -658,17 +658,23 @@ add_movable_span(int sy, edge *left_edge_ptr, edge *right_edge_ptr,
 	span_row_ptr = (*span_buffer_ptr)[sy];
 	prev_span_ptr = NULL;
 	first_span_ptr = span_row_ptr->opaque_span_list;
-	while (new_span.start_sx >= first_span_ptr->end_sx) {
+	while (first_span_ptr != NULL && new_span.start_sx >= first_span_ptr->end_sx) {
 		prev_span_ptr = first_span_ptr;
 		first_span_ptr = first_span_ptr->next_span_ptr;
+	}
+	if (first_span_ptr == NULL) {
+		return;
 	}
 
 	// Find the last span that overlaps the new span (i.e. does not end before
 	// the new span ends).
 
 	last_span_ptr = first_span_ptr;
-	while (last_span_ptr->end_sx < new_span.end_sx)
+	while (last_span_ptr != NULL && last_span_ptr->end_sx < new_span.end_sx)
 		last_span_ptr = last_span_ptr->next_span_ptr;
+	if (last_span_ptr == NULL) {
+		return;
+	}
 
 	// If the first and last overlapping span is one and the same...
 

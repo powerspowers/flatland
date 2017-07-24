@@ -3457,10 +3457,10 @@ create_palettes_in_popup_list(popup *popup_list)
 	popup_ptr = popup_list;
 	while (popup_ptr != NULL) {
 		if ((texture_ptr = popup_ptr->bg_texture_ptr) != NULL &&
-			texture_ptr->pixmap_list != NULL && !texture_ptr->is_16_bit)
+			texture_ptr->pixmap_list != NULL && texture_ptr->bytes_per_pixel == 1)
 			texture_ptr->create_display_palette_list();
 		if ((texture_ptr = popup_ptr->fg_texture_ptr) != NULL &&
-			!texture_ptr->is_16_bit)
+			texture_ptr->bytes_per_pixel == 1)
 			texture_ptr->create_display_palette_list();
 		popup_ptr = popup_ptr->next_popup_ptr;
 	}
@@ -3527,7 +3527,7 @@ resume_spot(void)
 	while (blockset_ptr != NULL) {
 		texture_ptr = blockset_ptr->first_texture_ptr;
 		while (texture_ptr != NULL) {
-			if (!texture_ptr->is_16_bit) {
+			if (texture_ptr->bytes_per_pixel == 1) {
 				if (hardware_acceleration)
 					texture_ptr->create_texture_palette_list();
 				else
@@ -3539,7 +3539,7 @@ resume_spot(void)
 	}
 	texture_ptr = custom_blockset_ptr->first_texture_ptr;
 	while (texture_ptr != NULL) {
-		if (texture_ptr->pixmap_list != NULL && !texture_ptr->is_16_bit) {
+		if (texture_ptr->pixmap_list != NULL && texture_ptr->bytes_per_pixel == 1) {
 			if (hardware_acceleration)
 				texture_ptr->create_texture_palette_list();
 			else
