@@ -103,6 +103,7 @@ event polygon_info_requested;
 // protect them.
 
 semaphore<int> user_debug_level;
+semaphore<bool> force_software_rendering;
 semaphore<bool> spot_loaded;
 semaphore<bool> selection_active;
 semaphore<bool> mouse_look_mode;
@@ -167,6 +168,7 @@ static int old_curr_move_rate;
 static int old_curr_turn_rate;
 static int old_visible_block_radius;
 static int old_user_debug_level;
+static bool old_force_software_rendering;
 static float window_half_width;
 static float window_top_half_height, window_bottom_half_height;
 
@@ -720,6 +722,7 @@ options_window_callback(int option_ID, int option_value)
 		curr_move_rate.set(old_curr_move_rate);
 		curr_turn_rate.set(old_curr_turn_rate);
 		user_debug_level.set(old_user_debug_level);
+		force_software_rendering.set(old_force_software_rendering);
 		close_options_window();
 		break;
 	case VIEW_RADIUS_SLIDER:
@@ -739,6 +742,9 @@ options_window_callback(int option_ID, int option_value)
 		break;
 	case DEBUG_LEVEL_OPTION:
 		user_debug_level.set(option_value);
+		break;
+	case FORCE_SOFTWARE_RENDERING_CHECKBOX:
+		force_software_rendering.set(option_value ? true : false);
 	}
 }
 
@@ -832,9 +838,10 @@ show_options_window()
 	old_curr_move_rate = curr_move_rate.get();
 	old_curr_turn_rate = curr_turn_rate.get();
 	old_user_debug_level = user_debug_level.get();
+	old_force_software_rendering = force_software_rendering.get();
 	open_options_window(old_download_sounds, old_visible_block_radius,
 		old_use_classic_controls, old_curr_move_rate, old_curr_turn_rate,
-		old_user_debug_level, options_window_callback);
+		old_user_debug_level, old_force_software_rendering, options_window_callback);
 }
 
 void
@@ -1313,6 +1320,7 @@ run_app(void *instance_handle, int show_command, char *spot_file_path)
 	// access.
 
 	user_debug_level.create_semaphore();
+	force_software_rendering.create_semaphore();
 	spot_loaded.create_semaphore();
 	selection_active.create_semaphore();
 	mouse_look_mode.create_semaphore();
@@ -1450,6 +1458,7 @@ shut_down_app()
 	// Destroy semaphores for all variables that required synchronised access.
 
 	user_debug_level.destroy_semaphore();
+	force_software_rendering.destroy_semaphore();
 	spot_loaded.destroy_semaphore();
 	selection_active.destroy_semaphore();
 	mouse_look_mode.destroy_semaphore();

@@ -3101,20 +3101,22 @@ create_main_window(void (*key_callback)(byte key_code, bool key_down),
 	raw_input_device.hwndTarget = main_window_handle;
 	RegisterRawInputDevices(&raw_input_device, 1, sizeof(raw_input_device));
 
-	// Attempt to start up the hardware accelerated renderer, and if this fails,
-	// start up the software renderer.  If this also fails, the app is going to have
-	// to exit.
+	// Attempt to start up the hardware accelerated renderer unless software rendering is being forced.
+	// If hardware acceleration fails to start up, we will fall back on software rendering.
 
-	hardware_acceleration = true;
-	if (!start_up_hardware_renderer()) {
-		shut_down_hardware_renderer();
-		hardware_acceleration = false;
-		failed_to("start up 3D accelerated renderer--trying software renderer instead");
-		if (!start_up_software_renderer()) {
-			fatal_error("Flatland cannot start up", "Flatland was unable to initialize Direct3D or "
-				"DirectDraw. Please make sure you have DirectX 11 installed.");
-			return(false);
+	hardware_acceleration = false;
+	if (!force_software_rendering.get()) {
+		if (start_up_hardware_renderer()) {
+			hardware_acceleration = true;
+		} else {
+			shut_down_hardware_renderer();
+			failed_to("start up 3D accelerated renderer--trying software renderer instead");
 		}
+	}
+	if (!hardware_acceleration && !start_up_software_renderer()) {
+		fatal_error("Flatland cannot start up", "Flatland was unable to initialize Direct3D or "
+			"DirectDraw. Please make sure you have DirectX 11 installed.");
+		return(false);
 	}
 
 	// The texture pixel format is 8888 ARGB if 3D acceleration is active, otherwise it's 1555 ARGB.
@@ -3912,6 +3914,11 @@ handle_options_event(HWND window_handle, UINT message, WPARAM wParam,
 			case IDB_SHOW_ERRORS_AND_WARNINGS:
 				(*options_callback_ptr)(DEBUG_LEVEL_OPTION, SHOW_ERRORS_AND_WARNINGS);
 				break;
+			case IDB_FORCE_SOFTWARE_RENDERING:
+				if (SendMessage(control_handle, BM_GETCHECK, 0, 0) == BST_CHECKED)
+					(*options_callback_ptr)(FORCE_SOFTWARE_RENDERING_CHECKBOX, 1);
+				else
+					(*options_callback_ptr)(FORCE_SOFTWARE_RENDERING_CHECKBOX, 0);
 			}
 			break;
 		}
@@ -3936,7 +3943,7 @@ handle_options_event(HWND window_handle, UINT message, WPARAM wParam,
 
 void
 open_options_window(bool download_sounds_value, int viewing_distance_value, bool use_classic_controls_value,
-					int move_rate_value, int turn_rate_value, int user_debug_level_value,
+					int move_rate_value, int turn_rate_value, int user_debug_level_value, bool force_software_rendering,
 					void (*options_callback)(int option_ID, int option_value))
 {
 	HWND control_handle;
@@ -3997,6 +4004,15 @@ open_options_window(bool download_sounds_value, int viewing_distance_value, bool
 		control_handle = GetDlgItem(options_window_handle, IDB_SHOW_ERRORS_AND_WARNINGS);
 	}
 	SendMessage(control_handle, BM_SETCHECK, BST_CHECKED, 0);
+
+	// Initialize the "force software rendering" check box.  This is hidden in release builds.
+
+	control_handle = GetDlgItem(options_window_handle, IDB_FORCE_SOFTWARE_RENDERING);
+#ifdef _DEBUG
+	SendMessage(control_handle, BM_SETCHECK, force_software_rendering ? BST_CHECKED : BST_UNCHECKED, 0);
+#else
+	ShowWindow(control_handle, FALSE);
+#endif
 
 	// Show the options window.
 

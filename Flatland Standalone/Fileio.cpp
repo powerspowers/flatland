@@ -4757,6 +4757,7 @@ load_config_file(void)
 	int visible_block_radius_value;
 	int curr_move_rate_value, curr_turn_rate_value;
 	int user_debug_level_value;
+	int force_software_rendering_value;
 	float brightness_value;
 
 	// Initialise the configuration options with their default values.
@@ -4770,6 +4771,7 @@ load_config_file(void)
 	last_rover_update = 0;
 	last_spot_dir_update = 0;
 	user_debug_level_value = BE_SILENT;
+	force_software_rendering_value = 0;
 	brightness_value = 0.0f;
 
 	// First attempt to parse the configuration file.
@@ -4799,6 +4801,8 @@ load_config_file(void)
 				else if (!_stricmp(name, "debug option"))
 					read_config_enum(value, &user_debug_level_value,
 						debug_option_value_list, DEBUG_OPTION_VALUES);
+				else if (!_stricmp(name, "force software rendering"))
+					read_config_bool(value, &force_software_rendering_value);
 				else if (!_stricmp(name, "brightness"))
 					read_config_float(value, &brightness_value);
 			}
@@ -4813,6 +4817,7 @@ load_config_file(void)
 	curr_move_rate.set(curr_move_rate_value);
 	curr_turn_rate.set(curr_turn_rate_value);
 	user_debug_level.set(user_debug_level_value);
+	force_software_rendering.set(force_software_rendering_value ? true : false);
 	master_brightness.set(brightness_value / 100.0f);
 }
 
@@ -4877,6 +4882,7 @@ save_config_file(void)
 		write_config_time_t(fp, "last Rover update", last_rover_update, "seconds since epoch");
 		write_config_time_t(fp, "last spot directory update", last_spot_dir_update, "seconds since epoch");
 		write_config_enum(fp, "debug option", user_debug_level.get(), debug_option_value_list, DEBUG_OPTION_VALUES);
+		write_config_bool(fp, "force software rendering", force_software_rendering.get());
 		write_config_float(fp, "brightness", master_brightness.get() * 100.0f, "% relative to ambient light");
 		fclose(fp);
 	}

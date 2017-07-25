@@ -102,6 +102,7 @@ extern event polygon_info_requested;
 // protect them.
 
 extern semaphore<int> user_debug_level;
+extern semaphore<bool> force_software_rendering;
 extern semaphore<bool> spot_loaded;
 extern semaphore<bool> selection_active;
 extern semaphore<bool> mouse_look_mode;

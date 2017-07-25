@@ -23,14 +23,15 @@
 
 // Option window control IDs.
 
-#define OK_BUTTON						0
-#define	CANCEL_BUTTON					1
-#define DOWNLOAD_SOUNDS_CHECKBOX		2
-#define CLASSIC_CONTROLS_CHECKBOX		3
-#define	VIEW_RADIUS_SLIDER				4
-#define MOVE_RATE_SLIDER				5
-#define TURN_RATE_SLIDER				6
-#define	DEBUG_LEVEL_OPTION				7
+#define OK_BUTTON							0
+#define	CANCEL_BUTTON						1
+#define DOWNLOAD_SOUNDS_CHECKBOX			2
+#define CLASSIC_CONTROLS_CHECKBOX			3
+#define	VIEW_RADIUS_SLIDER					4
+#define MOVE_RATE_SLIDER					5
+#define TURN_RATE_SLIDER					6
+#define	DEBUG_LEVEL_OPTION					7
+#define FORCE_SOFTWARE_RENDERING_CHECKBOX	8
 
 // Command menu item IDs.
 
@@ -316,7 +317,7 @@ close_light_window(void);
 
 void
 open_options_window(bool download_sounds_value, int viewing_distance_value, bool use_classic_controls_value,
-					int move_rate_value, int turn_rate_value, int user_debug_level_value,
+					int move_rate_value, int turn_rate_value, int user_debug_level_value, bool force_software_rendering,
 					void (*options_callback)(int option_ID, int option_value));
 
 void

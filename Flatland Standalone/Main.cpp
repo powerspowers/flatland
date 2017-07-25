@@ -3070,6 +3070,7 @@ render_next_frame(void)
 		prev_time_ms = curr_time_ms;
 		curr_time_ms = get_time_ms();
 		elapsed_time = (float)(curr_time_ms - prev_time_ms) / 1000.0f;
+		debug_message("elapsed time = %d ms, %f s\n", curr_time_ms - prev_time_ms, elapsed_time);
 	} else {
 		curr_time_ms = get_time_ms();
 		clocktimer_time_ms = curr_time_ms;

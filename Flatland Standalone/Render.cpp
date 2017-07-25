@@ -20,6 +20,9 @@
 #include "Spans.h"
 #include "Utils.h"
 
+static int polygons_rendered;
+static int blocks_rendered;
+
 // Frustum test results.
 
 #define OUTSIDE_FRUSTUM		0
@@ -1447,6 +1450,8 @@ render_polygon(polygon *polygon_ptr, float turn_angle)
 		// Determine whether the polygon has been selected by the mouse.
 
 		polygon_selected = !found_selection && mouse_intersects_with_polygon((float)mouse_x, (float)mouse_y, &camera_direction, tpolygon_ptr);
+
+		polygons_rendered++;
 	} 
 	
 	// If hardware acceleration is not enabled... 
@@ -1770,6 +1775,8 @@ render_block(square *square_ptr, block *block_ptr, bool movable)
 	if ((curr_block_visibility = compare_block_against_frustum(block_ptr)) ==
 		OUTSIDE_FRUSTUM)
 		return;
+
+	blocks_rendered++;
 
 	// Remember the square and block pointers, and whether the block is movable.
 
@@ -3045,6 +3052,9 @@ render_frame(void)
 	pixmap *pixmap_ptr;
 	int row;
 
+	polygons_rendered = 0;
+	blocks_rendered = 0;
+
 	// If hardware acceleration is enabled, begin the 3D scene, otherwise lock
 	// the frame buffer.
 
@@ -3384,4 +3394,6 @@ render_frame(void)
 		found_selection = true;
 		curr_selected_exit_ptr = orb_exit_ptr;
 	}
+
+	debug_message("Polygons rendered this frame = %d, blocks rendered this frame = %d\n", polygons_rendered, blocks_rendered);
 }
