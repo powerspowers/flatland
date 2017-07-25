@@ -82,6 +82,7 @@ static pixmap pixmap_list[MAX_PIXMAPS];
 
 static int pixmaps;
 static bool transparent;
+static int bytes_per_pixel;
 
 // The global colourmap.
 
@@ -739,6 +740,7 @@ load_GIF(void)
 
 	pixmaps = 0;
 	transparent = false;
+	bytes_per_pixel = 1;
 	texture_loops = false;
 
 	// Initialise the pointer to the RGB palette.
@@ -974,11 +976,11 @@ load_JPEG(void)
 	int buffer_size;
 	int row, col;
 
-	// Initialise the number of pixmaps loaded, the transparent flag, and the
-	// loop flag.
+	// Initialise the number of pixmaps loaded, the transparent flag, the bytes per pixel, and the loop flag.
 
 	pixmaps = 0;
 	transparent = false;
+	bytes_per_pixel = hardware_acceleration ? 4 : 2;
 	texture_loops = false;
 
 	// Initialise the total time for animation.
@@ -1028,24 +1030,34 @@ load_JPEG(void)
 
 		// Allocate the image buffer.
 
-		buffer_size = image_width * image_height * 2;
+		buffer_size = image_width * image_height * bytes_per_pixel;
 		NEWARRAY(buffer_ptr, imagebyte, buffer_size);
 		if (buffer_ptr == NULL)
 			image_memory_error("JPEG image");
 
-		// Read the pixel components one scan line at a time, and convert them
-		// to 16-bit pixels in texture pixel format.
+		// Read the pixel components one scan line at a time.
 
 		image_ptr = buffer_ptr;
 		for (row = 0; row < image_height; row++) {
 			jpeg_read_scanlines(&cinfo, scan_line, 1);
 			for (col = 0; col < image_width; col++) {
-				if (cinfo.jpeg_color_space == JCS_GRAYSCALE)
-					colour.set_RGB(scan_line[0][col], scan_line[0][col], scan_line[0][col]);
-				else
-					colour.set_RGB(scan_line[0][col * 3], scan_line[0][col * 3 + 1], scan_line[0][col * 3 + 2]);
-				*(word *)image_ptr = RGB_to_texture_pixel(colour);
-				image_ptr += 2;
+				if (bytes_per_pixel == 2) {
+					if (cinfo.jpeg_color_space == JCS_GRAYSCALE) {
+						colour.set_RGB(scan_line[0][col], scan_line[0][col], scan_line[0][col]);
+					} else {
+						colour.set_RGB(scan_line[0][col * 3], scan_line[0][col * 3 + 1], scan_line[0][col * 3 + 2]);
+					}
+					*(word *)image_ptr = RGB_to_texture_pixel(colour);
+					image_ptr += 2;
+				} else {
+					if (cinfo.jpeg_color_space == JCS_GRAYSCALE) {
+						pixel grayscale_pixel = scan_line[0][col];
+						*(pixel *)image_ptr = 0xFF000000 | (grayscale_pixel << 16) | (grayscale_pixel << 8) | grayscale_pixel;
+					} else {
+						*(pixel *)image_ptr = 0xFF000000 | (scan_line[0][col * 3] << 16) | (scan_line[0][col * 3 + 1] << 8) | scan_line[0][col * 3 + 2]; 
+					}
+					image_ptr += 4;
+				}
 			}
 		}
 
@@ -1061,7 +1073,7 @@ load_JPEG(void)
 
 	// Initialise a pixmap containing the image just read.
 
-	pixmap_list->bytes_per_pixel = 2;
+	pixmap_list->bytes_per_pixel = bytes_per_pixel;
 	pixmap_list->image_ptr = buffer_ptr;
 	pixmap_list->image_size = buffer_size;
 	pixmap_list->width = image_width;
@@ -1090,7 +1102,8 @@ load_PNG()
 	// Initialise the number of pixmaps loaded, the transparent flag, the loop flag, and the number of colours.
 
 	pixmaps = 0;
-	transparent = false;
+	transparent = true;
+	bytes_per_pixel = hardware_acceleration ? 4 : 2;
 	texture_loops = false;
 	total_time_ms = 1;
 	colours = 0;
@@ -1160,6 +1173,10 @@ load_PNG()
 	if (colour_type == PNG_COLOR_TYPE_GRAY || colour_type == PNG_COLOR_TYPE_GRAY_ALPHA) {
 		png_set_gray_to_rgb(png_ptr);
 	}
+	if (colour_type == PNG_COLOR_TYPE_RGB ||
+		colour_type == PNG_COLOR_TYPE_RGB_ALPHA) {
+		png_set_bgr(png_ptr);
+	}
 	png_set_interlace_handling(png_ptr);
 	png_read_update_info(png_ptr, info_ptr);
 
@@ -1180,49 +1197,46 @@ load_PNG()
 	}
 	png_read_image(png_ptr, row_pointers);
 
-	// Create a buffer to hold the 16-bit image, and perform that transformation.
-	// XXX -- We will eventually remove this step and use the 32-bit pixel image instead.
+	// If hardware acceleration is not active, create a buffer to hold a 16-bit image, 
+	// and transform the 32-bit image to 16-bit.
 
-	imagebyte *buffer_ptr;
-	NEWARRAY(buffer_ptr, imagebyte, image_width * image_height * 2);
-	if (buffer_ptr == NULL) {
-		goto got_error;
-	}
-	imagebyte *source_image_ptr = image_data;
-	imagebyte *target_image_ptr = buffer_ptr;
-	for (int row = 0; row < image_height; row++) {
-		for (int col = 0; col < image_width; col++) {
-			imagebyte red = *source_image_ptr++;
-			imagebyte green = *source_image_ptr++;
-			imagebyte blue = *source_image_ptr++;
-			imagebyte alpha = *source_image_ptr++;
-			if (!alpha) {
-				transparent = true;
-			}
-			colour.set_RGB(red, green, blue, alpha);
-			*(word *)target_image_ptr = RGB_to_texture_pixel(colour);
-			target_image_ptr += 2;
+	if (bytes_per_pixel == 2) {
+		imagebyte *buffer_ptr;
+		NEWARRAY(buffer_ptr, imagebyte, image_width * image_height * 2);
+		if (buffer_ptr == NULL) {
+			goto got_error;
 		}
+		imagebyte *source_image_ptr = image_data;
+		imagebyte *target_image_ptr = buffer_ptr;
+		for (int row = 0; row < image_height; row++) {
+			for (int col = 0; col < image_width; col++) {
+				imagebyte blue = *source_image_ptr++;
+				imagebyte green = *source_image_ptr++;
+				imagebyte red = *source_image_ptr++;
+				imagebyte alpha = *source_image_ptr++;
+				colour.set_RGB(red, green, blue, alpha);
+				*(word *)target_image_ptr = RGB_to_texture_pixel(colour);
+				target_image_ptr += 2;
+			}
+		}
+		DELARRAY(image_data, imagebyte, image_width * image_height * 4);
+		image_data = buffer_ptr;
 	}
 
-	// Initialise a pixmap containing the image just read.  If there was at least one
-	// transparent pixel, set a transparent index to ensure that the software renderer
-	// uses transparent spans.
+	// Initialise a pixmap containing the image just read.  Note we set a transparent index
+	// to ensure that the software renderer uses transparent spans.
 
-	pixmap_list->bytes_per_pixel = 2;
-	pixmap_list->image_ptr = buffer_ptr;
-	pixmap_list->image_size = image_width * image_height * 2;
+	pixmap_list->bytes_per_pixel = bytes_per_pixel;
+	pixmap_list->image_ptr = image_data;
+	pixmap_list->image_size = image_width * image_height * bytes_per_pixel;
 	pixmap_list->width = image_width;
 	pixmap_list->height = image_height;
-	pixmap_list->transparent_index = transparent ? 0 : -1;
+	pixmap_list->transparent_index = 0;
 	pixmap_list->delay_ms = 1;
 	pixmaps++;
 
 	// Free all temporary data.
 
-	if (image_data) {
-		DELARRAY(image_data, imagebyte, image_width * image_height * 4);
-	}
 	if (row_pointers) {
 		DELARRAY(row_pointers, png_bytep, image_height);
 	}
@@ -1266,6 +1280,9 @@ scale_pixmap(pixmap *pixmap_ptr, int new_image_width, int new_image_height, floa
 				*((word *)new_image_ptr) = *((word *)row_ptr + (int)x);
 				new_image_ptr += 2;
 				break;
+			case 4:
+				*((pixel *)new_image_ptr) = *((pixel *)row_ptr + (int)x);
+				new_image_ptr += 4;
 			}
 		}
 	}
@@ -1305,7 +1322,7 @@ load_image(const char *URL, const char *file_path, texture *texture_ptr)
 	}
 
 	// If the file begins with a GIF header, load the rest of the file as a GIF.
-	// If it begins with a PNG haeder, load the rest of the file as a PNG.
+	// If it begins with a PNG header, load the rest of the file as a PNG.
 	// Otherwise rewind the file and attmept to load the file as a JPEG.
 
 	try {
@@ -1315,7 +1332,6 @@ load_image(const char *URL, const char *file_path, texture *texture_ptr)
 		header_size = read_file(header, 6);
 		if (is_GIF_file(header, header_size)) {
 			load_GIF();
-			texture_ptr->bytes_per_pixel = 1;
 		} else {
 			header_size += read_file(header + 6, 2);
 			if (!png_sig_cmp(header, 0, header_size)) {
@@ -1324,8 +1340,8 @@ load_image(const char *URL, const char *file_path, texture *texture_ptr)
 				rewind_file();
 				load_JPEG();
 			}
-			texture_ptr->bytes_per_pixel = 2;
 		}
+		texture_ptr->bytes_per_pixel = bytes_per_pixel;
 	}
 	catch (char *) {
 		pop_file();

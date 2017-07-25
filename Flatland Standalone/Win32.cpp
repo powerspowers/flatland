@@ -3117,9 +3117,13 @@ create_main_window(void (*key_callback)(byte key_code, bool key_down),
 		}
 	}
 
-	// The texture pixel format is 1555 ARGB.
+	// The texture pixel format is 8888 ARGB if 3D acceleration is active, otherwise it's 1555 ARGB.
 
-	set_pixel_format(&texture_pixel_format, 0x7c00, 0x03e0, 0x001f, 0x8000);
+	if (hardware_acceleration) {
+		set_pixel_format(&texture_pixel_format, 0x00ff0000, 0x0000ff00, 0x000000ff, 0xff000000);
+	} else {
+		set_pixel_format(&texture_pixel_format, 0x7c00, 0x03e0, 0x001f, 0x8000);
+	}
 	
 	// If the display has a depth of 8 bits...
 
@@ -7593,7 +7597,7 @@ hardware_create_texture(int image_size_index)
 	desc.Width = image_dimensions;
 	desc.Height = image_dimensions;
 	desc.MipLevels = desc.ArraySize = 1;
-	desc.Format = DXGI_FORMAT_B5G5R5A1_UNORM;
+	desc.Format = DXGI_FORMAT_B8G8R8A8_UNORM;
 	desc.SampleDesc.Count = 1;
 	desc.Usage = D3D11_USAGE_DYNAMIC;
 	desc.BindFlags = D3D11_BIND_SHADER_RESOURCE;
@@ -7654,7 +7658,7 @@ hardware_set_texture(cache_entry *cache_entry_ptr)
 	byte *image_ptr, *end_image_ptr, *new_image_ptr;
 	pixel *palette_ptr;
 	int transparent_index;
-	word transparency_mask16;
+	pixel transparency_mask32;
 	int image_width, image_height;
 	int lit_image_dimensions;
 	int column_index;
@@ -7680,7 +7684,7 @@ hardware_set_texture(cache_entry *cache_entry_ptr)
 	}
 	surface_ptr = (byte *)d3d_mapped_subresource.pData;
 	row_pitch = d3d_mapped_subresource.RowPitch;
-	row_gap = row_pitch - image_dimensions * 2;
+	row_gap = row_pitch - image_dimensions * 4;
 
 	// Get the unlit image pointer and it's dimensions, and set a pointer to
 	// the end of the image data.
@@ -7699,16 +7703,16 @@ hardware_set_texture(cache_entry *cache_entry_ptr)
 		transparent_index = pixmap_ptr->transparent_index;
 		palette_ptr = pixmap_ptr->texture_palette_list;
 	}
-	transparency_mask16 = (word)texture_pixel_format.alpha_comp_mask;
+	transparency_mask32 = texture_pixel_format.alpha_comp_mask;
 
 	// Get the start address of the lit image and it's dimensions.
 
 	new_image_ptr = surface_ptr;
 	lit_image_dimensions = image_dimensions;
 
-	// If the pixmap is a 16-bit image, simply copy it to the new image buffer.
+	// If the pixmap is a 32-bit image, simply copy it to the new image buffer.
 
-	if (pixmap_ptr->bytes_per_pixel == 2) {
+	if (pixmap_ptr->bytes_per_pixel == 4) {
 		__asm {
 		
 			// EBX: holds pointer to current row of old image.
@@ -7729,16 +7733,16 @@ hardware_set_texture(cache_entry *cache_entry_ptr)
 
 		next_column:
 
-			// Get the current 16-bit index from the old image, and store it in
+			// Get the current 32-bit pixel from the old image, and store it in
 			// the new image.
 
-			mov ax, [ebx + ecx]
-			mov [edx], ax
+			mov eax, [ebx + ecx]
+			mov [edx], eax
 
 			// Increment the old image offset, wrapping back to zero if the 
 			// end of the row is reached.
 
-			add ecx, 2
+			add ecx, 4
 			cmp ecx, image_width 
 			jl next_pixel
 			mov ecx, 0
@@ -7747,7 +7751,7 @@ hardware_set_texture(cache_entry *cache_entry_ptr)
 
 			// Increment the new image pointer.
 
-			add edx, 2
+			add edx, 4
 
 			// Decrement the column counter, and copy next pixel in row if
 			// there are any left.
@@ -7777,7 +7781,7 @@ hardware_set_texture(cache_entry *cache_entry_ptr)
 		}
 	}
 
-	// If the pixmap is an 8-bit image, convert it to a 16-bit lit image.
+	// If the pixmap is an 8-bit image, convert it to a 32-bit lit image.
 
 	else {
 		__asm {
@@ -7804,9 +7808,9 @@ hardware_set_texture(cache_entry *cache_entry_ptr)
 		next_column2:
 
 			// Get the current 8-bit index from the old image, use it to
-			// obtain the 16-bit pixel, and store it in the new image.  If 
+			// obtain the 32-bit pixel, and store it in the new image.  If 
 			// the 8-bit index is not the transparent index, mark the pixel as
-			// opaque by setting the transparency bit.
+			// opaque by setting the transparency mask.
 
 			mov eax, 0
 			mov ecx, column_index
@@ -7814,13 +7818,13 @@ hardware_set_texture(cache_entry *cache_entry_ptr)
 			mov ecx, palette_ptr
 			cmp eax, transparent_index
 			jne opaque_pixel2
-			mov ax, [ecx + eax * 4]	
+			mov eax, [ecx + eax * 4]	
 			jmp store_pixel2
 		opaque_pixel2:
-			mov ax, [ecx + eax * 4]
-			or ax, transparency_mask16
+			mov eax, [ecx + eax * 4]
+			or eax, transparency_mask32
 		store_pixel2:
-			mov [edx], ax
+			mov [edx], eax
 
 			// Increment the old image offset, wrapping back to zero if the 
 			// end of the row is reached.
@@ -7835,7 +7839,7 @@ hardware_set_texture(cache_entry *cache_entry_ptr)
 
 			// Increment the new image pointer.
 
-			add edx, 2
+			add edx, 4
 
 			// Decrement the column counter, and copy next pixel in row if
 			// there are any left.
