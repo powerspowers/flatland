@@ -4,8 +4,6 @@
 // All Rights Reserved. 
 //******************************************************************************
 
-#ifdef SIMKIN
-
 bool
 start_up_simkin(void);
 
@@ -41,5 +39,3 @@ resume_script(void);
 
 void
 terminate_script(void);
-
-#endif

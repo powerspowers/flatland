@@ -17,9 +17,7 @@
 #include "Parser.h"
 #include "Platform.h"
 #include "Plugin.h"
-#ifdef SIMKIN
 #include "SimKin.h"
-#endif
 #include "Utils.h"
 
 // Current load index.

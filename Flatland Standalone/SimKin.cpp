@@ -4,8 +4,6 @@
 // All Rights Reserved. 
 //******************************************************************************
 
-#ifdef SIMKIN
-
 #include "simkin\skInterpreter.h"
 #include "simkin\skStatementStepper.h"
 #include "simkin\skElementExecutable.h"
@@ -3277,5 +3275,3 @@ terminate_script(void)
 	perform_command.send_event(true);
 	command_completed.wait_for_event();
 }
-
-#endif

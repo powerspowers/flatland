@@ -20,9 +20,7 @@
 #include "Platform.h"
 #include "Plugin.h"
 #include "resource.h"
-#ifdef SIMKIN
 #include "SimKin.h"
-#endif
 #include "Spans.h"
 
 // Important directories and file paths.

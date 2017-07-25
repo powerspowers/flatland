@@ -22,9 +22,7 @@
 #include "Platform.h"
 #include "Plugin.h"
 #include "Utils.h"
-#ifdef SIMKIN
 #include "SimKin.h"
-#endif
 
 // Update types.
 
@@ -1016,14 +1014,10 @@ start_up_spot(void)
 	warnings = false;
 	low_memory = false;
 
-#ifdef SIMKIN
-
 	// Start up SimKin.
 
 	if (!start_up_simkin())
 		return(false);
-
-#endif
 
 	// Set loading message in the title.
 
@@ -1150,16 +1144,12 @@ start_up_spot(void)
 
 	teleport(curr_spot_entrance);
 
-#ifdef SIMKIN
-
 	// Call the "start" method of the global SimKin script, if there is one,
 	// and wait for it to complete.
 
 	script_executing = call_global_method("start");
 	while (script_executing)
 		script_executing = resume_script();
-
-#endif
 
 	// Indicate success.
 
@@ -1186,8 +1176,6 @@ shut_down_spot(void)
 
 	log_stats();
 
-#ifdef SIMKIN
-
 	// Call the "stop" method of the global SimKin script, if there is
 	// one, then shut down SimKin.  We must terminate any script currently
 	// executing before we can call the "stop" method, then we wait for it to 
@@ -1199,8 +1187,6 @@ shut_down_spot(void)
 	while (script_executing)
 		script_executing = resume_script();
 	shut_down_simkin();
-
-#endif
 
 #ifdef STREAMING_MEDIA
 
@@ -1807,16 +1793,11 @@ adjust_trajectory(vector &trajectory, float elapsed_time, bool &player_falling)
 static bool
 find_active_script(trigger *trigger_ptr)
 {
-#ifdef SIMKIN
-
 	for (int j = 0; j < active_script_count; j++) {
 		if (active_script_list[j]->script_def_ptr->ID == trigger_ptr->script_def_ptr->ID &&
 			active_script_list[j]->block_ptr == trigger_ptr->block_ptr)
 			return(true);
 	}
-
-#endif
-
 	return(false);
 }
 
@@ -1834,13 +1815,8 @@ add_trigger_to_active_list(square *square_ptr, block *block_ptr,
 	// If the trigger neither has an action list nor a script, then it should
 	// be ignored.
 
-#ifdef SIMKIN
 	if (trigger_ptr->action_list == NULL && trigger_ptr->script_def_ptr == NULL)
 		return;
-#else
-	if (trigger_ptr->action_list == NULL)
-		return;
-#endif
 
 	// Initialise the trigger.
 	
@@ -3227,8 +3203,6 @@ render_next_frame(void)
 	display_frame_buffer();
 	frames_rendered++;
 
-#ifdef SIMKIN
-
 	// If there is a script currently executing, resume it.  Otherwise execute
 	// the script at the head of the active script queue.  When a script
 	// completes, it is removed from the head of the queue.
@@ -3248,8 +3222,6 @@ render_next_frame(void)
 			active_script_count--;
 		}
 	}
-
-#endif
 
 	// Check for a mouse selection and a mouse clicked event.
 

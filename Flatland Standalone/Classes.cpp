@@ -16,9 +16,7 @@
 #include "Platform.h"
 #include "Plugin.h"
 #include "Spans.h"
-#ifdef SIMKIN
 #include "SimKin.h"
-#endif
 #include "Utils.h"
 
 //==============================================================================
@@ -1925,9 +1923,7 @@ trigger::trigger()
 	square_ptr = NULL;
 	block_ptr = NULL;
 	action_list = NULL;
-#ifdef SIMKIN
 	script_def_ptr = NULL;
-#endif
 	next_trigger_ptr = NULL;
 }
 
@@ -3207,16 +3203,12 @@ block_def::new_block(square *square_ptr)
 block *
 block_def::del_block(block *block_ptr)
 {
-#ifdef SIMKIN
-
 	// Delete the block and vertex SimKin objects, if they exist.
 
 	if (block_ptr->block_simkin_object_ptr != NULL)
 		destroy_block_simkin_object(block_ptr);
 	if (block_ptr->vertex_simkin_object_ptr != NULL)
 		destroy_vertex_simkin_object(block_ptr);
-
-#endif
 
 	// Remove the block from the used block list.
 
@@ -3596,10 +3588,8 @@ block::block()
 	pixmap_index = 0;
 	col_mesh_ptr = NULL;
 	solid = true;
-#ifdef SIMKIN
 	block_simkin_object_ptr = NULL;
 	vertex_simkin_object_ptr = NULL;
-#endif
 	light_list = NULL;
 	active_light_list = NULL;
 	set_active_lights = false;
@@ -3640,16 +3630,12 @@ block::~block()
 	if (col_mesh_ptr != NULL)
 		DELBASEARRAY((colmeshbyte *)col_mesh_ptr, colmeshbyte, col_mesh_size);
 
-#ifdef SIMKIN
-
 	// Destroy the block and vertex SimKin objects, if they exist.
 
 	if (block_simkin_object_ptr != NULL)
 		destroy_block_simkin_object(this);
 	if (vertex_simkin_object_ptr != NULL)
 		destroy_vertex_simkin_object(this);
-
-#endif
 
 	// Delete the list of lights.
 

@@ -1028,8 +1028,6 @@ struct action {
 	action *next_action_ptr;	// Next action in list.
 };
 
-#ifdef SIMKIN
-
 //------------------------------------------------------------------------------
 // Script definition class.
 //------------------------------------------------------------------------------
@@ -1040,8 +1038,6 @@ struct script_def {
 	void *script_simkin_object_ptr;
 	script_def *next_script_def_ptr;
 };
-
-#endif
 
 //------------------------------------------------------------------------------
 // Trigger class.
@@ -1064,9 +1060,7 @@ struct trigger {
 	mapcoords target;			// Target location (for "location").
 	byte key_code;				// Key code (for "key up/down/hold").
 	action *action_list;		// List of actions.
-#ifdef SIMKIN
 	script_def *script_def_ptr;	// Script to execute (if action list is NULL).
-#endif
 	string label;				// Text for label (only used for "click on").
 	int partindex;              // *mp* Part that this trigger activates with - need to change
 	trigger *next_trigger_ptr;	// Next trigger in list.
@@ -1480,11 +1474,9 @@ struct block {
 	bool solid;						// TRUE if block is solid.
 	COL_MESH *col_mesh_ptr;			// Pointer to the collision mesh.
 	int col_mesh_size;				// Size of collision mesh in bytes.
-#ifdef SIMKIN
 	bool scripted;					// TRUE if this block has scripts.
 	void *block_simkin_object_ptr;	// Pointer to the block SimKin object.
 	void *vertex_simkin_object_ptr;	// Pointer to the vertex SimKin object.
-#endif
 	light *light_list;				// List of lights in block.
 	light_ref *active_light_list;	// List of lights illuminating block.
 	bool set_active_lights;			// TRUE if active lights need to be set.

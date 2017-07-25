@@ -23,9 +23,7 @@
 #include "Spans.h"
 #include "Tags.h"
 #include "Utils.h"
-#ifdef SIMKIN
 #include "SimKin.h"
-#endif
 
 // Flag indicating if strict XML compliance is being used to parse spot.
 
@@ -79,13 +77,9 @@ static part *part_list;
 static trigger *create_tag_last_trigger_ptr, *create_tag_trigger_list;
 static int create_tag_trigger_flags;
 
-#ifdef SIMKIN
-
 // Global SimKin script.
 
 static string global_script;
-
-#endif
 
 //==============================================================================
 // Functions to parse BLOCK tags.
@@ -2936,8 +2930,6 @@ parse_imagemap_script_tag(imagemap *imagemap_ptr)
 	if (parsed_attribute[ACTION_TEXT])
 		trigger_ptr->label = action_text;
 
-#ifdef SIMKIN
-
 	// Parse the nested text inside the script tag as a script.
 
 	start_parsing_nested_tags();
@@ -2948,9 +2940,6 @@ parse_imagemap_script_tag(imagemap *imagemap_ptr)
 		delete trigger_ptr;
 		return;
 	}
-
-#endif
-
 	trigger_ptr->partindex = ALL_PARTS;
 
 	// Parse the coords parameter based upon the area shape, then add the
@@ -3696,8 +3685,6 @@ parse_script_tag(block_def *block_def_ptr, bool need_location_param)
 		}
 	}
 
-#ifdef SIMKIN
-
 	// Create a script definition for this script, and store it in the trigger.
 
 	start_parsing_nested_tags();
@@ -3708,9 +3695,6 @@ parse_script_tag(block_def *block_def_ptr, bool need_location_param)
 		delete trigger_ptr;
 		return(NULL);
 	}
-
-#endif
-
 	return(trigger_ptr);
 }
 
@@ -3991,12 +3975,10 @@ parse_next_body_tag(int tag_token, bool allow_import_tag)
 		parse_create_tag();
 		break;
 
-#ifdef SIMKIN
 	case TOKEN_DEFINE:
 		parse_define_tag(script);
 		global_script = script + global_script;
 		break;
-#endif
 
 	case TOKEN_ENTRANCE:
 
@@ -4470,13 +4452,9 @@ parse_spot_file(char *spot_URL, char *spot_file_path)
 
 	spot_title = "Untitled Spot";
 
-#ifdef SIMKIN
-
 	// Reset the global script.
 
 	global_script = "";
-
-#endif
 
 	// Attempt to open the spot file as a zip archive first.
 
@@ -4563,14 +4541,10 @@ parse_spot_file(char *spot_URL, char *spot_file_path)
 				expected_levels);
 	}
 
-#ifdef SIMKIN
-
 	// If a global script was constructed, assign it to the spot object.
 
 	if (strlen(global_script) > 0)
 		set_global_script(global_script);
-
-#endif
 
 	// If a player tag was seen, create the player block.  Otherwise set a
 	// default camera offset and player collision box.
