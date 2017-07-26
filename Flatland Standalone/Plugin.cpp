@@ -119,6 +119,7 @@ semaphore<bool> download_sounds;
 semaphore<bool> use_classic_controls;
 semaphore<int> visible_block_radius;
 semaphore<bool> snapshot_in_progress;
+semaphore<bool> fly_mode;
 
 // Saved spot file path.
 
@@ -194,6 +195,7 @@ static void sidle_mode(bool key_down);
 static void fast_mode(bool key_down);
 static void jump(bool key_down);
 static void exit_mouse_look_mode(bool key_down);
+static void toggle_fly_mode(bool key_down);
 
 // Key code to function table.
 
@@ -208,7 +210,8 @@ static key_code_to_func classic_key_func_table[] = {
 	{CONTROL_KEY, 0, fast_mode},
 	{NUMPAD_ADD_KEY, 0, go_faster},
 	{NUMPAD_SUBTRACT_KEY, 0, go_slower},
-	{'J', 0, jump},
+	{SPACE_BAR_KEY, 0, jump},
+	{'F', 0, toggle_fly_mode},
 	{0, 0, NULL}
 };
 static key_code_to_func new_key_func_table[] = {
@@ -218,6 +221,7 @@ static key_code_to_func new_key_func_table[] = {
 	{'D', 0, sidle_right},
 	{ESC_KEY, 0, exit_mouse_look_mode},
 	{SPACE_BAR_KEY, 0, jump},
+	{'F', 0, toggle_fly_mode},
 	{0, 0, NULL}
 };
 
@@ -502,18 +506,6 @@ move_forward(bool key_down)
 }
 
 //------------------------------------------------------------------------------
-// Start jump motion.
-//------------------------------------------------------------------------------
-
-static void
-jump(bool key_down)
-{
-	if (key_down) {
-		curr_jump_delta.set(MAXIMUM_JUMPING_SPEED);
-	}
-}
-
-//------------------------------------------------------------------------------
 // Start or stop backward motion.
 //------------------------------------------------------------------------------
 
@@ -674,6 +666,18 @@ fast_mode(bool key_down)
 }
 
 //------------------------------------------------------------------------------
+// Start jump motion.
+//------------------------------------------------------------------------------
+
+static void
+jump(bool key_down)
+{
+	if (key_down) {
+		curr_jump_delta.set(MAXIMUM_JUMPING_SPEED);
+	}
+}
+
+//------------------------------------------------------------------------------
 // Disable mouse look mode.
 //------------------------------------------------------------------------------
 
@@ -682,6 +686,18 @@ exit_mouse_look_mode(bool key_down)
 {
 	if (key_down) {
 		disable_mouse_look_mode();
+	}
+}
+
+//------------------------------------------------------------------------------
+// Toggle fly mode.
+//------------------------------------------------------------------------------
+
+static void
+toggle_fly_mode(bool key_down)
+{
+	if (key_down) {
+		fly_mode.set(!fly_mode.get());
 	}
 }
 
@@ -1339,6 +1355,7 @@ run_app(void *instance_handle, int show_command, char *spot_file_path)
 	downloaded_URL.create_semaphore();
 	downloaded_file_path.create_semaphore();
 	snapshot_in_progress.create_semaphore();
+	fly_mode.create_semaphore();
 
 	// Load the configuration file.
 
@@ -1357,10 +1374,11 @@ run_app(void *instance_handle, int show_command, char *spot_file_path)
 	curr_move_delta.set(0.0f);
 	curr_turn_delta.set(0.0f);
 	curr_look_delta.set(0.0f);
-	curr_jump_delta.set((float)0.0);
+	curr_jump_delta.set(0.0f);
 	curr_mouse_x.set(-1);
 	curr_mouse_y.set(-1);
 	snapshot_in_progress.set(false);
+	fly_mode.set(false);
 
 	// Initialise other variables.
 
@@ -1477,6 +1495,7 @@ shut_down_app()
 	downloaded_URL.destroy_semaphore();
 	downloaded_file_path.destroy_semaphore();
 	snapshot_in_progress.destroy_semaphore();
+	fly_mode.destroy_semaphore();
 
 	// Destroy the events sent by the player thread.
 

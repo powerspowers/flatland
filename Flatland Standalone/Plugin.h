@@ -120,6 +120,7 @@ extern semaphore<bool> download_sounds;
 extern semaphore<bool> use_classic_controls;
 extern semaphore<int> visible_block_radius;
 extern semaphore<bool> snapshot_in_progress;
+extern semaphore<bool> fly_mode;
 
 // Saved spot file path.
 

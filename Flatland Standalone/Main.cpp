@@ -1659,10 +1659,10 @@ adjust_trajectory(vector &trajectory, float elapsed_time)
 	new_trajectory.truncate(player_step_height);
 	trajectory -= new_trajectory;
 
-	// If there is a jump delta and no fall delta, apply the jump delta to the trajectory, 
+	// If there is a jump delta and no fall delta or fly mode active, apply the jump delta to the trajectory, 
 	// then reduce the jump delta by a fixed amount until it reaches zero.
 
-	jump_delta = enable_player_translation && FEQ(player_fall_delta, 0.0f) ? curr_jump_delta.get() : 0.0f;
+	jump_delta = enable_player_translation && !fly_mode.get() && FEQ(player_fall_delta, 0.0f) ? curr_jump_delta.get() : 0.0f;
 	if (FGT(jump_delta, 0.0f)) {
 		new_trajectory.dy = jump_delta * elapsed_time;
 		jump_delta -= JUMPING_DEACCELERATION * elapsed_time;
@@ -1698,59 +1698,61 @@ adjust_trajectory(vector &trajectory, float elapsed_time)
 			&floor_y, player_step_height, &player_collision_box);
 	}
 	
-	// If the floor height is valid, do a gravity check.
+	// If fly mode is not active and the floor height is valid, do a gravity check.
 
-	if (FGE(floor_y, 0.0f)) {
+	if (!fly_mode.get()) {
+		if (FGE(floor_y, 0.0f)) {
 
-		// If the player height is below the floor height, determine whether
-		// the player can step up to that height; if not, the player should not
-		// move at all.
+			// If the player height is below the floor height, determine whether
+			// the player can step up to that height; if not, the player should not
+			// move at all.
 
-		if (FLT(new_position.y, floor_y)) {
-			if (FLT(floor_y - new_position.y, player_step_height))
-				new_position.y = floor_y + player_step_height;
-			else
-				new_position = old_position;
-		} 
-		
-		// If the player height is above the floor height, we are in free
-		// fall...
-	
-		else {
-		
-			// If we can step down to the floor height, do so.
-
-			if (FLT(new_position.y - floor_y, player_step_height)) {
-				new_position.y = floor_y;
-				player_fall_delta = 0.0f;
+			if (FLT(new_position.y, floor_y)) {
+				if (FLT(floor_y - new_position.y, player_step_height))
+					new_position.y = floor_y + player_step_height;
+				else
+					new_position = old_position;
 			} 
 		
-			// Otherwise, if we're not jumping, allow gravity to pull the player down by the given
-			// fall delta.  If this puts the player below the floor height, put them at the floor
-			// height and zero the fall delta.  Otherwise increase the fall delta over time until
-			// a maximum delta is reached.
-			
-			else if (FEQ(jump_delta, 0.0f)) {
-				if (FGT(elapsed_time, 0.0f)) {
-					new_position.y -= player_fall_delta * elapsed_time;
-				}
-				if (FLE(new_position.y, floor_y)) {
+			// If the player height is above the floor height, we are in free
+			// fall...
+	
+			else {
+		
+				// If we can step down to the floor height, do so.
+
+				if (FLT(new_position.y - floor_y, player_step_height)) {
 					new_position.y = floor_y;
 					player_fall_delta = 0.0f;
-				} else {
-					player_fall_delta += FALLING_ACCELERATION * elapsed_time;
-					if (FGT(player_fall_delta, MAXIMUM_FALLING_SPEED))
-						player_fall_delta = MAXIMUM_FALLING_SPEED;
+				} 
+		
+				// Otherwise, if we're not jumping, allow gravity to pull the player down by the given
+				// fall delta.  If this puts the player below the floor height, put them at the floor
+				// height and zero the fall delta.  Otherwise increase the fall delta over time until
+				// a maximum delta is reached.
+			
+				else if (FEQ(jump_delta, 0.0f)) {
+					if (FGT(elapsed_time, 0.0f)) {
+						new_position.y -= player_fall_delta * elapsed_time;
+					}
+					if (FLE(new_position.y, floor_y)) {
+						new_position.y = floor_y;
+						player_fall_delta = 0.0f;
+					} else {
+						player_fall_delta += FALLING_ACCELERATION * elapsed_time;
+						if (FGT(player_fall_delta, MAXIMUM_FALLING_SPEED))
+							player_fall_delta = MAXIMUM_FALLING_SPEED;
+					}
 				}
 			}
 		}
-	}
 
-	// If the floor height is not -1.0f, this means that COL_checkCollisions()
-	// returned a bogus new position, so set it to the old position.
+		// If the floor height is not -1.0f, this means that COL_checkCollisions()
+		// returned a bogus new position, so set it to the old position.
 	
-	else if (FNE(floor_y, -1.0f))
-		new_position = old_position;	
+		else if (FNE(floor_y, -1.0f))
+			new_position = old_position;
+	}
 
 	// Return the final trajectory vector.
 
@@ -3113,24 +3115,6 @@ render_next_frame(void)
 		}
 	}
 
-	// Set the trajectory based upon the move delta, side delta, and the turn angle.
-	// Note there is no Y component in the trajectory.
-
-	trajectory.dx = move_delta * sinf(RAD(player_viewpoint.turn_angle)) +
-		side_delta * sinf(RAD(player_viewpoint.turn_angle + 90.0f));
-	trajectory.dy = 0.0f;
-	trajectory.dz = move_delta * cosf(RAD(player_viewpoint.turn_angle)) +
-		side_delta * cosf(RAD(player_viewpoint.turn_angle + 90.0f));
-
-	// Adjust the trajectory to take in account collisions, then move the player along this trajectory.
-	// Note that there is a maximum distance the player can move in order for collision detection to
-	// be accurate, so it may be necessary to adjust the trajectory more than once.
-
-	do {
-		new_trajectory = adjust_trajectory(trajectory, elapsed_time);
-		player_viewpoint.position = player_viewpoint.position + new_trajectory;
-	} while (FNE(trajectory.dx, 0.0f) || FNE(trajectory.dz, 0.0f));
-
 	// Adjust the look angle by the look delta.
 
 	player_viewpoint.look_angle = neg_adjust_angle(player_viewpoint.look_angle + look_delta);
@@ -3145,6 +3129,29 @@ render_next_frame(void)
 	player_viewpoint.look_angle_radians = RAD(player_viewpoint.look_angle);
 	player_viewpoint.inv_turn_angle_radians = RAD(360.0f - player_viewpoint.turn_angle);
 	player_viewpoint.inv_look_angle_radians = RAD(360.0f - pos_adjust_angle(player_viewpoint.look_angle));
+
+	// Set the trajectory based upon the move delta, side delta, and the turn angle.
+	// Note there is no Y component in the trajectory unless fly mode is active, in
+	// which case the look angle is used.
+
+	trajectory.dx = move_delta * sinf(player_viewpoint.turn_angle_radians) +
+		side_delta * sinf(RAD(player_viewpoint.turn_angle + 90.0f));
+	if (fly_mode.get()) {
+		trajectory.dy = move_delta * sinf(player_viewpoint.inv_look_angle_radians);
+	} else {
+		trajectory.dy = 0.0f;
+	}
+	trajectory.dz = move_delta * cosf(player_viewpoint.turn_angle_radians) +
+		side_delta * cosf(RAD(player_viewpoint.turn_angle + 90.0f));
+
+	// Adjust the trajectory to take in account collisions, then move the player along this trajectory.
+	// Note that there is a maximum distance the player can move in order for collision detection to
+	// be accurate, so it may be necessary to adjust the trajectory more than once.
+
+	do {
+		new_trajectory = adjust_trajectory(trajectory, elapsed_time);
+		player_viewpoint.position = player_viewpoint.position + new_trajectory;
+	} while (FNE(trajectory.dx, 0.0f) || FNE(trajectory.dz, 0.0f));
 
 	// Set a flag indicating whether the viewpoint has changed.
 
