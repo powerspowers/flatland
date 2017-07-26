@@ -2139,6 +2139,8 @@ start_up_platform_API(void *instance_handle, int show_command, void (*quit_callb
 	char buffer[_MAX_PATH];
 	char *app_name;
 	WNDCLASS window_class;
+	RECT window_rect;
+	INT right_edges[2];
 	int index;
 	FILE *fp;
 
@@ -2184,13 +2186,18 @@ start_up_platform_API(void *instance_handle, int show_command, void (*quit_callb
 		return FALSE;
 	}
 
-	// Add a status bar at the bottom of the main application window.
+	// Add a status bar at the bottom of the main application window, with two parts: a large left
+	// part that holds a title, and a small right part that holds a mode.
 
 	status_bar_handle = CreateWindow(STATUSCLASSNAME, NULL, SBARS_SIZEGRIP | WS_CHILD | WS_VISIBLE,
 		0, 0, 0, 0, app_window_handle, NULL, app_instance_handle, NULL);
 	if (!status_bar_handle) {
 		return FALSE;
 	}
+	GetClientRect(app_window_handle, &window_rect);
+	right_edges[0] = window_rect.right - 75;
+	right_edges[1] = window_rect.right;
+	SendMessage(status_bar_handle, SB_SETPARTS, 2, (LPARAM)right_edges);
 
 	// Find the path to the executable, and strip out the file name.
 
@@ -8313,6 +8320,27 @@ set_title(char *format, ...)
 	// Draw the title on the status bar.
 
 	SendMessage(status_bar_handle, SB_SETTEXT, 0, (LPARAM)(char *)title_text);
+}
+
+//------------------------------------------------------------------------------
+// Set the status text.
+//------------------------------------------------------------------------------
+
+void
+set_status_text(char *format, ...)
+{
+	va_list arg_ptr;
+	char status_text[BUFSIZ];
+
+	// Construct the status text.
+
+	va_start(arg_ptr, format);
+	vbprintf(status_text, BUFSIZ, format, arg_ptr);
+	va_end(arg_ptr);
+
+	// Draw the title on the status bar.
+
+	SendMessage(status_bar_handle, SB_SETTEXT, 1, (LPARAM)(char *)status_text);
 }
 
 //------------------------------------------------------------------------------

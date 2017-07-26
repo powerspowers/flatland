@@ -697,7 +697,13 @@ static void
 toggle_fly_mode(bool key_down)
 {
 	if (key_down) {
-		fly_mode.set(!fly_mode.get());
+		if (fly_mode.get()) {
+			fly_mode.set(false);
+			set_status_text("");
+		} else {
+			fly_mode.set(true);
+			set_status_text("Fly mode");
+		}
 	}
 }
 

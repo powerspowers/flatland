@@ -517,6 +517,9 @@ get_title(void);
 void
 set_title(char *format, ...);
 
+void
+set_status_text(char *format, ...);
+
 // URL functions (called by the player thread only).
 
 void
