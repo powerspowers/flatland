@@ -103,6 +103,13 @@
 #define REAL_PLAYER				1
 #define WINDOWS_MEDIA_PLAYER	2
 
+// Falling acceleration and maximum speed, and jump deacceleration and maximum speed.
+
+#define FALLING_ACCELERATION	(UNITS_PER_BLOCK * 10.0f)
+#define MAXIMUM_FALLING_SPEED	(UNITS_PER_BLOCK * 20.0f)
+#define JUMPING_DEACCELERATION	(UNITS_PER_BLOCK * 100.0f)
+#define MAXIMUM_JUMPING_SPEED	(UNITS_PER_BLOCK * 20.0f)
+
 //------------------------------------------------------------------------------
 // Event class.
 //------------------------------------------------------------------------------

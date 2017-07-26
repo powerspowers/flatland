@@ -994,6 +994,41 @@ vector::operator +(vector A)
 	return(B);
 }
 
+// Operator to subtract one vector from another to create a third vector.
+
+vector
+vector::operator -(vector A)
+{
+	vector B;
+
+	B.dx = dx - A.dx;
+	B.dy = dy - A.dy;
+	B.dz = dz - A.dz;
+	return(B);
+}
+
+// Operator to add a vector to this one.
+
+vector&
+vector::operator +=(vector &A)
+{
+	dx += A.dx;
+	dy += A.dy;
+	dz += A.dz;
+	return(*this);
+}
+
+// Operator to subtract a vector from this one.
+
+vector&
+vector::operator -=(vector &A)
+{
+	dx -= A.dx;
+	dy -= A.dy;
+	dz -= A.dz;
+	return(*this);
+}
+
 // Negation operator.
 
 vector
@@ -1023,33 +1058,43 @@ vector::operator ==(vector A)
 	return(FEQ(dx, A.dx) && FEQ(dy, A.dy) && FEQ(dz, A.dz));
 }
 
-// Method to normalise the vector.
-
-void
-vector::normalise(void)
-{
-	float magnitude = (float)sqrt(dx * dx + dy * dy + dz * dz);
-	if (FGT(magnitude, 0.0f)) {
-		float one_on_magnitude = 1.0f / magnitude;
-		dx = dx * one_on_magnitude;
-		dy = dy * one_on_magnitude;
-		dz = dz * one_on_magnitude;
-	}
-}
-
-// Method to normalise the vector, returning the length of the vector.
+// Method to return the length of the vector.
 
 float
 vector::length(void)
 {
-	float magnitude = MATHS_sqrt(dx * dx + dy * dy + dz * dz);
+	return sqrtf(dx * dx + dy * dy + dz * dz);
+}
+
+// Method to normalise the vector, returning the original length of the vector.
+
+float
+vector::normalise(void)
+{
+	float magnitude = length();
 	if (FGT(magnitude, 0.0f)) {
 		float one_on_magnitude = 1.0f / magnitude;
-		dx = dx * one_on_magnitude;
-		dy = dy * one_on_magnitude;
-		dz = dz * one_on_magnitude;
+		dx *= one_on_magnitude;
+		dy *= one_on_magnitude;
+		dz *= one_on_magnitude;
 	}
-	return(magnitude);
+	return magnitude;
+}
+
+// Method to truncate the vector if its length is greater than the maximum requested.
+
+void 
+vector::truncate(float max_length)
+{
+	if (FGT(max_length, 0.0f)) {
+		float magnitude = length();
+		if (FGT(magnitude, max_length)) {
+			float scaling_factor = max_length / magnitude;
+			dx *= scaling_factor;
+			dy *= scaling_factor;
+			dz *= scaling_factor;
+		}
+	}
 }
 
 // Method to rotate the vector around the X axis (look).

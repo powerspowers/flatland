@@ -576,17 +576,21 @@ struct vector {
 	~vector();
 	void set(float set_dx, float set_dy, float set_dz);
 
-	vector operator *(float A);		// Scaling operator.
-	vector operator *(vector A);	// Cross product.
-	float operator &(vector A);		// Dot product.
+	vector operator *(float A);			// Scaling operator.
+	vector operator *(vector A);		// Cross product.
+	float operator &(vector A);			// Dot product.
 	vector operator +(vector A);
+	vector operator -(vector B);
+	vector& operator +=(vector &A);
+	vector& operator -=(vector &A);
 	vector operator -();
 	bool operator !();
 	bool operator ==(vector A);
-	void normalise(void);			// Normalise vector.
-	float length(void);				// Normalise vector, returning it's length.
-	void rotate_x(float look_angle);// Rotate around X axis.
-	void rotate_y(float turn_angle);// Rotate around Y axis.
+	float length(void);					// Return the length of the vector.
+	float normalise(void);				// Normalise vector, returning its original length.
+	void truncate(float max_length);	// Truncate the vector to a maximum length.
+	void rotate_x(float look_angle);	// Rotate around X axis.
+	void rotate_y(float turn_angle);	// Rotate around Y axis.
 };	
 
 //------------------------------------------------------------------------------

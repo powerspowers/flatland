@@ -238,7 +238,7 @@ compute_vertex_colour(light_ref *active_light_list, vertex *vertex_ptr,
 			// from the light, it is not affected.
 
 			light_vector = active_light_list[index].light_pos - *vertex_ptr;
-			distance = light_vector.length();
+			distance = light_vector.normalise();
 			dot = light_vector & *normal_ptr;
 			if (distance <= light_ptr->radius && dot > 0.0f) {
 				if (light_ptr->flood)
@@ -264,7 +264,7 @@ compute_vertex_colour(light_ref *active_light_list, vertex *vertex_ptr,
 			// If the polygon is facing away from the light, it is not affected.
 
 			light_vector = -(active_light_list[index].light_pos - *vertex_ptr);
-			distance = light_vector.length();
+			distance = light_vector.normalise();
 			dot = light_vector & light_ptr->dir;
 			dot2 = -(light_vector & *normal_ptr);
 			if (distance <= light_ptr->radius && dot2 > 0.0f &&

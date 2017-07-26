@@ -248,11 +248,9 @@ extern bool player_block_replaced;
 extern string curr_URL;
 extern string curr_file_path;
 
-// Flags indicating if the viewpoint has changed, and if so the current
-// direction of movement.
+// Flag indicating if the viewpoint has changed.
 
 extern bool viewpoint_has_changed;
-extern bool forward_movement;
 
 // Current custom texture and wave in the download pipeline, and a flag 
 // indicating whether the current download has completed.

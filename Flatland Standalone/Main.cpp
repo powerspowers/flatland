@@ -279,11 +279,9 @@ bool player_block_replaced;
 string curr_URL;
 string curr_file_path;
 
-// Flags indicating if the viewpoint has changed, and if so the current
-// direction of movement.
+// Flag indicating if the viewpoint has changed.
 
 bool viewpoint_has_changed;
-bool forward_movement;
 
 // Current custom texture and wave in the download pipeline, and a flag 
 // indicating whether the current download has completed.
@@ -365,10 +363,6 @@ static float player_fall_delta;
 static COL_MESH *col_mesh_list[512];
 static VEC3 mesh_pos_list[512];
 static int col_meshes;
-
-// Flag indicating if the trajectory is tilted.
-
-static bool trajectory_tilted;
 
 // Flag indicating if player viewpoint has been set.
 
@@ -1111,8 +1105,7 @@ start_up_spot(void)
 	clocktimer_time_ms = 0;
 	frames_rendered = 0;
 	player_viewpoint_set = true;
-	player_fall_delta = 0;
-	trajectory_tilted = false;
+	player_fall_delta = 0.0f;
 
 	// Initiate the downloading of the first custom texture or wave.
 
@@ -1651,51 +1644,33 @@ get_overlapping_blocks(float x, float y, float z,
 //------------------------------------------------------------------------------
 
 static vector
-adjust_trajectory(vector &trajectory, float elapsed_time, bool &player_falling)
+adjust_trajectory(vector &trajectory, float elapsed_time)
 {
-	float max_dx, max_dz;
-	float abs_dx, abs_dz;
 	vector new_trajectory;
 	vertex old_position, new_position;
 	float floor_y;
+	float jump_delta;
 	int column, row, level;
 
-	// Set the maximum length permitted for the trajectory.
+	// Truncate the trajectory so that it does not exceed the player step height,
+	// if necessary, then subtract the possibly truncated trajectory from the original.
 
-	max_dx = player_step_height;
-	max_dz = player_step_height;
+	new_trajectory = trajectory;
+	new_trajectory.truncate(player_step_height);
+	trajectory -= new_trajectory;
 
-	// Compute the absolute values of the X and Z trajectory components.
+	// If there is a jump delta and no fall delta, apply the jump delta to the trajectory, 
+	// then reduce the jump delta by a fixed amount until it reaches zero.
 
-	abs_dx = FABS(trajectory.dx);
-	abs_dz = FABS(trajectory.dz);
-
-	// If the X and Z components of the trajectory are less or equal to the
-	// X and Z components of the maximum trajectory vector, then use this 
-	// trajectory.
-
-	if (FLE(abs_dx, max_dx) && FLE(abs_dz, max_dz)) {
-		new_trajectory = trajectory;
-		trajectory.set(0.0f, 0.0f, 0.0f);
-	} 
-	
-	// Compute a new trajectory such that the player moves along the axis
-	// of the largest component no further than the matching component of the
-	// maximum trajectory vector.
-	
-	else {
-		if (FGT(abs_dx, abs_dz)) {
-			new_trajectory.dx = max_dx * (trajectory.dx / abs_dx);
-			new_trajectory.dy = 0.0f;
-			new_trajectory.dz = max_dx * (trajectory.dz / abs_dx);
-		} else {
-			new_trajectory.dx = max_dz * (trajectory.dx / abs_dz);
-			new_trajectory.dy = 0.0f;
-			new_trajectory.dz = max_dz * (trajectory.dz / abs_dz);
+	jump_delta = enable_player_translation && FEQ(player_fall_delta, 0.0f) ? curr_jump_delta.get() : 0.0f;
+	if (FGT(jump_delta, 0.0f)) {
+		new_trajectory.dy = jump_delta * elapsed_time;
+		jump_delta -= JUMPING_DEACCELERATION * elapsed_time;
+		if (FLT(jump_delta, 0.0f)) {
+			jump_delta = 0.0f;
 		}
-		trajectory.dx -= new_trajectory.dx;
-		trajectory.dz -= new_trajectory.dz;
 	}
+	curr_jump_delta.set(jump_delta);
 
 	// If the new player position is off the map, don't move the player at all
 	// and make the floor height invalid.
@@ -1704,7 +1679,7 @@ adjust_trajectory(vector &trajectory, float elapsed_time, bool &player_falling)
 	new_position = old_position + new_trajectory;
 	new_position.get_map_position(&column, &row, &level);
 	if (new_position.x < 0.0 || column >= world_ptr->columns || 
-		row < 0 || new_position.z < 0.0 ||
+		new_position.z < 0.0 || row < 0 ||
 		new_position.y < 0.0 || level >= world_ptr->levels) {
 		new_position = old_position;
 		floor_y = -1.0f;
@@ -1725,7 +1700,6 @@ adjust_trajectory(vector &trajectory, float elapsed_time, bool &player_falling)
 	
 	// If the floor height is valid, do a gravity check.
 
-	player_falling = false;
 	if (FGE(floor_y, 0.0f)) {
 
 		// If the player height is below the floor height, determine whether
@@ -1751,24 +1725,22 @@ adjust_trajectory(vector &trajectory, float elapsed_time, bool &player_falling)
 				player_fall_delta = 0.0f;
 			} 
 		
-			// Otherwise, allow gravity to pull the player down by the given
-			// fall delta.  If this puts the player below the floor height,
-			// put them at the floor height and zero the fall delta.  Otherwise
-			// increase the fall delta over time until a maximum delta is
-			// reached.
+			// Otherwise, if we're not jumping, allow gravity to pull the player down by the given
+			// fall delta.  If this puts the player below the floor height, put them at the floor
+			// height and zero the fall delta.  Otherwise increase the fall delta over time until
+			// a maximum delta is reached.
 			
-			else {
-				player_falling = true;
+			else if (FEQ(jump_delta, 0.0f)) {
 				if (FGT(elapsed_time, 0.0f)) {
-					new_position.y -= player_fall_delta;
+					new_position.y -= player_fall_delta * elapsed_time;
 				}
 				if (FLE(new_position.y, floor_y)) {
 					new_position.y = floor_y;
 					player_fall_delta = 0.0f;
 				} else {
-					player_fall_delta += 1.0f * elapsed_time;
-					if (FGT(player_fall_delta, 3.0f))
-						player_fall_delta = 3.0f;
+					player_fall_delta += FALLING_ACCELERATION * elapsed_time;
+					if (FGT(player_fall_delta, MAXIMUM_FALLING_SPEED))
+						player_fall_delta = MAXIMUM_FALLING_SPEED;
 				}
 			}
 		}
@@ -3030,7 +3002,6 @@ render_next_frame(void)
 	float elapsed_time;
 	float move_delta, side_delta, turn_delta, look_delta;
 	vector trajectory, new_trajectory, unit_trajectory;
-	bool player_falling;
 	vector orig_direction, new_direction;
 	int column, row, level;
 	int last_column, last_row, last_level;
@@ -3046,7 +3017,6 @@ render_next_frame(void)
 		prev_time_ms = curr_time_ms;
 		curr_time_ms = get_time_ms();
 		elapsed_time = (float)(curr_time_ms - prev_time_ms) / 1000.0f;
-		debug_message("elapsed time = %d ms, %f s\n", curr_time_ms - prev_time_ms, elapsed_time);
 	} else {
 		curr_time_ms = get_time_ms();
 		clocktimer_time_ms = curr_time_ms;
@@ -3123,10 +3093,6 @@ render_next_frame(void)
 		}
 	}
 
-	// Set a flag indicating if we're moving forward or backward.
-
-	forward_movement = FGE(move_delta, 0.0f);
-
 	// Update the player's last position and current turn angle.
 
 	if (turn_delta != 0.0f) {
@@ -3148,6 +3114,7 @@ render_next_frame(void)
 	}
 
 	// Set the trajectory based upon the move delta, side delta, and the turn angle.
+	// Note there is no Y component in the trajectory.
 
 	trajectory.dx = move_delta * sinf(RAD(player_viewpoint.turn_angle)) +
 		side_delta * sinf(RAD(player_viewpoint.turn_angle + 90.0f));
@@ -3156,9 +3123,11 @@ render_next_frame(void)
 		side_delta * cosf(RAD(player_viewpoint.turn_angle + 90.0f));
 
 	// Adjust the trajectory to take in account collisions, then move the player along this trajectory.
+	// Note that there is a maximum distance the player can move in order for collision detection to
+	// be accurate, so it may be necessary to adjust the trajectory more than once.
 
 	do {
-		new_trajectory = adjust_trajectory(trajectory, elapsed_time, player_falling);
+		new_trajectory = adjust_trajectory(trajectory, elapsed_time);
 		player_viewpoint.position = player_viewpoint.position + new_trajectory;
 	} while (FNE(trajectory.dx, 0.0f) || FNE(trajectory.dz, 0.0f));
 
@@ -3176,12 +3145,6 @@ render_next_frame(void)
 	player_viewpoint.look_angle_radians = RAD(player_viewpoint.look_angle);
 	player_viewpoint.inv_turn_angle_radians = RAD(360.0f - player_viewpoint.turn_angle);
 	player_viewpoint.inv_look_angle_radians = RAD(360.0f - pos_adjust_angle(player_viewpoint.look_angle));
-
-	// Set the trajectory tilted flag.  The trajectory is tilted if there is a
-	// Y component to the trajectory in addition to an X or Z component.
-
-	trajectory_tilted = FNE(new_trajectory.dy, 0.0f) && 
-		(FNE(new_trajectory.dx, 0.0f) || FNE(new_trajectory.dz, 0.0f));
 
 	// Set a flag indicating whether the viewpoint has changed.
 
@@ -3230,8 +3193,7 @@ render_next_frame(void)
 
 	// Determine the location the player is standing on.
 
-	player_viewpoint.position.get_map_position(&player_column, &player_row,
-		&player_level);
+	player_viewpoint.position.get_map_position(&player_column, &player_row, &player_level);
 
 	// Process the currently and previously selected squares, followed by
 	// the currently and previously selected areas, followed by the list of
@@ -3245,8 +3207,7 @@ render_next_frame(void)
 	// Process all global triggers in the global trigger list, and in all
 	// movable and fixed blocks.
 
-	process_global_triggers_in_trigger_list(global_trigger_list, NULL, 
-		false);
+	process_global_triggers_in_trigger_list(global_trigger_list, NULL, false);
 	process_global_triggers_in_block_list(movable_block_list);
 	process_global_triggers_in_block_list(fixed_block_list);
 	process_global_triggers_in_block_list(player_block_ptr);
@@ -3294,8 +3255,7 @@ render_next_frame(void)
 	// frame, then we don't need to check whether there is an exit on this 
 	// square.
 
-	player_viewpoint.last_position.get_map_position(&last_column, &last_row,
-		&last_level);
+	player_viewpoint.last_position.get_map_position(&last_column, &last_row, &last_level);
 	if (player_column == last_column && player_row == last_row && 
 		player_level == last_level && !player_block_replaced && 
 		!player_was_teleported)
@@ -3312,8 +3272,7 @@ render_next_frame(void)
 	// over an exit on a block, and a fixed block takes precedence over a
 	// movable one.
 
-	square_ptr = world_ptr->get_square_ptr(player_column, player_row, 
-		player_level);
+	square_ptr = world_ptr->get_square_ptr(player_column, player_row, player_level);
 	exit_ptr = NULL;
 	if (square_ptr != NULL) {
 		if (square_ptr->exit_ptr != NULL && 
@@ -3338,10 +3297,8 @@ render_next_frame(void)
 		}
 	}
 	if (exit_ptr != NULL) {
-		return(handle_exit(exit_ptr->URL, exit_ptr->target, 
-			exit_ptr->is_spot_URL));		
+		return(handle_exit(exit_ptr->URL, exit_ptr->target, exit_ptr->is_spot_URL));		
 	}
-
 	return(true);
 }
 

@@ -217,6 +217,7 @@ static key_code_to_func new_key_func_table[] = {
 	{'A', 'Q', sidle_left},
 	{'D', 0, sidle_right},
 	{ESC_KEY, 0, exit_mouse_look_mode},
+	{SPACE_BAR_KEY, 0, jump},
 	{0, 0, NULL}
 };
 
@@ -508,7 +509,7 @@ static void
 jump(bool key_down)
 {
 	if (key_down) {
-		curr_jump_delta.set(1.5f);
+		curr_jump_delta.set(MAXIMUM_JUMPING_SPEED);
 	}
 }
 
