@@ -964,6 +964,7 @@ struct wave {
 struct sound {
 	string name;					// Name.
 	bool ambient;					// TRUE if an ambient sound.
+	string URL;						// URL to sound file.
 	wave *wave_ptr;					// Pointer to wave.
 	void *sound_buffer_ptr;			// Pointer to sound buffer.
 	vertex position;				// Position of sound.
@@ -1389,6 +1390,7 @@ struct blockset {
 	bool sky_brightness_set;					// TRUE if sky brightness set.
 	float sky_brightness;						// Sky brightness.
 	bool ground_defined;						// TRUE if ground defined.
+	string ground_texture_URL;					// URL of ground texture.
 	texture *ground_texture_ptr;				// Pointer to ground texture.
 	bool ground_colour_set;						// TRUE if ground colour set.
 	RGBcolour ground_colour;					// Ground colour.

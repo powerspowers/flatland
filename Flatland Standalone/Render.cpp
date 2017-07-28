@@ -350,7 +350,7 @@ compare_polygon_against_frustum(polygon *polygon_ptr)
 	vector *normal_vector_ptr;
 	float plane_offset;
 	polygon_def *polygon_def_ptr;
-	vertex *vertex_list, *vertex_ptr, translation;
+	vertex *vertex_list, *vertex_ptr;
 	vertex_def *vertex_def_ptr;
 
 	// For each frustum plane, determine how many polygon vertices are on the 
@@ -359,7 +359,6 @@ compare_polygon_against_frustum(polygon *polygon_ptr)
 
 	vertex_list = block_tvertex_list;
 	polygon_def_ptr = polygon_ptr->polygon_def_ptr;
-	translation = curr_block_ptr->translation;
 	planes = 0;
 	for (plane_index = 0; plane_index < FRUSTUM_PLANES; plane_index++) {
 		normal_vector_ptr = &frustum_normal_vector_list[plane_index];

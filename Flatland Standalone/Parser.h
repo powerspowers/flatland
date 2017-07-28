@@ -199,9 +199,6 @@ void
 parse_rest_of_document(bool strict_XML_compliance);
 
 void
-save_document(const char *file_name);
-
-void
 start_parsing_nested_tags(void);
 
 bool

@@ -929,16 +929,16 @@ version_number_to_string(unsigned int version_number)
 	version4 = version_number & 255;
 	if (version3 == 0) {
 		if (version4 == 255)
-			bprintf(version_string, 16, "v%d.%d", version1, version2);
+			bprintf(version_string, 16, "%d.%d", version1, version2);
 		else
-			bprintf(version_string, 16, "v%d.%d-beta.%d", version1, version2, 
+			bprintf(version_string, 16, "%d.%db%d", version1, version2, 
 				version4);
 	} else {
 		if (version4 == 255)
-			bprintf(version_string, 16, "v%d.%d.%d", version1, version2, 
+			bprintf(version_string, 16, "%d.%d.%d", version1, version2, 
 				version3);
 		else
-			bprintf(version_string, 16, "v%d.%d.%d-beta.%d", version1, version2, 
+			bprintf(version_string, 16, "%d.%d.%db%d", version1, version2, 
 				version3, version4);
 	}
 	return(version_string);
@@ -4315,23 +4315,6 @@ parse_rest_of_document(bool strict_XML_compliance_flag)
 }
 
 //------------------------------------------------------------------------------
-// Save the current XML document to a file.
-//------------------------------------------------------------------------------
-
-void
-save_document(const char *file_name)
-{
-	string text;
-	FILE *fp;
-
-	text = entity_list_to_string(file_stack_ptr->parse_stack_ptr->entity_list);
-	if ((fp = fopen(file_name, "w")) != NULL) {
-		text.write(fp);
-		fclose(fp);
-	}
-}
-
-//------------------------------------------------------------------------------
 // Start parsing nested tags in the current entity.
 //------------------------------------------------------------------------------
 
@@ -4527,12 +4510,15 @@ string
 attribute_value_to_string(int value_type, int value)
 {
 	switch (value_type) {
-
+	case VALUE_BOOLEAN:
+		return get_value_str_from_list(value, boolean_value_list, BOOLEAN_VALUES);
+	case VALUE_FOG_STYLE:
+		return get_value_str_from_list(value, fog_style_value_list, FOG_STYLE_VALUES);
+	case VALUE_MAP_STYLE:
+		return get_value_str_from_list(value, map_style_value_list, MAP_STYLE_VALUES);
 	case VALUE_PLAYBACK_MODE:
-		return(get_value_str_from_list(value, playback_mode_value_list,
-			PLAYBACK_MODE_VALUES));
-
+		return get_value_str_from_list(value, playback_mode_value_list, PLAYBACK_MODE_VALUES);
 	default:
-		return("");
+		return "";
 	}
 }

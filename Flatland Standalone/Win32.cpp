@@ -2071,12 +2071,20 @@ LRESULT CALLBACK app_window_proc(HWND hWnd, UINT message, WPARAM wParam, LPARAM 
 				break;
 			case ID_FILE_OPENSPOTFILE:
 				{	
-					char file_path[256];
-					if (open_file_dialog(file_path, 256)) {
+					char file_path[_MAX_PATH];
+					if (open_file_dialog(file_path, _MAX_PATH)) {
 						raise_semaphore(recent_spot_list_semaphore);
 						selected_recent_spot_URL = file_path;
 						recent_spot_selected.send_event(true);
 						lower_semaphore(recent_spot_list_semaphore);
+					}
+				}
+				break;
+			case ID_FILE_SAVESPOTFILE:
+				{
+					saved_spot_file_path = get_save_file_name("Save spot to 3DML file", "3DML file\0*.3dml\0", NULL);
+					if (saved_spot_file_path != NULL) {
+						save_3DML_source_requested.send_event(true);
 					}
 				}
 				break;

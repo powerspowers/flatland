@@ -1772,9 +1772,10 @@ parse_ground_tag(blockset *blockset_ptr)
 
 	// Initialise the ground parameters that were given.
 
-	if (parsed_attribute[GROUND_TEXTURE])
-		blockset_ptr->ground_texture_ptr = 
-			load_texture(blockset_ptr, ground_texture, true);
+	if (parsed_attribute[GROUND_TEXTURE]) {
+		blockset_ptr->ground_texture_URL = ground_texture;
+		blockset_ptr->ground_texture_ptr = load_texture(blockset_ptr, ground_texture, true);
+	}
 
 #ifdef STREAMING_MEDIA
 
@@ -1988,6 +1989,7 @@ parse_ambient_sound_tag(void)
 		return;
 	}
 	ambient_sound_ptr->ambient = true;
+	ambient_sound_ptr->URL = ambient_sound_file;
 	ambient_sound_ptr->wave_ptr = wave_ptr;
 
 	// If the volume attribute was given, set the sound volume.
@@ -4572,6 +4574,107 @@ parse_spot_file(char *spot_URL, char *spot_file_path)
 	// parsed.
 
 	init_spot();
+}
+
+//==============================================================================
+// Spot saving function.
+//==============================================================================
+
+static char attribute_string[256];
+
+static string
+percentage_to_string(float percentage)
+{
+	sprintf(attribute_string, "%g%%", percentage * 100.0f);
+	return attribute_string;
+}
+
+static string
+colour_to_string(RGBcolour colour, bool normalized = false)
+{
+	if (normalized) {
+		sprintf(attribute_string, "(%d, %d, %d)", (int)(colour.red * 255.0f), (int)(colour.green * 255.0f), (int)(colour.blue * 255.0f));
+	} else {
+		sprintf(attribute_string, "(%g, %g, %g)", colour.red, colour.green, colour.blue);
+	}
+	return attribute_string;
+}
+
+static string
+delay_range_to_string(delayrange delay_range)
+{
+	if (delay_range.delay_range_ms > 0) {
+		sprintf(attribute_string, "%g..%g", (float)delay_range.min_delay_ms / 1000.0f, (float)(delay_range.min_delay_ms + delay_range.delay_range_ms) / 1000.0f);
+	} else {
+		sprintf(attribute_string, "%g", (float)delay_range.min_delay_ms / 1000.0f);
+	}
+	return attribute_string;
+}
+
+static string
+radius_to_string(float radius)
+{
+	sprintf(attribute_string, "%g", radius / UNITS_PER_BLOCK);
+	return attribute_string;
+}
+
+void
+save_spot_file(const char *spot_file_path)
+{
+	FILE *fp;
+	if ((fp = fopen(spot_file_path, "w")) != NULL) {
+		fprintf(fp, "<spot version=\"%s\">\n", version_number_to_string(min_rover_version));
+		fprintf(fp, "\t<head>\n");
+		if (got_ambient_light_tag) {
+			fprintf(fp, "\t\t<ambient_light brightness=\"%s\" color=\"%s\"/>\n", (char *)percentage_to_string(ambient_light_brightness),
+				(char *)colour_to_string(ambient_light_colour));
+		}
+		if (got_ambient_sound_tag) {
+			fprintf(fp, "\t\t<ambient_sound file=\"%s\" volume=\"%s\" playback=\"%s\" delay=\"%s\"/>\n", (char *)ambient_sound_ptr->URL,
+				(char *)percentage_to_string(ambient_sound_ptr->volume),
+				(char *)attribute_value_to_string(VALUE_PLAYBACK_MODE, ambient_sound_ptr->playback_mode), 
+				(char *)delay_range_to_string(ambient_sound_ptr->delay_range));
+		}
+		if (got_base_tag || !_strnicmp(spot_URL_dir, "http://", 7)) {
+			fprintf(fp, "\t\t<base href=\"%s\"/>\n", (char *)spot_URL_dir);
+		}
+		if (got_debug_tag) {
+			fprintf(fp, "\t\t<debug warnings=\"%s\"/>\n", (char *)attribute_value_to_string(VALUE_BOOLEAN, debug_warnings)); 
+		}
+		if (global_fog_enabled) {
+			fprintf(fp, "\t\t<fog style=\"%s\" color=\"%s\"", (char *)attribute_value_to_string(VALUE_FOG_STYLE, global_fog.style),
+				(char *)colour_to_string(global_fog.colour, true));
+			if (global_fog.style == LINEAR_FOG) {
+				if (global_fog.start_radius != 0.0f) {
+					fprintf(fp, " start=\"%s\"", (char *)radius_to_string(global_fog.start_radius));
+				}
+				if (global_fog.end_radius != 0.0f) {
+					fprintf(fp, " end=\"%s\"", (char *)radius_to_string(global_fog.end_radius));
+				}
+			} else {
+				fprintf(fp, " density=\"%s\"", (char *)percentage_to_string(global_fog.density));
+			}
+			fprintf(fp, "/>\n");
+		}
+		if (custom_blockset_ptr->ground_defined) {
+			fprintf(fp, "\t\t<ground");
+			if (custom_blockset_ptr->ground_texture_ptr) {
+				fprintf(fp, " texture=\"%s\"", (char *)custom_blockset_ptr->ground_texture_URL);
+			}
+			if (custom_blockset_ptr->ground_colour_set) {
+				fprintf(fp, " color=\"%s\"", (char *)colour_to_string(custom_blockset_ptr->ground_colour));
+			}
+			fprintf(fp, "/>\n");
+		}
+		fprintf(fp, "\t\t<map dimensions=\"(%d, %d, %d)\" style=\"%s\"/>\n", world_ptr->columns, world_ptr->rows, 
+			world_ptr->ground_level_exists ? world_ptr->levels - 2 : world_ptr->levels - 1,
+			(char *)attribute_value_to_string(VALUE_MAP_STYLE, world_ptr->map_style));
+		fprintf(fp, "\t</head>\n");
+		fprintf(fp, "\t<body>\n");
+		fprintf(fp, "\t</body>\n");
+		fprintf(fp, "</spot>\n");
+		fclose(fp);
+	}
 }
 
 //==============================================================================

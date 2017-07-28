@@ -337,7 +337,6 @@ static attr_def map_attr_list[MAP_ATTRIBUTES] = {
 	{TOKEN_STYLE, VALUE_MAP_STYLE, &map_style, false}
 };
 
-
 // META tag (spot file only).
 
 #define META_ATTRIBUTES	2
@@ -577,7 +576,6 @@ static attr_def create_part_attr_list[CREATE_PART_ATTRIBUTES] = {
 };
 
 #endif
-
 
 // PLACEHOLDER tag (style and spot files).
 
@@ -1201,7 +1199,7 @@ static tag_def head_tag_list[] = {
 	{TOKEN_FOG, fog_attr_list, FOG_ATTRIBUTES, false},
 	{TOKEN_GROUND, ground_attr_list, GROUND_ATTRIBUTES, false},
 	{TOKEN_MAP, map_attr_list, MAP_ATTRIBUTES, false},
-	{TOKEN_META,meta_attr_list,META_ATTRIBUTES, false},
+	{TOKEN_META, meta_attr_list, META_ATTRIBUTES, false},
 	{TOKEN_ORB, orb_attr_list, ORB_ATTRIBUTES, false},
 	{TOKEN_PLACEHOLDER, placeholder_attr_list, PLACEHOLDER_ATTRIBUTES, false},
 	{TOKEN_SKY, sky_attr_list, SKY_ATTRIBUTES, false},

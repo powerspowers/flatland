@@ -4190,7 +4190,7 @@ player_thread(void *arg_list)
 			// do so now.
 
 			if (save_3DML_source_requested.event_sent())
-				save_document(saved_spot_file_path);
+				save_spot_file(saved_spot_file_path);
 
 			// Handle the current download, if there is one.
 	
