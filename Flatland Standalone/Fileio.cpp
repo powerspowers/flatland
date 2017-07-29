@@ -4675,20 +4675,10 @@ save_spot_file(const char *spot_file_path)
 		fprintf(fp, "<spot version=\"%s\">\n", version_number_to_string(min_rover_version));
 		fprintf(fp, "\t<head>\n");
 
-		// If an ambient_light tag was present, generate it.
+		// If a debug tag was present, generate it.
 
-		if (got_ambient_light_tag) {
-			fprintf(fp, "\t\t<ambient_light brightness=\"%s\" color=\"%s\"/>\n", (char *)percentage_to_string(ambient_light_brightness),
-				(char *)colour_to_string(ambient_light_colour));
-		}
-
-		// If an ambient_sound tag was present, generate it.
-
-		if (got_ambient_sound_tag) {
-			fprintf(fp, "\t\t<ambient_sound file=\"%s\" volume=\"%s\" playback=\"%s\" delay=\"%s\"/>\n", (char *)ambient_sound_ptr->URL,
-				(char *)percentage_to_string(ambient_sound_ptr->volume),
-				(char *)attribute_value_to_string(VALUE_PLAYBACK_MODE, ambient_sound_ptr->playback_mode), 
-				(char *)delay_range_to_string(ambient_sound_ptr->delay_range));
+		if (got_debug_tag) {
+			fprintf(fp, "\t\t<debug warnings=\"%s\"/>\n", (char *)attribute_value_to_string(VALUE_BOOLEAN, debug_warnings)); 
 		}
 
 		// If a base tag was present, or this spot came from the web, generate it.
@@ -4705,10 +4695,20 @@ save_spot_file(const char *spot_file_path)
 			blockset_ptr = blockset_ptr->next_blockset_ptr;
 		}
 
-		// If a debug tag was present, generate it.
+		// If an ambient_light tag was present, generate it.
 
-		if (got_debug_tag) {
-			fprintf(fp, "\t\t<debug warnings=\"%s\"/>\n", (char *)attribute_value_to_string(VALUE_BOOLEAN, debug_warnings)); 
+		if (got_ambient_light_tag) {
+			fprintf(fp, "\t\t<ambient_light brightness=\"%s\" color=\"%s\"/>\n", (char *)percentage_to_string(ambient_light_brightness),
+				(char *)colour_to_string(ambient_light_colour));
+		}
+
+		// If an ambient_sound tag was present, generate it.
+
+		if (got_ambient_sound_tag) {
+			fprintf(fp, "\t\t<ambient_sound file=\"%s\" volume=\"%s\" playback=\"%s\" delay=\"%s\"/>\n", (char *)ambient_sound_ptr->URL,
+				(char *)percentage_to_string(ambient_sound_ptr->volume),
+				(char *)attribute_value_to_string(VALUE_PLAYBACK_MODE, ambient_sound_ptr->playback_mode), 
+				(char *)delay_range_to_string(ambient_sound_ptr->delay_range));
 		}
 
 		// If a fog tag was present, generate it.
