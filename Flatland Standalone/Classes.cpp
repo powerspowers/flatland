@@ -3276,6 +3276,7 @@ block_def::del_block(block *block_ptr)
 string
 block_def::get_symbol(void)
 {
+	char ch;
 	string symbol;
 
 	switch (world_ptr->map_style) {
@@ -3283,7 +3284,8 @@ block_def::get_symbol(void)
 		symbol = single_symbol;
 		break;
 	case DOUBLE_MAP:
-		symbol = (char)(double_symbol >> 7);
+		ch = (char)(double_symbol >> 7);
+		symbol = ch == 0 ? '.' : ch;
 		symbol += (char)(double_symbol & 127);
 	}
 	return(symbol);
@@ -3298,6 +3300,7 @@ block_def::get_symbol(void)
 blockset::blockset()
 {
 	block_def_list = NULL;
+	last_block_def_ptr = NULL;
 	placeholder_texture_ptr = NULL;
 	sky_defined = false;
 	sky_texture_ptr = NULL;
@@ -3363,13 +3366,17 @@ blockset::~blockset()
 	}
 }
 
-// Add block definition to the head of the block definition list.
+// Add block definition to the end of the block definition list.
 
 void
 blockset::add_block_def(block_def *block_def_ptr)
 {
-	block_def_ptr->next_block_def_ptr = block_def_list;
-	block_def_list = block_def_ptr;
+	if (last_block_def_ptr != NULL) {
+		last_block_def_ptr->next_block_def_ptr = block_def_ptr;
+	} else {
+		block_def_list = block_def_ptr;
+	}
+	last_block_def_ptr = block_def_ptr;
 }
 
 // Delete the block definition with the given single or double character symbol,
@@ -3388,10 +3395,12 @@ blockset::delete_block_def(word symbol)
 			(world_ptr->map_style == DOUBLE_MAP && 
 			 block_def_ptr->double_symbol == symbol)) {
 			if (prev_block_def_ptr != NULL)
-				prev_block_def_ptr->next_block_def_ptr =
-					block_def_ptr->next_block_def_ptr;
+				prev_block_def_ptr->next_block_def_ptr = block_def_ptr->next_block_def_ptr;
 			else
 				block_def_list = block_def_ptr->next_block_def_ptr;
+			if (block_def_ptr == last_block_def_ptr) {
+				last_block_def_ptr = prev_block_def_ptr;
+			}
 			DEL(block_def_ptr, block_def);
 			return(true);
 		}
@@ -4008,7 +4017,7 @@ block::set_nextloop(int number)
 
 square::square()
 {
-	block_symbol = NULL_BLOCK_SYMBOL;
+	orig_block_symbol = NULL_BLOCK_SYMBOL;
 	block_ptr = NULL;
 	exit_ptr = NULL;
 	popup_trigger_flags = 0;

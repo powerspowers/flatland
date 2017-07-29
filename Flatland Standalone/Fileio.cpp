@@ -3492,7 +3492,7 @@ parse_level_tag(void)
 					warning("Symbol at location (%d,%d,%d) was invalid",
 						column + 1, row + 1, curr_level + 1);
 				else
-					row_ptr->block_symbol = ch1;
+					row_ptr->orig_block_symbol = ch1;
 				row_ptr++;
 				column++;
 				ch1 = *++line_ptr;
@@ -3512,9 +3512,9 @@ parse_level_tag(void)
 						break;
 					}
 				} else if (ch1 == '.')
-					row_ptr->block_symbol = ch2;
+					row_ptr->orig_block_symbol = ch2;
 				else	
-					row_ptr->block_symbol = (ch1 << 7) + ch2;
+					row_ptr->orig_block_symbol = (ch1 << 7) + ch2;
 				row_ptr++;
 				column++;
 				ch1 = *++line_ptr;
@@ -3805,9 +3805,9 @@ parse_next_create_tag(int tag_token, tag_def *create_tag_list,
 		// Parse the ACTION or SCRIPT tag and create a trigger.
 
 		if (tag_token == TOKEN_ACTION)
-			trigger_ptr = parse_action_tag(custom_block_def_ptr,false);
+			trigger_ptr = parse_action_tag(custom_block_def_ptr, false);
 		else
-			trigger_ptr = parse_script_tag(custom_block_def_ptr,false);
+			trigger_ptr = parse_script_tag(custom_block_def_ptr, false);
 
 		// Add the trigger the end of the trigger list.
 
@@ -3822,7 +3822,6 @@ parse_next_create_tag(int tag_token, tag_def *create_tag_list,
 			// in the list.
 
 			create_tag_trigger_flags |= trigger_ptr->trigger_flag;
-
 		}
 
 		break;
@@ -3937,6 +3936,7 @@ parse_create_tag(void)
 	// it's symbol, and add it to the custom blockset and symbol table.
 
 	custom_block_def_ptr->dup_block_def(block_def_ptr);
+	custom_block_def_ptr->source_block = create_block;
 	switch (world_ptr->map_style) {
 	case SINGLE_MAP:
 		custom_block_def_ptr->single_symbol = (char)create_symbol;
@@ -4174,9 +4174,9 @@ parse_next_body_tag(int tag_token, bool allow_import_tag)
 		// Parse the ACTION or SCRIPT tag and create a trigger.
 
 		if (tag_token == TOKEN_ACTION)
-			trigger_ptr = parse_action_tag(0, true); // *mp* freestanding actions have no parts - hmmm...
+			trigger_ptr = parse_action_tag(NULL, true);
 		else
-			trigger_ptr = parse_script_tag(0, true);
+			trigger_ptr = parse_script_tag(NULL, true);
 
 		// If a trigger was successfully created...
 
@@ -4307,7 +4307,7 @@ parse_body_tags(void)
 		for (int row = 0; row < world_ptr->rows; row++)
 			for (int column = 0; column < world_ptr->columns; column++) {
 				square *square_ptr = world_ptr->get_square_ptr(column, row, 0);
-				square_ptr->block_symbol = GROUND_BLOCK_SYMBOL;
+				square_ptr->orig_block_symbol = GROUND_BLOCK_SYMBOL;
 			}
 
 	// Initialise some state variables.
@@ -4820,6 +4820,33 @@ save_spot_file(const char *spot_file_path)
 
 		fprintf(fp, "\t</head>\n");
 		fprintf(fp, "\t<body>\n");
+
+		// Generate a create tag for every custom block definition.
+
+		block_def *block_def_ptr = custom_blockset_ptr->block_def_list;
+		while (block_def_ptr != NULL) {
+			fprintf(fp, "\t\t<create symbol=\"%s\" block=\"%s\">\n", (char *)block_def_ptr->get_symbol(), (char *)block_def_ptr->source_block);
+			fprintf(fp, "\t\t</create>\n");
+			block_def_ptr = block_def_ptr->next_block_def_ptr;
+		}
+
+		// Generate the level tags.
+
+		for (int level = world_ptr->ground_level_exists ? 1 : 0, level_no = 1; level < world_ptr->levels - 1; level++, level_no++) {
+			fprintf(fp, "\t\t<level number=\"%d\">\n", level_no);
+			for (int row = 0; row < world_ptr->rows; row++) {
+				fprintf(fp, "\t\t\t");
+				for (int column = 0; column < world_ptr->columns; column++) {
+					square *square_ptr = world_ptr->get_square_ptr(column, row, level);
+					fprintf(fp, "%s", (char *)get_symbol(square_ptr->orig_block_symbol));
+					if (world_ptr->map_style == DOUBLE_MAP) {
+						fprintf(fp, " ");
+					}
+				}
+				fprintf(fp, "\n");
+			}
+			fprintf(fp, "\t\t</level>\n");
+		}
 
 		// Generate the closing body tag, and the closing spot tag.
 

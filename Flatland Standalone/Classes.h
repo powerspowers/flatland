@@ -1330,6 +1330,7 @@ struct block;						// Forward declaration.
 
 struct block_def {
 	bool custom;					// TRUE if custom block.
+	string source_block;			// The name or symbol of the source block.
 	char single_symbol;				// Single-character symbol.
 	word double_symbol;				// Double-character symbol.
 	string name;					// Block name.
@@ -1392,6 +1393,7 @@ struct blockset {
 	string URL;									// URL of blockset.
 	string name;								// Name of blockset.
 	block_def *block_def_list;					// List of block definitions.
+	block_def *last_block_def_ptr;				// Pointer to last block definition.
 	string placeholder_texture_URL;				// URL of placeholder texture.
 	texture *placeholder_texture_ptr;			// Placeholder texture.
 	bool sky_defined;							// TRUE if sky defined.
@@ -1530,7 +1532,7 @@ struct block {
 //------------------------------------------------------------------------------
 
 struct square {
-	word block_symbol;					// Block symbol.
+	word orig_block_symbol;				// Symbol of original block on square.
 	block *block_ptr;					// Pointer to block (if any).
 	hyperlink *exit_ptr;				// Pointer to exit (if any).
 	int popup_trigger_flags;			// Popup trigger flags.

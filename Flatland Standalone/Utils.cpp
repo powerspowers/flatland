@@ -2291,7 +2291,7 @@ init_spot(void)
 		for (row = 0; row < world_ptr->rows; row++)
 			for (column = 0; column < world_ptr->columns; column++) {
 				square_ptr = world_ptr->get_square_ptr(column, row, level);
-				block_symbol = square_ptr->block_symbol;
+				block_symbol = square_ptr->orig_block_symbol;
 				if (block_symbol != NULL_BLOCK_SYMBOL) {
 
 					// Refresh the player window.
@@ -2928,4 +2928,26 @@ find_popup(popup *popup_list, const char *popup_name)
 		popup_ptr = popup_ptr->next_popup_ptr;
 	}
 	return(popup_ptr);
+}
+
+//------------------------------------------------------------------------------
+// Return the single or double symbol as a string.
+//------------------------------------------------------------------------------
+
+string
+get_symbol(word symbol)
+{
+	char ch;
+	string symbol_string;
+
+	switch (world_ptr->map_style) {
+	case SINGLE_MAP:
+		symbol_string = (char)symbol;
+		break;
+	case DOUBLE_MAP:
+		ch = (char)(symbol >> 7);
+		symbol_string = ch == 0 ? '.' : ch;
+		symbol_string += (char)(symbol & 127);
+	}
+	return(symbol_string);
 }

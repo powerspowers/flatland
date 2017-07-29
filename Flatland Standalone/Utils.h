@@ -155,3 +155,6 @@ find_sound(sound *sound_list, const char *sound_name);
 
 popup *
 find_popup(popup *popup_list, const char *popup_name);
+
+string
+get_symbol(word symbol);
