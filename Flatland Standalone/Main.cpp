@@ -125,6 +125,11 @@ blockset_list *old_blockset_list_ptr;
 blockset_list *blockset_list_ptr;
 blockset *custom_blockset_ptr;
 
+// Metadata list.
+
+metadata *first_metadata_ptr;
+metadata *last_metadata_ptr;
+
 // Symbol to block definition mapping table.  If single character symbols are
 // being used, only the first 127 entries are valid.  If double character
 // symbols are being used, all entries are valid.
@@ -3535,6 +3540,8 @@ init_player(void)
 	spot_URL_dir = "";
 	old_blockset_list_ptr = NULL;
 	blockset_list_ptr = NULL;
+	first_metadata_ptr = NULL;
+	last_metadata_ptr = NULL;
 	last_refresh_time_ms = 0;
 	refresh_count = 0;
 

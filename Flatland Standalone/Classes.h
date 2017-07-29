@@ -635,6 +635,16 @@ struct circle {
 	int x, y, r;
 };
 
+//------------------------------------------------------------------------------
+// Metadata class.
+//------------------------------------------------------------------------------
+
+struct metadata {
+	string name;
+	string content;
+	metadata *next_metadata_ptr;
+};
+
 //==============================================================================
 // Polygon rasterisation classes.
 //==============================================================================
@@ -1382,8 +1392,10 @@ struct blockset {
 	string URL;									// URL of blockset.
 	string name;								// Name of blockset.
 	block_def *block_def_list;					// List of block definitions.
+	string placeholder_texture_URL;				// URL of placeholder texture.
 	texture *placeholder_texture_ptr;			// Placeholder texture.
 	bool sky_defined;							// TRUE if sky defined.
+	string sky_texture_URL;						// URL of sky texture.
 	texture *sky_texture_ptr;					// Pointer to sky texture.
 	bool sky_colour_set;						// TRUE is sky colour set.
 	RGBcolour sky_colour;						// Sky colour.
@@ -1395,6 +1407,7 @@ struct blockset {
 	bool ground_colour_set;						// TRUE if ground colour set.
 	RGBcolour ground_colour;					// Ground colour.
 	bool orb_defined;							// TRUE if orb defined.
+	string orb_texture_URL;						// URL of orb texture.
 	texture *orb_texture_ptr;					// Pointer to orb texture.
 	bool orb_direction_set;						// TRUE if orb direction set.
 	direction orb_direction;					// Orb direction.

@@ -1806,9 +1806,10 @@ parse_orb_tag(blockset *blockset_ptr)
 
 	// Initialise the orb parameters that were given.
 
-	if (parsed_attribute[ORB_TEXTURE])
-		blockset_ptr->orb_texture_ptr = 
-			load_texture(blockset_ptr, orb_texture, true);
+	if (parsed_attribute[ORB_TEXTURE]) {
+		blockset_ptr->orb_texture_URL = orb_texture;
+		blockset_ptr->orb_texture_ptr = load_texture(blockset_ptr, orb_texture, true);
+	}
 
 #ifdef STREAMING_MEDIA
 
@@ -1843,7 +1844,7 @@ parse_orb_tag(blockset *blockset_ptr)
 		}
 		exit_ptr->URL = orb_href;
 		if (parsed_attribute[ORB_IS_SPOT])
-			exit_ptr->is_spot_URL = true;
+			exit_ptr->is_spot_URL = orb_is_spot;
 		if (parsed_attribute[ORB_TARGET])
 			exit_ptr->target = orb_target;
 		if (parsed_attribute[ORB_TEXT])
@@ -1872,8 +1873,7 @@ parse_placeholder_tag(blockset *blockset_ptr)
 	if ((texture_ptr = load_texture(blockset_ptr, placeholder_texture, false)) == NULL || 
 		(texture_ptr->blockset_ptr == NULL && (!download_URL(texture_ptr->URL, NULL, false) ||
 		 !load_image(texture_ptr->URL, curr_file_path, texture_ptr)))) {
-		warning("Unable to download placeholder texture from %s", 
-			placeholder_texture);
+		warning("Unable to download placeholder texture from %s", placeholder_texture);
 		if (texture_ptr != NULL)
 			DEL(texture_ptr, texture);
 		return;
@@ -1881,6 +1881,7 @@ parse_placeholder_tag(blockset *blockset_ptr)
 
 	// Store the pointer to the placeholder texture in the blockset.
 
+	blockset_ptr->placeholder_texture_URL = placeholder_texture;
 	blockset_ptr->placeholder_texture_ptr = texture_ptr;
 }
 
@@ -1899,8 +1900,10 @@ parse_sky_tag(blockset *blockset_ptr)
 
 	// Initialise the sky parameters that were given.
 
-	if (parsed_attribute[SKY_TEXTURE])
+	if (parsed_attribute[SKY_TEXTURE]) {
+		blockset_ptr->sky_texture_URL = sky_texture;
 		blockset_ptr->sky_texture_ptr = load_texture(blockset_ptr, sky_texture, true);
+	}
 
 #ifdef STREAMING_MEDIA
 
@@ -2190,6 +2193,32 @@ parse_debug_tag(void)
 		spot_debug_level = SHOW_ERRORS_ONLY; 
 }
 
+//------------------------------------------------------------------------------
+// Parse a meta tag.
+//------------------------------------------------------------------------------
+
+static void
+parse_meta_tag(void)
+{
+	metadata *metadata_ptr;
+
+	// Create a new metadata object, and add it to the end of the metadata list.
+
+	NEW(metadata_ptr, metadata);
+	if (metadata_ptr == NULL) {
+		memory_warning("metadata");
+		return;
+	}
+	metadata_ptr->name = meta_name;
+	metadata_ptr->content = meta_content;
+	metadata_ptr->next_metadata_ptr = NULL;
+	if (last_metadata_ptr != NULL) {
+		last_metadata_ptr->next_metadata_ptr = metadata_ptr;
+	} else {
+		first_metadata_ptr = metadata_ptr;
+	}
+	last_metadata_ptr = metadata_ptr;
+}
 
 //------------------------------------------------------------------------------
 // Parse a fog tag.
@@ -4357,6 +4386,7 @@ parse_head_tags(void)
 			world_ptr->ground_level_exists = true;
 			break;
 		case TOKEN_META:
+			parse_meta_tag();
 			break;
 		case TOKEN_MAP:
 			parse_map_tag();
@@ -4411,6 +4441,15 @@ parse_spot_file(char *spot_URL, char *spot_file_path)
 
 	curr_load_index = 0;
 	global_fog_enabled = false;
+
+	// Delete the metadata list.
+
+	while (first_metadata_ptr != NULL) {
+		metadata *next_metadata_ptr = first_metadata_ptr->next_metadata_ptr;
+		DEL(first_metadata_ptr, metadata);
+		first_metadata_ptr = next_metadata_ptr;
+	}
+	last_metadata_ptr = NULL;
 
 #ifdef STREAMING_MEDIA
 
@@ -4618,29 +4657,62 @@ radius_to_string(float radius)
 	return attribute_string;
 }
 
+static string
+direction_to_string(direction dir)
+{
+	sprintf(attribute_string, "(%g, %g)", dir.angle_y, dir.angle_x);
+	return attribute_string;
+}
+
 void
 save_spot_file(const char *spot_file_path)
 {
 	FILE *fp;
 	if ((fp = fopen(spot_file_path, "w")) != NULL) {
+
+		// Generate the opening spot tag, followed by the opening head tag.
+
 		fprintf(fp, "<spot version=\"%s\">\n", version_number_to_string(min_rover_version));
 		fprintf(fp, "\t<head>\n");
+
+		// If an ambient_light tag was present, generate it.
+
 		if (got_ambient_light_tag) {
 			fprintf(fp, "\t\t<ambient_light brightness=\"%s\" color=\"%s\"/>\n", (char *)percentage_to_string(ambient_light_brightness),
 				(char *)colour_to_string(ambient_light_colour));
 		}
+
+		// If an ambient_sound tag was present, generate it.
+
 		if (got_ambient_sound_tag) {
 			fprintf(fp, "\t\t<ambient_sound file=\"%s\" volume=\"%s\" playback=\"%s\" delay=\"%s\"/>\n", (char *)ambient_sound_ptr->URL,
 				(char *)percentage_to_string(ambient_sound_ptr->volume),
 				(char *)attribute_value_to_string(VALUE_PLAYBACK_MODE, ambient_sound_ptr->playback_mode), 
 				(char *)delay_range_to_string(ambient_sound_ptr->delay_range));
 		}
+
+		// If a base tag was present, or this spot came from the web, generate it.
+
 		if (got_base_tag || !_strnicmp(spot_URL_dir, "http://", 7)) {
 			fprintf(fp, "\t\t<base href=\"%s\"/>\n", (char *)spot_URL_dir);
 		}
+
+		// Generate a blockset tag for every loaded blockset.
+
+		blockset *blockset_ptr = blockset_list_ptr->first_blockset_ptr;
+		while (blockset_ptr != NULL) {
+			fprintf(fp, "\t\t<blockset href=\"%s\"/>\n", (char *)blockset_ptr->URL);
+			blockset_ptr = blockset_ptr->next_blockset_ptr;
+		}
+
+		// If a debug tag was present, generate it.
+
 		if (got_debug_tag) {
 			fprintf(fp, "\t\t<debug warnings=\"%s\"/>\n", (char *)attribute_value_to_string(VALUE_BOOLEAN, debug_warnings)); 
 		}
+
+		// If a fog tag was present, generate it.
+
 		if (global_fog_enabled) {
 			fprintf(fp, "\t\t<fog style=\"%s\" color=\"%s\"", (char *)attribute_value_to_string(VALUE_FOG_STYLE, global_fog.style),
 				(char *)colour_to_string(global_fog.colour, true));
@@ -4656,6 +4728,9 @@ save_spot_file(const char *spot_file_path)
 			}
 			fprintf(fp, "/>\n");
 		}
+
+		// If a ground tag was present, generate it.
+
 		if (custom_blockset_ptr->ground_defined) {
 			fprintf(fp, "\t\t<ground");
 			if (custom_blockset_ptr->ground_texture_ptr) {
@@ -4666,11 +4741,88 @@ save_spot_file(const char *spot_file_path)
 			}
 			fprintf(fp, "/>\n");
 		}
+
+		// Generate the map tag.
+
 		fprintf(fp, "\t\t<map dimensions=\"(%d, %d, %d)\" style=\"%s\"/>\n", world_ptr->columns, world_ptr->rows, 
 			world_ptr->ground_level_exists ? world_ptr->levels - 2 : world_ptr->levels - 1,
 			(char *)attribute_value_to_string(VALUE_MAP_STYLE, world_ptr->map_style));
+
+		// Generate a tag for all metadata.
+
+		metadata *metadata_ptr = first_metadata_ptr;
+		while (metadata_ptr) {
+			fprintf(fp, "\t\t<meta name=\"%s\" content=\"%s\"/>\n", (char *)metadata_ptr->name, (char *)metadata_ptr->content);
+			metadata_ptr = metadata_ptr->next_metadata_ptr;
+		}
+
+		// If an orb tag was present, generate it.
+
+		if (custom_blockset_ptr->orb_defined) {
+			fprintf(fp, "\t\t<orb");
+			if (custom_blockset_ptr->orb_texture_ptr) {
+				fprintf(fp, " texture=\"%s\"", (char *)custom_blockset_ptr->orb_texture_URL);
+			}
+			if (custom_blockset_ptr->orb_direction_set) {
+				fprintf(fp, " position=\"%s\"", (char *)direction_to_string(custom_blockset_ptr->orb_direction));
+			}
+			if (custom_blockset_ptr->orb_brightness_set) {
+				fprintf(fp, " brightness=\"%s\"", (char *)percentage_to_string(custom_blockset_ptr->orb_brightness));
+			}
+			if (custom_blockset_ptr->orb_colour_set) {
+				fprintf(fp, " color=\"%s\"", (char *)colour_to_string(custom_blockset_ptr->orb_colour));
+			}
+			if (custom_blockset_ptr->orb_exit_ptr) {
+				hyperlink *orb_exit_ptr = custom_blockset_ptr->orb_exit_ptr;
+				fprintf(fp, " href=\"%s\"", (char *)orb_exit_ptr->URL);
+				if (orb_exit_ptr->is_spot_URL) {
+					fprintf(fp, " is_spot=\"yes\"");
+				}
+				if (orb_exit_ptr->target != "") {
+					fprintf(fp, " target=\"%s\"", (char *)orb_exit_ptr->target);
+				}
+				if (orb_exit_ptr->label != "") {
+					fprintf(fp, " text=\"%s\"", (char *)orb_exit_ptr->label);
+				}
+			}
+			fprintf(fp, "/>\n");
+		}
+
+		// If a placeholder tag was present, generate it.
+
+		if (custom_blockset_ptr->placeholder_texture_ptr) {
+			fprintf(fp, "\t\t<placeholder texture=\"%s\"/>\n", (char *)custom_blockset_ptr->placeholder_texture_URL);
+		}
+
+		// If a sky tag was present, generate it.
+
+		if (custom_blockset_ptr->sky_defined) {
+			fprintf(fp, "\t\t<sky");
+			if (custom_blockset_ptr->sky_texture_ptr) {
+				fprintf(fp, " texture=\"%s\"", (char *)custom_blockset_ptr->sky_texture_URL);
+			}
+			if (custom_blockset_ptr->sky_colour_set) {
+				fprintf(fp, " color=\"%s\"", (char *)colour_to_string(custom_blockset_ptr->sky_colour));
+			}
+			if (custom_blockset_ptr->sky_brightness_set) {
+				fprintf(fp, " brightness=\"%s\"", (char *)percentage_to_string(custom_blockset_ptr->sky_brightness));
+			}
+			fprintf(fp, "/>\n");
+		}
+
+		// If a title tag was present, generate it.
+
+		if (got_title_tag) {
+			fprintf(fp, "\t\t<title name=\"%s\"/>\n", (char *)title_name);
+		}
+
+		// Generate the closing head tag, and the opening body tag.
+
 		fprintf(fp, "\t</head>\n");
 		fprintf(fp, "\t<body>\n");
+
+		// Generate the closing body tag, and the closing spot tag.
+
 		fprintf(fp, "\t</body>\n");
 		fprintf(fp, "</spot>\n");
 		fclose(fp);

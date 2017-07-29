@@ -95,6 +95,11 @@ extern blockset_list *old_blockset_list_ptr;
 extern blockset_list *blockset_list_ptr;
 extern blockset *custom_blockset_ptr;
 
+// Metadata list.
+
+extern metadata *first_metadata_ptr;
+extern metadata *last_metadata_ptr;
+
 // Symbol to block definition mapping table.
 
 extern block_def *block_symbol_table[16384];

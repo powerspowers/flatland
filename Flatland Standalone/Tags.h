@@ -345,8 +345,8 @@ static attr_def map_attr_list[MAP_ATTRIBUTES] = {
 static string meta_name;
 static string meta_content;
 static attr_def meta_attr_list[META_ATTRIBUTES] = {
-	{TOKEN_NAME, VALUE_STRING, &meta_name, false},
-	{TOKEN_CONTENT, VALUE_STRING, &meta_content, false}
+	{TOKEN_NAME, VALUE_STRING, &meta_name, true},
+	{TOKEN_CONTENT, VALUE_STRING, &meta_content, true}
 };
 
 // ORB tag (style and spot files).
@@ -1091,8 +1091,7 @@ static tag_def block_tag_list[] = {
 	{TOKEN_FRAMES, frames_attr_list, FRAMES_ATTRIBUTES, true},
 	{TOKEN_LOOPS, loops_attr_list, LOOPS_ATTRIBUTES, true},
 	{TOKEN_PARTS, NULL, 0, true},
-	{TOKEN_POINT_LIGHT, point_light_attr_list, POINT_LIGHT_ATTRIBUTES - 1, 
-		false},
+	{TOKEN_POINT_LIGHT, point_light_attr_list, POINT_LIGHT_ATTRIBUTES - 1, false},
 	{TOKEN_SOUND, sound_attr_list, SOUND_ATTRIBUTES - 1, false},
 	{TOKEN_SPOT_LIGHT, spot_light_attr_list, SPOT_LIGHT_ATTRIBUTES - 1, false},
 	{TOKEN_VERTICES, vertices_attr_list, VERTICES_ATTRIBUTES, true},
@@ -1105,8 +1104,7 @@ static tag_def sprite_block_tag_list[] = {
 	{TOKEN_EXIT, exit_attr_list, EXIT_ATTRIBUTES - 1, false},
 	{TOKEN_PARAM, sprite_attr_param_list, SPRITE_PARAM_ATTRIBUTES, false},
 	{TOKEN_PART, part_attr_list, SPRITE_PART_ATTRIBUTES, false},
-	{TOKEN_POINT_LIGHT, point_light_attr_list, POINT_LIGHT_ATTRIBUTES - 1, 
-		false},
+	{TOKEN_POINT_LIGHT, point_light_attr_list, POINT_LIGHT_ATTRIBUTES - 1, false},
 	{TOKEN_SOUND, sound_attr_list, SOUND_ATTRIBUTES - 1, false},
 	{TOKEN_SPOT_LIGHT, spot_light_attr_list, SPOT_LIGHT_ATTRIBUTES - 1, false},
 	{TOKEN_NONE}
@@ -1136,8 +1134,7 @@ static tag_def body_tag_list[] = {
 // CACHE tag list (cache file only).
 
 static tag_def cache_tag_list[] = {
-	{TOKEN_BLOCKSET, cached_blockset_attr_list, CACHED_BLOCKSET_ATTRIBUTES, 
-		false},
+	{TOKEN_BLOCKSET, cached_blockset_attr_list, CACHED_BLOCKSET_ATTRIBUTES, false},
 	{TOKEN_NONE}
 };
 
@@ -1151,8 +1148,7 @@ static tag_def structural_create_tag_list[] = {
 	{TOKEN_IMPORT, import_attr_list, IMPORT_ATTRIBUTES, false},
 	{TOKEN_PARAM, param_attr_list, PARAM_ATTRIBUTES, false},
 	{TOKEN_PART, create_part_attr_list, CREATE_PART_ATTRIBUTES, false},
-	{TOKEN_POINT_LIGHT, point_light_attr_list, POINT_LIGHT_ATTRIBUTES - 1,
-		false},
+	{TOKEN_POINT_LIGHT, point_light_attr_list, POINT_LIGHT_ATTRIBUTES - 1, false},
 	{TOKEN_POPUP, popup_attr_list, POPUP_ATTRIBUTES - 1, false},
 	{TOKEN_SCRIPT, action_attr_list, ACTION_ATTRIBUTES - 1, true},
 	{TOKEN_SOUND, sound_attr_list, SOUND_ATTRIBUTES - 1, false},
@@ -1170,8 +1166,7 @@ static tag_def sprite_create_tag_list[] = {
 	{TOKEN_IMPORT, import_attr_list, IMPORT_ATTRIBUTES, false},
 	{TOKEN_PARAM, sprite_attr_param_list, SPRITE_PARAM_ATTRIBUTES, false},
 	{TOKEN_PART, create_part_attr_list, PART_ATTRIBUTES, false},
-	{TOKEN_POINT_LIGHT, point_light_attr_list, POINT_LIGHT_ATTRIBUTES - 1,
-		false},
+	{TOKEN_POINT_LIGHT, point_light_attr_list, POINT_LIGHT_ATTRIBUTES - 1, false},
 	{TOKEN_POPUP, popup_attr_list, POPUP_ATTRIBUTES - 1, false},
 	{TOKEN_SCRIPT, action_attr_list, ACTION_ATTRIBUTES - 1, true},
 	{TOKEN_SOUND, sound_attr_list, SOUND_ATTRIBUTES - 1, false},
@@ -1189,10 +1184,8 @@ static tag_def directory_tag_list[] = {
 // HEAD tag list (spot file only).
 
 static tag_def head_tag_list[] = {
-	{TOKEN_AMBIENT_LIGHT, ambient_light_attr_list, AMBIENT_LIGHT_ATTRIBUTES,
-		false},
-	{TOKEN_AMBIENT_SOUND, ambient_sound_attr_list, AMBIENT_SOUND_ATTRIBUTES,
-		false},
+	{TOKEN_AMBIENT_LIGHT, ambient_light_attr_list, AMBIENT_LIGHT_ATTRIBUTES, false},
+	{TOKEN_AMBIENT_SOUND, ambient_sound_attr_list, AMBIENT_SOUND_ATTRIBUTES, false},
 	{TOKEN_BASE, base_attr_list, BASE_ATTRIBUTES, false},
 	{TOKEN_BLOCKSET, blockset_attr_list, BLOCKSET_ATTRIBUTES, false},
 	{TOKEN_DEBUG, debug_attr_list, DEBUG_ATTRIBUTES, false},
@@ -1213,11 +1206,9 @@ static tag_def head_tag_list[] = {
 // IMAGEMAP tag list (block file only).
 
 static tag_def imagemap_tag_list[] = {
-	{TOKEN_ACTION, imagemap_action_attr_list, IMAGEMAP_ACTION_ATTRIBUTES,
-		true},
+	{TOKEN_ACTION, imagemap_action_attr_list, IMAGEMAP_ACTION_ATTRIBUTES, true},
 	{TOKEN_AREA, area_attr_list, AREA_ATTRIBUTES, true},
-	{TOKEN_SCRIPT, imagemap_action_attr_list, IMAGEMAP_ACTION_ATTRIBUTES,
-		true},
+	{TOKEN_SCRIPT, imagemap_action_attr_list, IMAGEMAP_ACTION_ATTRIBUTES, true},
 	{TOKEN_NONE}
 };
 
