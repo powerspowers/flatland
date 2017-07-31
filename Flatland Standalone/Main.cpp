@@ -147,6 +147,7 @@ block *fixed_block_list;
 // Global list of entrances.
 
 entrance *global_entrance_list;
+entrance *last_global_entrance_ptr;
 
 // List of imagemaps.
 
@@ -976,6 +977,7 @@ start_up_spot(void)
 	// Initialise various global lists.
 
 	global_entrance_list = NULL;
+	last_global_entrance_ptr = NULL;
 	imagemap_list = NULL;
 	global_light_list = NULL;
 	global_sound_list = NULL;

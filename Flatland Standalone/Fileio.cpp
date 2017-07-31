@@ -3349,7 +3349,7 @@ parse_define_tag(string &script)
 //------------------------------------------------------------------------------
 
 static entrance *
-parse_entrance_tag(entrance *&entrance_list)
+parse_entrance_tag(entrance **entrance_list, entrance **last_entrance_ptr = NULL)
 {
 	entrance *entrance_ptr;
 
@@ -3371,8 +3371,15 @@ parse_entrance_tag(entrance *&entrance_list)
 
 	entrance_ptr->name = entrance_name;
 	entrance_ptr->initial_direction = entrance_angle;
-	entrance_ptr->next_entrance_ptr = entrance_list;
-	entrance_list = entrance_ptr;
+	entrance_ptr->next_entrance_ptr = NULL;
+	if (last_entrance_ptr && *last_entrance_ptr) {
+		(*last_entrance_ptr)->next_entrance_ptr = entrance_ptr;
+	} else {
+		*entrance_list = entrance_ptr;
+	}
+	if (last_entrance_ptr) {
+		*last_entrance_ptr = entrance_ptr;
+	}
 
 	// Return a pointer to the entrance.
 
@@ -3784,18 +3791,23 @@ parse_next_create_tag(int tag_token, tag_def *create_tag_list,
 
 	case TOKEN_ENTRANCE:
 		if (custom_block_def_ptr->entrance_ptr == NULL) {
-			if (custom_block_def_ptr->allow_entrance)
-				parse_entrance_tag(custom_block_def_ptr->entrance_ptr);
-			else
-				warning("Block with name \"%s\" does not permit an entrance",
-					custom_block_def_ptr->name);
+			if (custom_block_def_ptr->allow_entrance) {
+				parse_entrance_tag(&custom_block_def_ptr->entrance_ptr);
+			} else {
+				warning("Block with name \"%s\" does not permit an entrance", custom_block_def_ptr->name);
+			}
+		} else {
+			warning("Duplicate entrance tag in block with name \"%s\"", custom_block_def_ptr->name);
 		}
 		break;
 
 	case TOKEN_EXIT:
 		if (!got_exit_tag) {
 			got_exit_tag = true;
+			custom_block_def_ptr->custom_exit = true;
 			parse_exit_tag(custom_block_def_ptr->exit_ptr);
+		} else {
+			warning("Duplicate exit tag in block with name \"%s\"", custom_block_def_ptr->name);
 		}
 		break;
 
@@ -3828,11 +3840,10 @@ parse_next_create_tag(int tag_token, tag_def *create_tag_list,
 
 	case TOKEN_DEFINE:
 
-		// Parse the DEFINE tag and append the script to the custom block's
-		// script.
+		// Parse the DEFINE tag and append the script to the custom block's script.
 
 		parse_define_tag(script);
-		custom_block_def_ptr->script = script + custom_block_def_ptr->script;
+		custom_block_def_ptr->script += script;
 		break;
 
 	case TOKEN_IMPORT:
@@ -4008,7 +4019,7 @@ parse_next_body_tag(int tag_token, bool allow_import_tag)
 
 	case TOKEN_DEFINE:
 		parse_define_tag(script);
-		global_script = script + global_script;
+		global_script += script;
 		break;
 
 	case TOKEN_ENTRANCE:
@@ -4016,7 +4027,7 @@ parse_next_body_tag(int tag_token, bool allow_import_tag)
 		// Parse the entrance tag, add an entrance to the global entrance
 		// list.
 
-		entrance_ptr = parse_entrance_tag(global_entrance_list);
+		entrance_ptr = parse_entrance_tag(&global_entrance_list, &last_global_entrance_ptr);
 
 		// Store the pointer to the square in the entrance.
 
@@ -4664,6 +4675,53 @@ direction_to_string(direction dir)
 	return attribute_string;
 }
 
+static string
+location_to_string(int column, int row, int level)
+{
+	sprintf(attribute_string, "(%d, %d, %d)", column + 1, row + 1, world_ptr->ground_level_exists ? level : level + 1);
+	return attribute_string;
+}
+
+static void
+generate_entrance_tag(FILE *fp, const char *prefix, entrance *entrance_ptr)
+{
+	fprintf(fp, "%s<entrance name=\"%s\" angle\"%g, %g\"", prefix, (char *)entrance_ptr->name, 
+		entrance_ptr->initial_direction.angle_y, entrance_ptr->initial_direction.angle_x);
+	if (entrance_ptr->square_ptr) {
+		int column, row, level;
+		world_ptr->get_square_location(entrance_ptr->square_ptr, &column, &row, &level);
+		fprintf(fp, " location=\"%s\"", (char *)location_to_string(column, row, level));
+	}
+	fprintf(fp, "/>\n");
+}
+
+static void
+generate_common_exit_attributes(FILE *fp, hyperlink *exit_ptr)
+{
+	fprintf(fp, " href=\"%s\"", (char *)exit_ptr->URL);
+	if (exit_ptr->is_spot_URL) {
+		fprintf(fp, " is_spot=\"yes\"");
+	}
+	if (exit_ptr->target != "") {
+		fprintf(fp, " target=\"%s\"", (char *)exit_ptr->target);
+	}
+	if (exit_ptr->label != "") {
+		fprintf(fp, " text=\"%s\"", (char *)exit_ptr->label);
+	}
+}
+
+static void
+generate_exit_tag(FILE *fp, const char *prefix, hyperlink *exit_ptr, int column = -1, int row = -1, int level = -1)
+{
+	fprintf(fp, "%s<exit", prefix);
+	generate_common_exit_attributes(fp, exit_ptr);
+	fprintf(fp, " trigger=\"%s\"", (char *)attribute_value_to_string(VALUE_EXIT_TRIGGER, exit_ptr->trigger_flags));
+	if (column >= 0 && row >= 0 && level >= 0) {
+		fprintf(fp, " location=\"%s\"", (char *)location_to_string(column, row, level));
+	}
+	fprintf(fp, "/>\n");
+}
+
 void
 save_spot_file(const char *spot_file_path)
 {
@@ -4773,17 +4831,7 @@ save_spot_file(const char *spot_file_path)
 				fprintf(fp, " color=\"%s\"", (char *)colour_to_string(custom_blockset_ptr->orb_colour));
 			}
 			if (custom_blockset_ptr->orb_exit_ptr) {
-				hyperlink *orb_exit_ptr = custom_blockset_ptr->orb_exit_ptr;
-				fprintf(fp, " href=\"%s\"", (char *)orb_exit_ptr->URL);
-				if (orb_exit_ptr->is_spot_URL) {
-					fprintf(fp, " is_spot=\"yes\"");
-				}
-				if (orb_exit_ptr->target != "") {
-					fprintf(fp, " target=\"%s\"", (char *)orb_exit_ptr->target);
-				}
-				if (orb_exit_ptr->label != "") {
-					fprintf(fp, " text=\"%s\"", (char *)orb_exit_ptr->label);
-				}
+				generate_common_exit_attributes(fp, custom_blockset_ptr->orb_exit_ptr);
 			}
 			fprintf(fp, "/>\n");
 		}
@@ -4821,11 +4869,59 @@ save_spot_file(const char *spot_file_path)
 		fprintf(fp, "\t</head>\n");
 		fprintf(fp, "\t<body>\n");
 
+		// Generate a define tag for the global script, if it's not empty.
+
+		if (global_script != "") {
+			fprintf(fp, "\t\t<define>%s</define>\n", (char *)global_script);
+		}
+
+		// Generate an entrance tag for every global entrance.
+
+		entrance *entrance_ptr = global_entrance_list;
+		while (entrance_ptr) {
+			generate_entrance_tag(fp, "\t\t", entrance_ptr);
+			entrance_ptr = entrance_ptr->next_entrance_ptr;
+		}
+
+		// Generate an exit tag for every exit on a square.
+
+		for (int level = 0; level < world_ptr->levels; level++) {
+			for (int row = 0; row < world_ptr->rows; row++) {
+				for (int column = 0; column < world_ptr->columns; column++) {
+					square *square_ptr = world_ptr->get_square_ptr(column, row, level);
+					if (square_ptr->exit_ptr) {
+						generate_exit_tag(fp, "\t\t", square_ptr->exit_ptr, column, row, level);
+					}
+				}
+			}
+		}
+
 		// Generate a create tag for every custom block definition.
 
 		block_def *block_def_ptr = custom_blockset_ptr->block_def_list;
 		while (block_def_ptr != NULL) {
 			fprintf(fp, "\t\t<create symbol=\"%s\" block=\"%s\">\n", (char *)block_def_ptr->get_symbol(), (char *)block_def_ptr->source_block);
+
+			// If the block definition has a script, generate a define tag.
+
+			if (block_def_ptr->script != "") {
+				fprintf(fp, "\t\t\t<define>%s</define>\n", (char *)block_def_ptr->script);
+			}
+
+			// If the block definition has an entrance, generate an entrance tag.
+
+			if (block_def_ptr->entrance_ptr) {
+				generate_entrance_tag(fp, "\t\t\t", block_def_ptr->entrance_ptr);
+			}
+
+			// If the block definition has a custom exit, generate an exit tag.
+
+			if (block_def_ptr->exit_ptr && block_def_ptr->custom_exit) {
+				generate_exit_tag(fp, "\t\t\t", block_def_ptr->exit_ptr);
+			}
+
+			// Generate the end create tag.
+
 			fprintf(fp, "\t\t</create>\n");
 			block_def_ptr = block_def_ptr->next_block_def_ptr;
 		}

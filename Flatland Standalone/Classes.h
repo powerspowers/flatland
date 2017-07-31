@@ -1351,6 +1351,7 @@ struct block_def {
 	popup *popup_list;				// List of popups (if any).
 	popup *last_popup_ptr;			// Pointer to last popup in list (if any).
 	entrance *entrance_ptr;			// Pointer to entrance (if any).
+	bool custom_exit;				// TRUE if custom block definition has an exit.
 	hyperlink *exit_ptr;			// Pointer to exit (if any).
 	int trigger_flags;				// Trigger flags.
 	trigger *trigger_list;			// List of triggers (if any).

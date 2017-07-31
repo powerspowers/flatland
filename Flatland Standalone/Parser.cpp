@@ -4512,6 +4512,8 @@ attribute_value_to_string(int value_type, int value)
 	switch (value_type) {
 	case VALUE_BOOLEAN:
 		return get_value_str_from_list(value, boolean_value_list, BOOLEAN_VALUES);
+	case VALUE_EXIT_TRIGGER:
+		return get_value_str_from_list(value, exit_trigger_value_list, EXIT_TRIGGER_VALUES);
 	case VALUE_FOG_STYLE:
 		return get_value_str_from_list(value, fog_style_value_list, FOG_STYLE_VALUES);
 	case VALUE_MAP_STYLE:

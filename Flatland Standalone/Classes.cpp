@@ -2677,6 +2677,7 @@ block_def::block_def()
 	popup_list = NULL;
 	last_popup_ptr = NULL;
 	entrance_ptr = NULL;
+	custom_exit = false;
 	exit_ptr = NULL;
 	trigger_flags = 0;
 	trigger_list = NULL;

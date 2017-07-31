@@ -115,6 +115,7 @@ extern block *fixed_block_list;
 // Global list of entrances.
 
 extern entrance *global_entrance_list;
+extern entrance *last_global_entrance_ptr;
 
 // List of imagemaps.
 
