@@ -1184,10 +1184,12 @@ struct popup {
 	bool always_visible;			// TRUE if popup is always visible.
 	vertex position;				// Position of popup.
 	int window_alignment;			// Placement of popup on window.
+	float radius;					// Radius of popup.
 	float radius_squared;			// Radius of popup squared.
 	float brightness;				// Popup brightness.
 	int brightness_index;			// Popup brightness index.
 	RGBcolour colour;				// Background colour.
+	string bg_texture_URL;			// URL of background texture.
 	texture *bg_texture_ptr;		// Pointer to background texture (or NULL).
 	texture *fg_texture_ptr;		// Pointer to foreground texture (or NULL).
 	bool create_foreground;			// TRUE if foreground texture is required.
@@ -1196,6 +1198,7 @@ struct popup {
 	string text;					// Text to be drawn on popup.
 	RGBcolour text_colour;			// Text colour.
 	int text_alignment;				// Text alignment mode.
+	string imagemap_name;			// Name of imagemap.
 	imagemap *imagemap_ptr;			// Pointer to imagemap (or NULL).
 	pixmap *bg_pixmap_ptr;			// Pointer to current background pixmap.
 	int sx, sy;						// Current screen position.

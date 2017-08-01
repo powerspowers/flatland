@@ -1146,8 +1146,7 @@ parse_point_light_tag(light *&light_list, light *&last_light_ptr, bool allow_rep
 //------------------------------------------------------------------------------
 
 static popup *
-parse_popup_tag(popup *&popup_list, popup *&last_popup_ptr,
-				bool allow_replacement)
+parse_popup_tag(popup *&popup_list, popup *&last_popup_ptr, bool allow_replacement)
 {
 	popup *popup_ptr;
 
@@ -1230,9 +1229,11 @@ parse_popup_tag(popup *&popup_list, popup *&last_popup_ptr,
 	// Initialise the background texture if the texture or stream parameter
 	// was given.
 
-	if (parsed_attribute[POPUP_TEXTURE])
+	if (parsed_attribute[POPUP_TEXTURE]) {
+		popup_ptr->bg_texture_URL = popup_texture;
 		popup_ptr->bg_texture_ptr = load_texture(custom_blockset_ptr,
 			popup_texture, true);
+	}
 
 #ifdef STREAMING_MEDIA
 
@@ -1263,6 +1264,7 @@ parse_popup_tag(popup *&popup_list, popup *&last_popup_ptr,
 	// that name, if it exists.
 
 	if (parsed_attribute[POPUP_IMAGEMAP]) {
+		popup_ptr->imagemap_name = popup_imagemap;
 		if ((popup_ptr->imagemap_ptr = find_imagemap(popup_imagemap)) == NULL)
 			warning("There is no imagemap with name \"%s\"", popup_imagemap);
 	}
@@ -4743,6 +4745,14 @@ location_to_string(int column, int row, int level)
 }
 
 static string
+square_location_to_string(square *square_ptr)
+{
+	int column, row, level;
+	world_ptr->get_square_location(square_ptr, &column, &row, &level);
+	return location_to_string(column, row, level);
+}
+
+static string
 map_coords_to_string(mapcoords map_coords)
 {
 	return location_to_string(map_coords.column, map_coords.row, map_coords.level);
@@ -4761,9 +4771,7 @@ generate_entrance_tag(FILE *fp, const char *prefix, entrance *entrance_ptr)
 	fprintf(fp, "%s<entrance name=\"%s\" angle\"%g, %g\"", prefix, (char *)entrance_ptr->name, 
 		entrance_ptr->initial_direction.angle_y, entrance_ptr->initial_direction.angle_x);
 	if (entrance_ptr->square_ptr) {
-		int column, row, level;
-		world_ptr->get_square_location(entrance_ptr->square_ptr, &column, &row, &level);
-		fprintf(fp, " location=\"%s\"", (char *)location_to_string(column, row, level));
+		fprintf(fp, " location=\"%s\"", (char *)square_location_to_string(entrance_ptr->square_ptr));
 	}
 	fprintf(fp, "/>\n");
 }
@@ -4775,10 +4783,10 @@ generate_common_exit_attributes(FILE *fp, hyperlink *exit_ptr)
 	if (exit_ptr->is_spot_URL) {
 		fprintf(fp, " is_spot=\"yes\"");
 	}
-	if (exit_ptr->target != "") {
+	if (strlen(exit_ptr->target) > 0) {
 		fprintf(fp, " target=\"%s\"", (char *)exit_ptr->target);
 	}
-	if (exit_ptr->label != "") {
+	if (strlen(exit_ptr->label) > 0) {
 		fprintf(fp, " text=\"%s\"", (char *)exit_ptr->label);
 	}
 }
@@ -4805,25 +4813,54 @@ generate_light_tag(FILE *fp, const char *prefix, light *light_ptr, bool has_map_
 	} else {
 		fprintf(fp, "spot_light style=\"%s\"", (char *)attribute_value_to_string(VALUE_SPOT_LIGHT_STYLE, light_ptr->style));
 	}
-	if (light_ptr->name != "") {
+	if (strlen(light_ptr->name) > 0) {
 		fprintf(fp, " name=\"%s\"", (char *)light_ptr->name);
 	}
 	if (light_ptr->position.x != UNITS_PER_HALF_BLOCK && light_ptr->position.y != UNITS_PER_HALF_BLOCK && light_ptr->position.z != UNITS_PER_HALF_BLOCK) {
 		fprintf(fp, " position=\"%s\"", (char *)vertex_to_string(light_ptr->position));
 	}
-	fprintf(fp, " brightness=\"%s\"", (char *)percentage_range_to_string(light_ptr->intensity_range));
-	fprintf(fp, " radius=\"%s\"", (char *)radius_to_string(light_ptr->radius));
+	fprintf(fp, " brightness=\"%s\" radius=\"%s\"", (char *)percentage_range_to_string(light_ptr->intensity_range), (char *)radius_to_string(light_ptr->radius));
 	if (light_ptr->speed) {
 		fprintf(fp, " speed=\"%g\"", light_ptr->speed);
 	}
-	fprintf(fp, " flood=\"%s\"", (char *)boolean_to_string(light_ptr->flood));
-	fprintf(fp, " color=\"%s\"", (char *)colour_to_string(light_ptr->colour));
+	fprintf(fp, " flood=\"%s\" color=\"%s\"", (char *)boolean_to_string(light_ptr->flood), (char *)colour_to_string(light_ptr->colour));
 	if (!is_point_light) {
-		fprintf(fp, " direction=\"%s\"", (char *)direction_range_to_string(light_ptr->dir_range));
-		fprintf(fp, " cone=\"%g\"", light_ptr->cone_angle);
+		fprintf(fp, " direction=\"%s\" cone=\"%g\"", (char *)direction_range_to_string(light_ptr->dir_range), light_ptr->cone_angle);
 	}
 	if (has_map_coords) {
 		fprintf(fp, " location=\"%s\"", (char *)map_coords_to_string(light_ptr->map_coords));
+	}
+	fprintf(fp, "/>\n");
+}
+
+static void
+generate_popup_tag(FILE *fp, const char *prefix, popup *popup_ptr)
+{
+	fprintf(fp, "%s<popup", prefix);
+	if (strlen(popup_ptr->name) > 0) {
+		fprintf(fp, " name=\"%s\"", (char *)popup_ptr->name);
+	}
+	fprintf(fp, " placement=\"%s\" radius=\"%s\" brightness=\"%s\"", (char *)attribute_value_to_string(VALUE_PLACEMENT, popup_ptr->window_alignment),
+		(char *)radius_to_string(popup_ptr->radius), (char *)percentage_to_string(popup_ptr->brightness));
+	if (popup_ptr->bg_texture_ptr) {
+		fprintf(fp, " texture=\"%s\"", (char *)popup_ptr->bg_texture_URL);
+	} else {
+		fprintf(fp, " size=\"(%d, %d)\"", popup_ptr->width, popup_ptr->height);
+	}
+	if (!popup_ptr->transparent_background) {
+		fprintf(fp, " color=\"%s\"", (char *)colour_to_string(popup_ptr->colour));
+	}
+	if (strlen(popup_ptr->text) > 0) {
+		fprintf(fp, " text=\"%s\"", (char *)popup_ptr->text);
+	}
+	fprintf(fp, " textcolor=\"%s\" textalign=\"%s\"", (char *)colour_to_string(popup_ptr->text_colour), 
+		(char *)attribute_value_to_string(VALUE_ALIGNMENT, popup_ptr->text_alignment));
+	if (strlen(popup_ptr->imagemap_name) > 0) {
+		fprintf(fp, " imagemap=\"%s\"", (char *)popup_ptr->imagemap_name);
+	}
+	fprintf(fp, " trigger=\"%s\"", (char *)attribute_value_to_string(VALUE_POPUP_TRIGGER, popup_ptr->trigger_flags));
+	if (popup_ptr->square_ptr) {
+		fprintf(fp, " location=\"%s\"", (char *)square_location_to_string(popup_ptr->square_ptr));
 	}
 	fprintf(fp, "/>\n");
 }
@@ -4991,7 +5028,7 @@ save_spot_file(const char *spot_file_path)
 
 		// Generate a define tag for the global script, if it's not empty.
 
-		if (global_script != "") {
+		if (strlen(global_script) > 0) {
 			fprintf(fp, "\t\t<define>%s</define>\n", (char *)global_script);
 		}
 
@@ -5040,6 +5077,14 @@ save_spot_file(const char *spot_file_path)
 			light_ptr = light_ptr->next_light_ptr;
 		}
 
+		// Generate a tag for every global popup.
+
+		popup *popup_ptr = global_popup_list;
+		while (popup_ptr) {
+			generate_popup_tag(fp, "\t\t", popup_ptr);
+			popup_ptr = popup_ptr->next_popup_ptr;
+		}
+
 		// Generate a create tag for every custom block definition.
 
 		block_def *block_def_ptr = custom_blockset_ptr->block_def_list;
@@ -5048,7 +5093,7 @@ save_spot_file(const char *spot_file_path)
 
 			// If the block definition has a script, generate a define tag.
 
-			if (block_def_ptr->script != "") {
+			if (strlen(block_def_ptr->script) > 0) {
 				fprintf(fp, "\t\t\t<define>%s</define>\n", (char *)block_def_ptr->script);
 			}
 
@@ -5070,6 +5115,14 @@ save_spot_file(const char *spot_file_path)
 			while (light_ptr) {
 				generate_light_tag(fp, "\t\t\t", light_ptr, false);
 				light_ptr = light_ptr->next_light_ptr;
+			}
+
+			// Generate a tag for every block popup.
+
+			popup *popup_ptr = block_def_ptr->popup_list;
+			while (popup_ptr) {
+				generate_popup_tag(fp, "\t\t\t", popup_ptr);
+				popup_ptr = popup_ptr->next_popup_ptr;
 			}
 
 			// Generate the end create tag.

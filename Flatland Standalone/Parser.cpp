@@ -1876,15 +1876,24 @@ get_token(const char *name)
 // list.
 //------------------------------------------------------------------------------
 
-static const char *
-get_value_str_from_list(int value, value_def *value_def_list,
-						int value_defs)
+static string
+get_value_str_from_list(int value, value_def *value_def_list, int value_defs, 
+						bool multiple_values = false)
 {
+	string value_str;
 	for (int index = 0; index < value_defs; index++) {
-		if (value == value_def_list[index].value)
+		if (multiple_values) {
+			if (value & value_def_list[index].value) {
+				if (strlen(value_str) > 0) {
+					value_str += ", ";
+				}
+				value_str += value_def_list[index].str;
+			}
+		} else if (value == value_def_list[index].value) {
 			return(value_def_list[index].str);
+		}
 	}
-	return(NULL);
+	return(value_str);
 }
 
 //------------------------------------------------------------------------------
@@ -4518,10 +4527,15 @@ attribute_value_to_string(int value_type, int value)
 		return get_value_str_from_list(value, fog_style_value_list, FOG_STYLE_VALUES);
 	case VALUE_MAP_STYLE:
 		return get_value_str_from_list(value, map_style_value_list, MAP_STYLE_VALUES);
+	case VALUE_ALIGNMENT:
+	case VALUE_PLACEMENT:
+		return get_value_str_from_list(value, alignment_value_list, ALIGNMENT_VALUES);
 	case VALUE_PLAYBACK_MODE:
 		return get_value_str_from_list(value, playback_mode_value_list, PLAYBACK_MODE_VALUES);
 	case VALUE_POINT_LIGHT_STYLE:
 		return get_value_str_from_list(value, point_light_style_value_list, POINT_LIGHT_STYLE_VALUES);
+	case VALUE_POPUP_TRIGGER:
+		return get_value_str_from_list(value, popup_trigger_value_list, POPUP_TRIGGER_VALUES, true);
 	case VALUE_SPOT_LIGHT_STYLE:
 		return get_value_str_from_list(value, spot_light_style_value_list, SPOT_LIGHT_STYLE_VALUES);
 	default:

@@ -1254,7 +1254,7 @@ downloader_thread(void *arg_list)
 
 			// If a target window was requested, simply open the URL in the default app.
 
-			if (requested_target != "") {
+			if (strlen(requested_target) > 0) {
 				open_URL_in_default_app(requested_URL);
 			}
 

@@ -2236,6 +2236,8 @@ imagemap::add_area(circle *circle_ptr, trigger *trigger_ptr)
 
 popup::popup()
 {
+	square_ptr = NULL;
+	block_ptr = NULL;
 	trigger_flags = PROXIMITY;
 	visible_flags = 0;
 	always_visible = false;
@@ -2243,6 +2245,7 @@ popup::popup()
 	position.y = UNITS_PER_HALF_BLOCK;
 	position.z = UNITS_PER_HALF_BLOCK;
 	window_alignment = CENTRE;
+	radius = UNITS_PER_BLOCK;
 	radius_squared = UNITS_PER_BLOCK * UNITS_PER_BLOCK;
 	brightness = 1.0f;
 	brightness_index = 0;
@@ -2255,8 +2258,10 @@ popup::popup()
 	text_colour.set_RGB(255, 255, 255);
 	text_alignment = CENTRE;
 	imagemap_ptr = NULL;
+	bg_pixmap_ptr = NULL;
 	next_popup_ptr = NULL;
 	next_square_popup_ptr = NULL;
+	next_visible_popup_ptr = NULL;
 }
 
 // Default destructor does nothing.
