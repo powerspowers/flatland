@@ -4662,397 +4662,383 @@ parse_spot_file(char *spot_URL, char *spot_file_path)
 // Spot saving function.
 //==============================================================================
 
-static char attribute_string[256];
+static FILE *save_fp;
+static int indent_level;
 
-static string
-boolean_to_string(bool flag)
+static void
+print_indent()
 {
-	return (char *)attribute_value_to_string(VALUE_BOOLEAN, flag);
-}
-
-static string
-percentage_to_string(float percentage)
-{
-	sprintf(attribute_string, "%g%%", percentage * 100.0f);
-	return attribute_string;
-}
-
-static string
-percentage_range_to_string(pcrange percentage_range)
-{
-	string min_percentage = percentage_to_string(percentage_range.min_percentage);
-	if (percentage_range.min_percentage == percentage_range.max_percentage) {
-		return min_percentage;
+	for (int i = 0; i < indent_level; i++) {
+		fprintf(save_fp, "\t");
 	}
-	string max_percentage = percentage_to_string(percentage_range.max_percentage);
-	sprintf(attribute_string, "%s..%s", (char *)min_percentage, (char *)max_percentage);
-	return attribute_string;
-}
-
-static string
-colour_to_string(RGBcolour colour, bool normalized = false)
-{
-	if (normalized) {
-		sprintf(attribute_string, "(%d, %d, %d)", (int)(colour.red * 255.0f), (int)(colour.green * 255.0f), (int)(colour.blue * 255.0f));
-	} else {
-		sprintf(attribute_string, "(%g, %g, %g)", colour.red, colour.green, colour.blue);
-	}
-	return attribute_string;
-}
-
-static string
-delay_range_to_string(delayrange delay_range)
-{
-	if (delay_range.delay_range_ms > 0) {
-		sprintf(attribute_string, "%g..%g", (float)delay_range.min_delay_ms / 1000.0f, (float)(delay_range.min_delay_ms + delay_range.delay_range_ms) / 1000.0f);
-	} else {
-		sprintf(attribute_string, "%g", (float)delay_range.min_delay_ms / 1000.0f);
-	}
-	return attribute_string;
-}
-
-static string
-radius_to_string(float radius)
-{
-	sprintf(attribute_string, "%g", radius / UNITS_PER_BLOCK);
-	return attribute_string;
-}
-
-static string
-direction_to_string(direction dir)
-{
-	sprintf(attribute_string, "(%g, %g)", dir.angle_y, dir.angle_x);
-	return attribute_string;
-}
-
-static string
-direction_range_to_string(dirrange dir_range)
-{
-	string min_direction = direction_to_string(dir_range.min_direction);
-	if (dir_range.min_direction.angle_x == dir_range.max_direction.angle_x && dir_range.min_direction.angle_y == dir_range.max_direction.angle_y) {
-		return min_direction;
-	}
-	string max_direction = direction_to_string(dir_range.max_direction);
-	sprintf(attribute_string, "%s..%s", (char *)min_direction, (char *)max_direction);
-	return attribute_string;
-}
-
-static string
-location_to_string(int column, int row, int level)
-{
-	sprintf(attribute_string, "(%d, %d, %d)", column + 1, row + 1, world_ptr->ground_level_exists ? level : level + 1);
-	return attribute_string;
-}
-
-static string
-square_location_to_string(square *square_ptr)
-{
-	int column, row, level;
-	world_ptr->get_square_location(square_ptr, &column, &row, &level);
-	return location_to_string(column, row, level);
-}
-
-static string
-map_coords_to_string(mapcoords map_coords)
-{
-	return location_to_string(map_coords.column, map_coords.row, map_coords.level);
-}
-
-static string
-vertex_to_string(vertex v)
-{
-	sprintf(attribute_string, "(%g, %g, %g)", v.x * TEXELS_PER_UNIT, v.y * TEXELS_PER_UNIT, v.z * TEXELS_PER_UNIT);
-	return attribute_string;
 }
 
 static void
-generate_entrance_tag(FILE *fp, const char *prefix, entrance *entrance_ptr)
+print_start_tag(string name)
 {
-	fprintf(fp, "%s<entrance name=\"%s\" angle\"%g, %g\"", prefix, (char *)entrance_ptr->name, 
-		entrance_ptr->initial_direction.angle_y, entrance_ptr->initial_direction.angle_x);
+	print_indent();
+	fprintf(save_fp, "<%s>\n", (char *)name);
+	indent_level++;
+}
+
+static void
+open_start_tag(string name)
+{
+	print_indent();
+	fprintf(save_fp, "<%s", (char *)name);
+}
+
+static void
+close_start_tag()
+{
+	fprintf(save_fp, ">\n");
+	indent_level++;
+}
+
+static void
+open_empty_tag(string name)
+{
+	open_start_tag(name);
+}
+
+static void
+close_empty_tag()
+{
+	fprintf(save_fp, "/>\n");
+}
+
+static void
+print_end_tag(string name)
+{
+	indent_level--;
+	print_indent();
+	fprintf(save_fp, "</%s>\n", (char *)name);
+}
+
+static void
+print_attr(string name, string value)
+{
+	if (strlen(value) > 0) {
+		fprintf(save_fp, " %s=\"%s\"", (char *)name, (char *)value);
+	}
+}
+
+static void
+print_define_tag(string script)
+{
+	print_start_tag("define");
+	fprintf(save_fp, "%s", (char *)script);
+	print_end_tag("define");
+}
+
+static void
+print_entrance_tag(entrance *entrance_ptr)
+{
+	open_empty_tag("entrance");
+	print_attr("name", entrance_ptr->name);
+	print_attr("angle", direction_to_string(entrance_ptr->initial_direction, false));
 	if (entrance_ptr->square_ptr) {
-		fprintf(fp, " location=\"%s\"", (char *)square_location_to_string(entrance_ptr->square_ptr));
+		print_attr("location", square_location_to_string(entrance_ptr->square_ptr));
 	}
-	fprintf(fp, "/>\n");
+	close_empty_tag();
 }
 
 static void
-generate_common_exit_attributes(FILE *fp, hyperlink *exit_ptr)
+print_common_exit_attributes(hyperlink *exit_ptr)
 {
-	fprintf(fp, " href=\"%s\"", (char *)exit_ptr->URL);
+	print_attr("href", exit_ptr->URL);
 	if (exit_ptr->is_spot_URL) {
-		fprintf(fp, " is_spot=\"yes\"");
+		print_attr("is_spot", "yes");
 	}
-	if (strlen(exit_ptr->target) > 0) {
-		fprintf(fp, " target=\"%s\"", (char *)exit_ptr->target);
-	}
-	if (strlen(exit_ptr->label) > 0) {
-		fprintf(fp, " text=\"%s\"", (char *)exit_ptr->label);
-	}
+	print_attr("target", exit_ptr->target);
+	print_attr("text", exit_ptr->label);
 }
 
 static void
-generate_exit_tag(FILE *fp, const char *prefix, hyperlink *exit_ptr, int column = -1, int row = -1, int level = -1)
+print_exit_tag(hyperlink *exit_ptr, int column = -1, int row = -1, int level = -1)
 {
-	fprintf(fp, "%s<exit", prefix);
-	generate_common_exit_attributes(fp, exit_ptr);
-	fprintf(fp, " trigger=\"%s\"", (char *)attribute_value_to_string(VALUE_EXIT_TRIGGER, exit_ptr->trigger_flags));
+	open_empty_tag("exit");
+	print_common_exit_attributes(exit_ptr);
+	print_attr("trigger", value_to_string(VALUE_EXIT_TRIGGER, exit_ptr->trigger_flags));
 	if (column >= 0 && row >= 0 && level >= 0) {
-		fprintf(fp, " location=\"%s\"", (char *)location_to_string(column, row, level));
+		print_attr("location", location_to_string(column, row, level));
 	}
-	fprintf(fp, "/>\n");
+	close_empty_tag();
 }
 
 static void
-generate_light_tag(FILE *fp, const char *prefix, light *light_ptr, bool has_map_coords)
+print_light_tag(light *light_ptr, bool has_map_coords)
 {
 	bool is_point_light = light_ptr->style == STATIC_POINT_LIGHT || light_ptr->style == PULSATING_POINT_LIGHT;
-	fprintf(fp, "%s<", prefix);
 	if (is_point_light) {
-		fprintf(fp, "point_light style=\"%s\"", (char *)attribute_value_to_string(VALUE_POINT_LIGHT_STYLE, light_ptr->style));
+		open_empty_tag("point_light");
+		print_attr("style", value_to_string(VALUE_POINT_LIGHT_STYLE, light_ptr->style));
 	} else {
-		fprintf(fp, "spot_light style=\"%s\"", (char *)attribute_value_to_string(VALUE_SPOT_LIGHT_STYLE, light_ptr->style));
+		open_empty_tag("spot_light");
+		print_attr("style", value_to_string(VALUE_SPOT_LIGHT_STYLE, light_ptr->style));
 	}
-	if (strlen(light_ptr->name) > 0) {
-		fprintf(fp, " name=\"%s\"", (char *)light_ptr->name);
-	}
+	print_attr("name", light_ptr->name);
 	if (light_ptr->position.x != UNITS_PER_HALF_BLOCK && light_ptr->position.y != UNITS_PER_HALF_BLOCK && light_ptr->position.z != UNITS_PER_HALF_BLOCK) {
-		fprintf(fp, " position=\"%s\"", (char *)vertex_to_string(light_ptr->position));
+		print_attr("position", vertex_to_string(light_ptr->position));
 	}
-	fprintf(fp, " brightness=\"%s\" radius=\"%s\"", (char *)percentage_range_to_string(light_ptr->intensity_range), (char *)radius_to_string(light_ptr->radius));
+	print_attr("brightness", percentage_range_to_string(light_ptr->intensity_range));
+	print_attr("radius", radius_to_string(light_ptr->radius));
 	if (light_ptr->speed) {
-		fprintf(fp, " speed=\"%g\"", light_ptr->speed);
+		print_attr("speed", float_to_string(light_ptr->speed));
 	}
-	fprintf(fp, " flood=\"%s\" color=\"%s\"", (char *)boolean_to_string(light_ptr->flood), (char *)colour_to_string(light_ptr->colour));
+	print_attr("flood", boolean_to_string(light_ptr->flood));
+	print_attr("color", colour_to_string(light_ptr->colour));
 	if (!is_point_light) {
-		fprintf(fp, " direction=\"%s\" cone=\"%g\"", (char *)direction_range_to_string(light_ptr->dir_range), light_ptr->cone_angle);
+		print_attr("direction", direction_range_to_string(light_ptr->dir_range));
+		print_attr("cone", float_to_string(light_ptr->cone_angle));
 	}
 	if (has_map_coords) {
-		fprintf(fp, " location=\"%s\"", (char *)map_coords_to_string(light_ptr->map_coords));
+		print_attr("location", map_coords_to_string(light_ptr->map_coords));
 	}
-	fprintf(fp, "/>\n");
+	close_empty_tag();
 }
 
 static void
-generate_popup_tag(FILE *fp, const char *prefix, popup *popup_ptr)
+print_popup_tag(popup *popup_ptr)
 {
-	fprintf(fp, "%s<popup", prefix);
-	if (strlen(popup_ptr->name) > 0) {
-		fprintf(fp, " name=\"%s\"", (char *)popup_ptr->name);
-	}
-	fprintf(fp, " placement=\"%s\" radius=\"%s\" brightness=\"%s\"", (char *)attribute_value_to_string(VALUE_PLACEMENT, popup_ptr->window_alignment),
-		(char *)radius_to_string(popup_ptr->radius), (char *)percentage_to_string(popup_ptr->brightness));
+	open_empty_tag("popup");
+	print_attr("name", popup_ptr->name);
+	print_attr("placement", value_to_string(VALUE_PLACEMENT, popup_ptr->window_alignment));
+	print_attr("radius", radius_to_string(popup_ptr->radius));
+	print_attr("brightness", percentage_to_string(popup_ptr->brightness));
 	if (popup_ptr->bg_texture_ptr) {
-		fprintf(fp, " texture=\"%s\"", (char *)popup_ptr->bg_texture_URL);
+		print_attr("texture", popup_ptr->bg_texture_URL);
 	} else {
-		fprintf(fp, " size=\"(%d, %d)\"", popup_ptr->width, popup_ptr->height);
+		print_attr("size", size_to_string(popup_ptr->width, popup_ptr->height));
 	}
 	if (!popup_ptr->transparent_background) {
-		fprintf(fp, " color=\"%s\"", (char *)colour_to_string(popup_ptr->colour));
+		print_attr("color", colour_to_string(popup_ptr->colour));
 	}
-	if (strlen(popup_ptr->text) > 0) {
-		fprintf(fp, " text=\"%s\"", (char *)popup_ptr->text);
-	}
-	fprintf(fp, " textcolor=\"%s\" textalign=\"%s\"", (char *)colour_to_string(popup_ptr->text_colour), 
-		(char *)attribute_value_to_string(VALUE_ALIGNMENT, popup_ptr->text_alignment));
-	if (strlen(popup_ptr->imagemap_name) > 0) {
-		fprintf(fp, " imagemap=\"%s\"", (char *)popup_ptr->imagemap_name);
-	}
-	fprintf(fp, " trigger=\"%s\"", (char *)attribute_value_to_string(VALUE_POPUP_TRIGGER, popup_ptr->trigger_flags));
+	print_attr("text", popup_ptr->text);
+	print_attr("textcolor", colour_to_string(popup_ptr->text_colour));
+	print_attr("textalign", value_to_string(VALUE_ALIGNMENT, popup_ptr->text_alignment));
+	print_attr("imagemap", popup_ptr->imagemap_name);
+	print_attr("trigger", value_to_string(VALUE_POPUP_TRIGGER, popup_ptr->trigger_flags));
 	if (popup_ptr->square_ptr) {
-		fprintf(fp, " location=\"%s\"", (char *)square_location_to_string(popup_ptr->square_ptr));
+		print_attr("location", square_location_to_string(popup_ptr->square_ptr));
 	}
-	fprintf(fp, "/>\n");
+	close_empty_tag();
 }
 
 void
 save_spot_file(const char *spot_file_path)
 {
-	FILE *fp;
-	if ((fp = fopen(spot_file_path, "w")) != NULL) {
+	// Open the spot file for writing and reset the indent level.
+
+	if ((save_fp = fopen(spot_file_path, "w")) != NULL) {
+		indent_level = 0;
 
 		// Generate the opening spot tag, followed by the opening head tag.
 
-		fprintf(fp, "<spot version=\"%s\">\n", version_number_to_string(min_rover_version));
-		fprintf(fp, "\t<head>\n");
+		open_start_tag("spot");
+		if (min_rover_version != 0) {
+			print_attr("version", version_number_to_string(min_rover_version));
+		}
+		close_start_tag();
+		print_start_tag("head");
 
 		// If a debug tag was present, generate it.
 
 		if (got_debug_tag) {
-			fprintf(fp, "\t\t<debug warnings=\"%s\"/>\n", (char *)boolean_to_string(debug_warnings)); 
+			open_empty_tag("debug");
+			print_attr("warnings", boolean_to_string(debug_warnings));
+			close_empty_tag(); 
 		}
 
 		// If a base tag was present, or this spot came from the web, generate it.
 
 		if (got_base_tag || !_strnicmp(spot_URL_dir, "http://", 7)) {
-			fprintf(fp, "\t\t<base href=\"%s\"/>\n", (char *)spot_URL_dir);
+			open_empty_tag("base");
+			print_attr("href", spot_URL_dir);
+			close_empty_tag();
 		}
 
 		// Generate a blockset tag for every loaded blockset.
 
 		blockset *blockset_ptr = blockset_list_ptr->first_blockset_ptr;
 		while (blockset_ptr != NULL) {
-			fprintf(fp, "\t\t<blockset href=\"%s\"/>\n", (char *)blockset_ptr->URL);
+			open_empty_tag("blockset");
+			print_attr("href", blockset_ptr->URL);
+			close_empty_tag();
 			blockset_ptr = blockset_ptr->next_blockset_ptr;
 		}
 
 		// If an ambient_light tag was present, generate it.
 
 		if (got_ambient_light_tag) {
-			fprintf(fp, "\t\t<ambient_light brightness=\"%s\" color=\"%s\"/>\n", (char *)percentage_to_string(ambient_light_brightness),
-				(char *)colour_to_string(ambient_light_colour));
+			open_empty_tag("ambient_light");
+			print_attr("brightness", percentage_to_string(ambient_light_brightness));
+			print_attr("color", colour_to_string(ambient_light_colour));
+			close_empty_tag();
 		}
 
 		// If an ambient_sound tag was present, generate it.
 
 		if (got_ambient_sound_tag) {
-			fprintf(fp, "\t\t<ambient_sound file=\"%s\" volume=\"%s\" playback=\"%s\" delay=\"%s\"/>\n", (char *)ambient_sound_ptr->URL,
-				(char *)percentage_to_string(ambient_sound_ptr->volume),
-				(char *)attribute_value_to_string(VALUE_PLAYBACK_MODE, ambient_sound_ptr->playback_mode), 
-				(char *)delay_range_to_string(ambient_sound_ptr->delay_range));
+			open_empty_tag("ambient_sound");
+			print_attr("file", ambient_sound_ptr->URL);
+			print_attr("volume", percentage_to_string(ambient_sound_ptr->volume));
+			print_attr("playback", value_to_string(VALUE_PLAYBACK_MODE, ambient_sound_ptr->playback_mode));
+			print_attr("delay", delay_range_to_string(ambient_sound_ptr->delay_range));
+			close_empty_tag();
 		}
 
 		// If a fog tag was present, generate it.
 
 		if (global_fog_enabled) {
-			fprintf(fp, "\t\t<fog style=\"%s\" color=\"%s\"", (char *)attribute_value_to_string(VALUE_FOG_STYLE, global_fog.style),
-				(char *)colour_to_string(global_fog.colour, true));
+			open_empty_tag("fog");
+			print_attr("style", value_to_string(VALUE_FOG_STYLE, global_fog.style));
+			print_attr("color", colour_to_string(global_fog.colour, true));
 			if (global_fog.style == LINEAR_FOG) {
 				if (global_fog.start_radius != 0.0f) {
-					fprintf(fp, " start=\"%s\"", (char *)radius_to_string(global_fog.start_radius));
+					print_attr("start", radius_to_string(global_fog.start_radius));
 				}
 				if (global_fog.end_radius != 0.0f) {
-					fprintf(fp, " end=\"%s\"", (char *)radius_to_string(global_fog.end_radius));
+					print_attr("end", radius_to_string(global_fog.end_radius));
 				}
 			} else {
-				fprintf(fp, " density=\"%s\"", (char *)percentage_to_string(global_fog.density));
+				print_attr("density", percentage_to_string(global_fog.density));
 			}
-			fprintf(fp, "/>\n");
+			close_empty_tag();
 		}
 
 		// If a ground tag was present, generate it.
 
 		if (custom_blockset_ptr->ground_defined) {
-			fprintf(fp, "\t\t<ground");
+			open_empty_tag("ground");
 			if (custom_blockset_ptr->ground_texture_ptr) {
-				fprintf(fp, " texture=\"%s\"", (char *)custom_blockset_ptr->ground_texture_URL);
+				print_attr("texture", custom_blockset_ptr->ground_texture_URL);
 			}
 			if (custom_blockset_ptr->ground_colour_set) {
-				fprintf(fp, " color=\"%s\"", (char *)colour_to_string(custom_blockset_ptr->ground_colour));
+				print_attr("color", colour_to_string(custom_blockset_ptr->ground_colour));
 			}
-			fprintf(fp, "/>\n");
+			close_empty_tag();
 		}
 
 		// Generate the map tag.
 
-		fprintf(fp, "\t\t<map dimensions=\"(%d, %d, %d)\" style=\"%s\"/>\n", world_ptr->columns, world_ptr->rows, 
-			world_ptr->ground_level_exists ? world_ptr->levels - 2 : world_ptr->levels - 1,
-			(char *)attribute_value_to_string(VALUE_MAP_STYLE, world_ptr->map_style));
+		open_empty_tag("map");
+		print_attr("dimensions", location_to_string(world_ptr->columns, world_ptr->rows, 
+			world_ptr->ground_level_exists ? world_ptr->levels - 2 : world_ptr->levels - 1));
+		print_attr("style", value_to_string(VALUE_MAP_STYLE, world_ptr->map_style));
+		close_empty_tag();
 
 		// Generate a tag for all metadata.
 
 		metadata *metadata_ptr = first_metadata_ptr;
 		while (metadata_ptr) {
-			fprintf(fp, "\t\t<meta name=\"%s\" content=\"%s\"/>\n", (char *)metadata_ptr->name, (char *)metadata_ptr->content);
+			open_empty_tag("meta");
+			print_attr("name", metadata_ptr->name);
+			print_attr("content", metadata_ptr->content);
+			close_empty_tag();
 			metadata_ptr = metadata_ptr->next_metadata_ptr;
 		}
 
 		// If an orb tag was present, generate it.
 
 		if (custom_blockset_ptr->orb_defined) {
-			fprintf(fp, "\t\t<orb");
+			open_empty_tag("orb");
 			if (custom_blockset_ptr->orb_texture_ptr) {
-				fprintf(fp, " texture=\"%s\"", (char *)custom_blockset_ptr->orb_texture_URL);
+				print_attr("texture", custom_blockset_ptr->orb_texture_URL);
 			}
 			if (custom_blockset_ptr->orb_direction_set) {
-				fprintf(fp, " position=\"%s\"", (char *)direction_to_string(custom_blockset_ptr->orb_direction));
+				print_attr("position", direction_to_string(custom_blockset_ptr->orb_direction, true));
 			}
 			if (custom_blockset_ptr->orb_brightness_set) {
-				fprintf(fp, " brightness=\"%s\"", (char *)percentage_to_string(custom_blockset_ptr->orb_brightness));
+				print_attr("brightness", percentage_to_string(custom_blockset_ptr->orb_brightness));
 			}
 			if (custom_blockset_ptr->orb_colour_set) {
-				fprintf(fp, " color=\"%s\"", (char *)colour_to_string(custom_blockset_ptr->orb_colour));
+				print_attr("color", colour_to_string(custom_blockset_ptr->orb_colour));
 			}
 			if (custom_blockset_ptr->orb_exit_ptr) {
-				generate_common_exit_attributes(fp, custom_blockset_ptr->orb_exit_ptr);
+				print_common_exit_attributes(custom_blockset_ptr->orb_exit_ptr);
 			}
-			fprintf(fp, "/>\n");
+			close_empty_tag();
 		}
 
 		// If a placeholder tag was present, generate it.
 
 		if (custom_blockset_ptr->placeholder_texture_ptr) {
-			fprintf(fp, "\t\t<placeholder texture=\"%s\"/>\n", (char *)custom_blockset_ptr->placeholder_texture_URL);
+			open_empty_tag("placeholder");
+			print_attr("texture", custom_blockset_ptr->placeholder_texture_URL);
+			close_empty_tag();
 		}
 
 		// If a sky tag was present, generate it.
 
 		if (custom_blockset_ptr->sky_defined) {
-			fprintf(fp, "\t\t<sky");
+			open_empty_tag("sky");
 			if (custom_blockset_ptr->sky_texture_ptr) {
-				fprintf(fp, " texture=\"%s\"", (char *)custom_blockset_ptr->sky_texture_URL);
+				print_attr("texture", custom_blockset_ptr->sky_texture_URL);
 			}
 			if (custom_blockset_ptr->sky_colour_set) {
-				fprintf(fp, " color=\"%s\"", (char *)colour_to_string(custom_blockset_ptr->sky_colour));
+				print_attr("color", colour_to_string(custom_blockset_ptr->sky_colour));
 			}
 			if (custom_blockset_ptr->sky_brightness_set) {
-				fprintf(fp, " brightness=\"%s\"", (char *)percentage_to_string(custom_blockset_ptr->sky_brightness));
+				print_attr("brightness", percentage_to_string(custom_blockset_ptr->sky_brightness));
 			}
-			fprintf(fp, "/>\n");
+			close_empty_tag();
 		}
 
 		// If a title tag was present, generate it.
 
 		if (got_title_tag) {
-			fprintf(fp, "\t\t<title name=\"%s\"/>\n", (char *)title_name);
+			open_empty_tag("title");
+			print_attr("name", title_name);
+			close_empty_tag();
 		}
 
-		// Generate the closing head tag, and the opening body tag.
+		// Generate the end head tag, and the start body tag.
 
-		fprintf(fp, "\t</head>\n");
-		fprintf(fp, "\t<body>\n");
+		print_end_tag("head");
+		print_start_tag("body");
 
 		// Generate all load tags.
 
 		load_tag *load_tag_ptr = first_load_tag_ptr;
 		while (load_tag_ptr) {
-			fprintf(fp, "\t\t<load");
+			open_empty_tag("load");
 			if (load_tag_ptr->is_texture_href) {
-				fprintf(fp, " texture=\"%s\"", (char *)load_tag_ptr->href);
+				print_attr("texture", load_tag_ptr->href);
 			} else {
-				fprintf(fp, " sound=\"%s\"", (char *)load_tag_ptr->href);
+				print_attr("sound", load_tag_ptr->href);
 			}
-			fprintf(fp, "/>\n");
+			close_empty_tag();
 			load_tag_ptr = load_tag_ptr->next_load_tag_ptr;
 		}
 
 		// Generate a define tag for the global script, if it's not empty.
 
 		if (strlen(global_script) > 0) {
-			fprintf(fp, "\t\t<define>%s</define>\n", (char *)global_script);
+			print_define_tag(global_script);
 		}
 
 		// Generate a player tag, if the player was defined.
 
 		if (got_player_tag) {
-			fprintf(fp, "\t\t<player");
+			open_empty_tag("player");
 			if (player_block_symbol != 0) {
-				fprintf(fp, " block=\"%s\"", (char *)get_symbol(player_block_symbol));
+				print_attr("block", get_symbol(player_block_symbol));
 			}
 			if (got_player_size) {
-				fprintf(fp, " size=\"%s\"", (char *)vertex_to_string(player_size));
+				print_attr("size", vertex_to_string(player_size));
 			}
 			if (got_player_camera) {
-				fprintf(fp, " camera=\"%s\"", (char *)vertex_to_string(player_camera));
+				print_attr("camera", vertex_to_string(player_camera));
 			}
-			fprintf(fp, "/>\n");
+			close_empty_tag();
 		}
 
 		// Generate an entrance tag for every global entrance.
 
 		entrance *entrance_ptr = global_entrance_list;
 		while (entrance_ptr) {
-			generate_entrance_tag(fp, "\t\t", entrance_ptr);
+			print_entrance_tag(entrance_ptr);
 			entrance_ptr = entrance_ptr->next_entrance_ptr;
 		}
 
@@ -5063,7 +5049,7 @@ save_spot_file(const char *spot_file_path)
 				for (int column = 0; column < world_ptr->columns; column++) {
 					square *square_ptr = world_ptr->get_square_ptr(column, row, level);
 					if (square_ptr->exit_ptr) {
-						generate_exit_tag(fp, "\t\t", square_ptr->exit_ptr, column, row, level);
+						print_exit_tag(square_ptr->exit_ptr, column, row, level);
 					}
 				}
 			}
@@ -5073,7 +5059,7 @@ save_spot_file(const char *spot_file_path)
 
 		light *light_ptr = global_light_list;
 		while (light_ptr) {
-			generate_light_tag(fp, "\t\t", light_ptr, true);
+			print_light_tag(light_ptr, true);
 			light_ptr = light_ptr->next_light_ptr;
 		}
 
@@ -5081,7 +5067,7 @@ save_spot_file(const char *spot_file_path)
 
 		popup *popup_ptr = global_popup_list;
 		while (popup_ptr) {
-			generate_popup_tag(fp, "\t\t", popup_ptr);
+			print_popup_tag(popup_ptr);
 			popup_ptr = popup_ptr->next_popup_ptr;
 		}
 
@@ -5089,31 +5075,34 @@ save_spot_file(const char *spot_file_path)
 
 		block_def *block_def_ptr = custom_blockset_ptr->block_def_list;
 		while (block_def_ptr != NULL) {
-			fprintf(fp, "\t\t<create symbol=\"%s\" block=\"%s\">\n", (char *)block_def_ptr->get_symbol(), (char *)block_def_ptr->source_block);
+			open_start_tag("create");
+			print_attr("symbol", block_def_ptr->get_symbol());
+			print_attr("block", block_def_ptr->source_block);
+			close_start_tag();
 
 			// If the block definition has a script, generate a define tag.
 
 			if (strlen(block_def_ptr->script) > 0) {
-				fprintf(fp, "\t\t\t<define>%s</define>\n", (char *)block_def_ptr->script);
+				print_define_tag(block_def_ptr->script);
 			}
 
 			// If the block definition has an entrance, generate an entrance tag.
 
 			if (block_def_ptr->entrance_ptr) {
-				generate_entrance_tag(fp, "\t\t\t", block_def_ptr->entrance_ptr);
+				print_entrance_tag(block_def_ptr->entrance_ptr);
 			}
 
 			// If the block definition has a custom exit, generate an exit tag.
 
 			if (block_def_ptr->exit_ptr && block_def_ptr->custom_exit) {
-				generate_exit_tag(fp, "\t\t\t", block_def_ptr->exit_ptr);
+				print_exit_tag(block_def_ptr->exit_ptr);
 			}
 
 			// Generate a tag for every block light.
 
 			light *light_ptr = block_def_ptr->light_list;
 			while (light_ptr) {
-				generate_light_tag(fp, "\t\t\t", light_ptr, false);
+				print_light_tag(light_ptr, false);
 				light_ptr = light_ptr->next_light_ptr;
 			}
 
@@ -5121,39 +5110,41 @@ save_spot_file(const char *spot_file_path)
 
 			popup *popup_ptr = block_def_ptr->popup_list;
 			while (popup_ptr) {
-				generate_popup_tag(fp, "\t\t\t", popup_ptr);
+				print_popup_tag(popup_ptr);
 				popup_ptr = popup_ptr->next_popup_ptr;
 			}
 
 			// Generate the end create tag.
 
-			fprintf(fp, "\t\t</create>\n");
+			print_end_tag("create");
 			block_def_ptr = block_def_ptr->next_block_def_ptr;
 		}
 
 		// Generate the level tags.
 
 		for (int level = world_ptr->ground_level_exists ? 1 : 0, level_no = 1; level < world_ptr->levels - 1; level++, level_no++) {
-			fprintf(fp, "\t\t<level number=\"%d\">\n", level_no);
+			open_start_tag("level");
+			print_attr("level", int_to_string(level_no));
+			close_start_tag();
 			for (int row = 0; row < world_ptr->rows; row++) {
-				fprintf(fp, "\t\t\t");
+				print_indent();
 				for (int column = 0; column < world_ptr->columns; column++) {
 					square *square_ptr = world_ptr->get_square_ptr(column, row, level);
-					fprintf(fp, "%s", (char *)get_symbol(square_ptr->orig_block_symbol));
+					fprintf(save_fp, "%s", (char *)get_symbol(square_ptr->orig_block_symbol));
 					if (world_ptr->map_style == DOUBLE_MAP) {
-						fprintf(fp, " ");
+						fprintf(save_fp, " ");
 					}
 				}
-				fprintf(fp, "\n");
+				fprintf(save_fp, "\n");
 			}
-			fprintf(fp, "\t\t</level>\n");
+			print_end_tag("level");
 		}
 
 		// Generate the closing body tag, and the closing spot tag.
 
-		fprintf(fp, "\t</body>\n");
-		fprintf(fp, "</spot>\n");
-		fclose(fp);
+		print_end_tag("body");
+		print_end_tag("spot");
+		fclose(save_fp);
 	}
 }
 

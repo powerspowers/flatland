@@ -1490,8 +1490,7 @@ ambient_sound_simkin_object::getValue(const skString& field, const skString& att
 	// If the field is "playback", return the playback mode.
 
 	else if (field == "playback") {
-		skString playback_mode(attribute_value_to_string(VALUE_PLAYBACK_MODE,
-			ambient_sound_ptr->playback_mode));
+		skString playback_mode(value_to_string(VALUE_PLAYBACK_MODE, ambient_sound_ptr->playback_mode));
 		value = playback_mode;
 	}
 

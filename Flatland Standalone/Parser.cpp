@@ -4509,14 +4509,18 @@ stop_parsing_nested_tags(void)
 	pop_parse_stack();
 }
 
+//==============================================================================
+// Attribute value to string functions.
+//==============================================================================
+
+static char attribute_string[256];
+
 //------------------------------------------------------------------------------
-// Parse an attribute's value according to it's type.  Returns TRUE on success,
-// or FALSE on failure if the attribute has a default value that can be used.
-// Otherwise an exception is thrown.
+// Convert an integer value to a value string based on its type.
 //------------------------------------------------------------------------------
 
 string
-attribute_value_to_string(int value_type, int value)
+value_to_string(int value_type, int value)
 {
 	switch (value_type) {
 	case VALUE_BOOLEAN:
@@ -4541,4 +4545,134 @@ attribute_value_to_string(int value_type, int value)
 	default:
 		return "";
 	}
+}
+
+//------------------------------------------------------------------------------
+// Convert various data types to strings.
+//------------------------------------------------------------------------------
+
+string
+boolean_to_string(bool flag)
+{
+	return value_to_string(VALUE_BOOLEAN, flag);
+}
+
+string
+int_to_string(int value)
+{
+	sprintf(attribute_string, "%d", value);
+	return attribute_string;
+}
+
+string
+float_to_string(float value)
+{
+	sprintf(attribute_string, "%g", value);
+	return attribute_string;
+}
+
+string
+percentage_to_string(float percentage)
+{
+	sprintf(attribute_string, "%g%%", percentage * 100.0f);
+	return attribute_string;
+}
+
+string
+percentage_range_to_string(pcrange percentage_range)
+{
+	string min_percentage = percentage_to_string(percentage_range.min_percentage);
+	if (percentage_range.min_percentage == percentage_range.max_percentage) {
+		return min_percentage;
+	}
+	string max_percentage = percentage_to_string(percentage_range.max_percentage);
+	sprintf(attribute_string, "%s..%s", (char *)min_percentage, (char *)max_percentage);
+	return attribute_string;
+}
+
+string
+colour_to_string(RGBcolour colour, bool normalized)
+{
+	if (normalized) {
+		sprintf(attribute_string, "(%d, %d, %d)", (int)(colour.red * 255.0f), (int)(colour.green * 255.0f), (int)(colour.blue * 255.0f));
+	} else {
+		sprintf(attribute_string, "(%g, %g, %g)", colour.red, colour.green, colour.blue);
+	}
+	return attribute_string;
+}
+
+string
+delay_range_to_string(delayrange delay_range)
+{
+	if (delay_range.delay_range_ms > 0) {
+		sprintf(attribute_string, "%g..%g", (float)delay_range.min_delay_ms / 1000.0f, (float)(delay_range.min_delay_ms + delay_range.delay_range_ms) / 1000.0f);
+	} else {
+		sprintf(attribute_string, "%g", (float)delay_range.min_delay_ms / 1000.0f);
+	}
+	return attribute_string;
+}
+
+string
+radius_to_string(float radius)
+{
+	sprintf(attribute_string, "%g", radius / UNITS_PER_BLOCK);
+	return attribute_string;
+}
+
+string
+direction_to_string(direction dir, bool add_parens)
+{
+	if (add_parens) {
+		sprintf(attribute_string, "(%g, %g)", dir.angle_y, dir.angle_x);
+	} else {
+		sprintf(attribute_string, "%g, %g", dir.angle_y, dir.angle_x);
+	}
+	return attribute_string;
+}
+
+string
+direction_range_to_string(dirrange dir_range)
+{
+	string min_direction = direction_to_string(dir_range.min_direction, true);
+	if (dir_range.min_direction.angle_x == dir_range.max_direction.angle_x && dir_range.min_direction.angle_y == dir_range.max_direction.angle_y) {
+		return min_direction;
+	}
+	string max_direction = direction_to_string(dir_range.max_direction, true);
+	sprintf(attribute_string, "%s..%s", (char *)min_direction, (char *)max_direction);
+	return attribute_string;
+}
+
+string
+location_to_string(int column, int row, int level)
+{
+	sprintf(attribute_string, "(%d, %d, %d)", column + 1, row + 1, world_ptr->ground_level_exists ? level : level + 1);
+	return attribute_string;
+}
+
+string
+square_location_to_string(square *square_ptr)
+{
+	int column, row, level;
+	world_ptr->get_square_location(square_ptr, &column, &row, &level);
+	return location_to_string(column, row, level);
+}
+
+string
+map_coords_to_string(mapcoords map_coords)
+{
+	return location_to_string(map_coords.column, map_coords.row, map_coords.level);
+}
+
+string
+vertex_to_string(vertex v)
+{
+	sprintf(attribute_string, "(%g, %g, %g)", v.x * TEXELS_PER_UNIT, v.y * TEXELS_PER_UNIT, v.z * TEXELS_PER_UNIT);
+	return attribute_string;
+}
+
+string
+size_to_string(int width, int height)
+{
+	sprintf(attribute_string, "(%d, %d)", width, height);
+	return attribute_string;
 }

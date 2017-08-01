@@ -217,8 +217,53 @@ nested_text_to_string(int start_tag_token);
 void
 stop_parsing_nested_tags(void);
 
-// Attribute value conversion function.
+// Attribute value to string functions.
 
 string
-attribute_value_to_string(int value_type, int value);
+value_to_string(int value_type, int value);
+
+string
+boolean_to_string(bool flag);
+
+string
+int_to_string(int value);
+
+string
+float_to_string(float value);
+
+string
+percentage_to_string(float percentage);
+
+string
+percentage_range_to_string(pcrange percentage_range);
+
+string
+colour_to_string(RGBcolour colour, bool normalized = false);
+
+string
+delay_range_to_string(delayrange delay_range);
+
+string
+radius_to_string(float radius);
+
+string
+direction_to_string(direction dir, bool add_parens);
+
+string
+direction_range_to_string(dirrange dir_range);
+
+string
+location_to_string(int column, int row, int level);
+
+string
+square_location_to_string(square *square_ptr);
+
+string
+map_coords_to_string(mapcoords map_coords);
+
+string
+vertex_to_string(vertex v);
+
+string
+size_to_string(int width, int height);
 
