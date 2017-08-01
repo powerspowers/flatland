@@ -1743,6 +1743,7 @@ light::light()
 	intensity_range.max_percentage = 1.0f;
 	intensity = 1.0f;
 	delta_intensity = 0.0f;
+	speed = 0.0f;
 	lit_colour.set_RGB(255,255,255);
 	set_radius(1.0f);
 	set_cone_angle(45.0f);
@@ -1787,6 +1788,10 @@ light::set_dir_speed(float light_speed)
 	float angle_x_range, angle_y_range, angle_h_range;
 	float degrees_per_second;
 	float temp_angle;
+
+	// Remember the speed in cycles per second.
+
+	speed = light_speed;
 
 	// Determine the range of angles around the X and Y axes, and from this
 	// compute the degrees travelled around the sphere.  If this is zero,
@@ -1861,6 +1866,7 @@ light::set_intensity_range(pcrange light_intensity_range)
 void
 light::set_intensity_speed(float light_speed)
 {
+	speed = light_speed;
 	delta_intensity = (intensity_range.max_percentage - 
 		intensity_range.min_percentage) * 2.0f * light_speed;
 }
@@ -1879,6 +1885,7 @@ light::set_radius(float light_radius)
 void
 light::set_cone_angle(float light_cone_angle)
 {
+	cone_angle = light_cone_angle;
 	cos_cone_angle = cosf(RAD(light_cone_angle));
 	cone_angle_M = 1.0f / (1.0f - cos_cone_angle);
 }
@@ -2672,6 +2679,7 @@ block_def::block_def()
 	polygons = 0;
 	polygon_def_list = NULL;
 	light_list = NULL;
+	last_light_ptr = NULL;
 	sound_list = NULL;
 	popup_trigger_flags = 0;
 	popup_list = NULL;

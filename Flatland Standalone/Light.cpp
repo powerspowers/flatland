@@ -101,11 +101,17 @@ find_closest_lights_in_light_list(light_ref *active_light_list,
 	while (light_ptr != NULL) {
 
 		// Compute the distance from the light to the vertex.  If a translation
-		// has been supplied, add it to the light's position.
+		// has been supplied, add it to the light's position, otherwise use the
+		// map coordinates in the light itself.
 
 		light_pos = light_ptr->position;
 		if (translation_ptr != NULL)
 			light_pos = light_pos + *translation_ptr;
+		else {
+			vertex translation;
+			translation.set_map_translation(light_ptr->map_coords.column, light_ptr->map_coords.row, light_ptr->map_coords.level);
+			light_pos = light_pos + translation;
+		}
 		rel_pos = light_pos - *vertex_ptr;
 		distance = (rel_pos.dx * rel_pos.dx) + (rel_pos.dy * rel_pos.dy) + 
 			(rel_pos.dz * rel_pos.dz);
@@ -163,6 +169,7 @@ void
 set_active_lights(light_ref *active_light_list, vertex *vertex_ptr)
 {
 	int index;
+	vertex translation;
 
 	// Initialise the closest light list, and the distance list.
 

@@ -129,6 +129,7 @@ extern imagemap *imagemap_list;
 // Global list of lights.
 
 extern light *global_light_list;
+extern light *last_global_light_ptr;
 
 // Orb direction, light, texture, brightness, size and exit.
 

@@ -4520,6 +4520,10 @@ attribute_value_to_string(int value_type, int value)
 		return get_value_str_from_list(value, map_style_value_list, MAP_STYLE_VALUES);
 	case VALUE_PLAYBACK_MODE:
 		return get_value_str_from_list(value, playback_mode_value_list, PLAYBACK_MODE_VALUES);
+	case VALUE_POINT_LIGHT_STYLE:
+		return get_value_str_from_list(value, point_light_style_value_list, POINT_LIGHT_STYLE_VALUES);
+	case VALUE_SPOT_LIGHT_STYLE:
+		return get_value_str_from_list(value, spot_light_style_value_list, SPOT_LIGHT_STYLE_VALUES);
 	default:
 		return "";
 	}

@@ -50,6 +50,8 @@ static bool got_loop_list;
 static bool got_param_tag;
 static bool got_part_list;
 static bool got_player_tag;
+static bool got_player_size;
+static bool got_player_camera;
 static bool got_server_tag;
 static bool got_sprite_part_tag;
 #ifdef STREAMING_MEDIA
@@ -1035,7 +1037,7 @@ parse_sprite_param_tag(block_def *block_def_ptr)
 //------------------------------------------------------------------------------
 
 static light *
-parse_point_light_tag(light *&light_list, bool allow_replacement)
+parse_point_light_tag(light *&light_list, light *&last_light_ptr, bool allow_replacement)
 {
 	string light_name;
 	light *light_ptr;
@@ -1057,7 +1059,7 @@ parse_point_light_tag(light *&light_list, bool allow_replacement)
 	// If allow_replacement is FALSE, and the light name is not empty, then
 	// verify no light with that name exists.
 	//
-	// NOTE: This means there an be multiple lights with no name.
+	// NOTE: This means there can be multiple lights with no name.
 
 	else {
 		if (strlen(light_name) > 0 && 
@@ -1069,7 +1071,7 @@ parse_point_light_tag(light *&light_list, bool allow_replacement)
 	}
 
 	// If no light has been found, create a new light with default settings,
-	// set it's name, then add it to the list.
+	// set it's name, then add it to the end of the list.
 
 	if (light_ptr == NULL) {
 		NEW(light_ptr, light);
@@ -1078,8 +1080,13 @@ parse_point_light_tag(light *&light_list, bool allow_replacement)
 			return(NULL);
 		}
 		light_ptr->name = light_name;
-		light_ptr->next_light_ptr = light_list;
-		light_list = light_ptr;
+		light_ptr->next_light_ptr = NULL;
+		if (last_light_ptr) {
+			last_light_ptr->next_light_ptr = light_ptr;
+		} else {
+			light_list = light_ptr;
+		}
+		last_light_ptr = light_ptr;
 	}
 
 	// If the style parameter was specified, set the light style, otherwise have
@@ -1416,7 +1423,7 @@ parse_sound_tag(sound *&sound_list, bool allow_replacement,
 //------------------------------------------------------------------------------
 
 static light *
-parse_spot_light_tag(light *&light_list, bool allow_replacement)
+parse_spot_light_tag(light *&light_list,  light *&last_light_ptr, bool allow_replacement)
 {
 	string light_name;
 	light *light_ptr;
@@ -1459,8 +1466,13 @@ parse_spot_light_tag(light *&light_list, bool allow_replacement)
 			return(NULL);
 		}
 		light_ptr->name = light_name;
-		light_ptr->next_light_ptr = light_list;
-		light_list = light_ptr;
+		light_ptr->next_light_ptr = NULL;
+		if (last_light_ptr) {
+			last_light_ptr->next_light_ptr = light_ptr;
+		} else {
+			light_list = light_ptr;
+		}
+		last_light_ptr = light_ptr;	
 	}
 
 	// If the style parameter was specified, set the light style, otherwise have
@@ -1507,8 +1519,8 @@ parse_spot_light_tag(light *&light_list, bool allow_replacement)
 	}
 
 	// If the cone parameter was specified, set the cone angle of the light.
-	// The angle given in the cone parameter is assumed to be a diameter, not
-	// a radius.
+	// The angle given in the cone parameter is assumed to be for generating a
+	// diameter, not a radius.
 
 	if (parsed_attribute[SPOT_LIGHT_CONE])
 		light_ptr->set_cone_angle(spot_light_cone / 2.0f);
@@ -1571,7 +1583,7 @@ parse_block_file(blockset *blockset_ptr, block_def *block_def_ptr)
 				parse_sprite_part_tag(blockset_ptr, block_def_ptr);
 				break;
 			case TOKEN_POINT_LIGHT:
-				parse_point_light_tag(block_def_ptr->light_list, true);
+				parse_point_light_tag(block_def_ptr->light_list, block_def_ptr->last_light_ptr, true);
 				break;
 			case TOKEN_SOUND:
 				if (sound_on)
@@ -1579,7 +1591,7 @@ parse_block_file(blockset *blockset_ptr, block_def *block_def_ptr)
 						blockset_ptr);
 				break;
 			case TOKEN_SPOT_LIGHT:
-				parse_spot_light_tag(block_def_ptr->light_list, true);
+				parse_spot_light_tag(block_def_ptr->light_list, block_def_ptr->last_light_ptr, true);
 			}
 		stop_parsing_nested_tags();
 
@@ -1641,7 +1653,7 @@ parse_block_file(blockset *blockset_ptr, block_def *block_def_ptr)
 				parse_part_list(blockset_ptr, block_def_ptr);
 				break;
 			case TOKEN_POINT_LIGHT:
-				parse_point_light_tag(block_def_ptr->light_list, true);
+				parse_point_light_tag(block_def_ptr->light_list, block_def_ptr->last_light_ptr, true);
 				break;
 			case TOKEN_SOUND:
 				if (sound_on)
@@ -1649,7 +1661,7 @@ parse_block_file(blockset *blockset_ptr, block_def *block_def_ptr)
 						blockset_ptr);
 				break;
 			case TOKEN_SPOT_LIGHT:
-				parse_spot_light_tag(block_def_ptr->light_list, true);
+				parse_spot_light_tag(block_def_ptr->light_list, block_def_ptr->last_light_ptr, true);
 				break;
 			case TOKEN_VERTICES:
 				parse_vertex_list(block_def_ptr);
@@ -3604,20 +3616,27 @@ parse_player_tag(void)
 
 	// Save the block symbol if it were given, otherwise set the symbol to zero.
 
-	player_block_symbol = player_block;
+	if (parsed_attribute[PLAYER_BLOCK]) {
+		player_block_symbol = player_block;
+	} else {
+		player_block_symbol = 0;
+	}
 
 	// Save the player size if it were given, otherwise set the size to a
 	// default value.
 
-	if (parsed_attribute[PLAYER_SIZE])
+	if (parsed_attribute[PLAYER_SIZE]) {
+		got_player_size = true;
 		player_dimensions = player_size;
-	else
+	} else {
 		player_dimensions.set(1.2f, 1.5f, 1.2f);
+	}
 
 	// Save the camera offset if it were given, otherwise select a default
 	// camera offset.
 
 	if (parsed_attribute[PLAYER_CAMERA]) {
+		got_player_camera = true;
 		player_camera_offset.dx = player_camera.x;
 		player_camera_offset.dy = player_camera.y;
 		player_camera_offset.dz = player_camera.z;
@@ -3784,11 +3803,11 @@ parse_next_create_tag(int tag_token, tag_def *create_tag_list,
 		break;
 
 	case TOKEN_POINT_LIGHT:
-		parse_point_light_tag(custom_block_def_ptr->light_list, true);
+		parse_point_light_tag(custom_block_def_ptr->light_list, custom_block_def_ptr->last_light_ptr, true);
 		break;
 
 	case TOKEN_SPOT_LIGHT:
-		parse_spot_light_tag(custom_block_def_ptr->light_list, true);
+		parse_spot_light_tag(custom_block_def_ptr->light_list, custom_block_def_ptr->last_light_ptr, true);
 		break;
 
 	case TOKEN_SOUND:
@@ -4122,14 +4141,12 @@ parse_next_body_tag(int tag_token, bool allow_import_tag)
 		// Parse the point light tag, adding the point light to the global
 		// light list.
 
-		light_ptr = parse_point_light_tag(global_light_list, false);
+		light_ptr = parse_point_light_tag(global_light_list, last_global_light_ptr, false);
 
-		// Translate the light's position by the map coordinates.
+		// Save the light's map coordinates.
 
 		if (light_ptr != NULL) {
-			translation.set_map_translation(point_light_location.column, 
-				point_light_location.row, point_light_location.level);
-			light_ptr->position = light_ptr->position + translation;
+			light_ptr->map_coords = point_light_location;
 		}
 		break;
 
@@ -4261,14 +4278,12 @@ parse_next_body_tag(int tag_token, bool allow_import_tag)
 		// Parse the spot light tag, adding the spot light to the global
 		// light list.
 
-		light_ptr = parse_spot_light_tag(global_light_list, false);
+		light_ptr = parse_spot_light_tag(global_light_list, last_global_light_ptr, false);
 
-		// Translate the light's position by the map coordinates.
+		// Save the map coordinates for the light.
 
 		if (light_ptr != NULL) {
-			translation.set_map_translation(spot_light_location.column, 
-				spot_light_location.row, spot_light_location.level);
-			light_ptr->position = light_ptr->position + translation;
+			light_ptr->map_coords = spot_light_location;
 		}
 	}
 }
@@ -4346,6 +4361,8 @@ parse_body_tags(void)
 	// Initialise some state variables.
 
 	got_player_tag = false;
+	got_player_size = false;
+	got_player_camera = false;
 	curr_level = 0;
 
 	// Parse the body tags.
@@ -4646,9 +4663,27 @@ parse_spot_file(char *spot_URL, char *spot_file_path)
 static char attribute_string[256];
 
 static string
+boolean_to_string(bool flag)
+{
+	return (char *)attribute_value_to_string(VALUE_BOOLEAN, flag);
+}
+
+static string
 percentage_to_string(float percentage)
 {
 	sprintf(attribute_string, "%g%%", percentage * 100.0f);
+	return attribute_string;
+}
+
+static string
+percentage_range_to_string(pcrange percentage_range)
+{
+	string min_percentage = percentage_to_string(percentage_range.min_percentage);
+	if (percentage_range.min_percentage == percentage_range.max_percentage) {
+		return min_percentage;
+	}
+	string max_percentage = percentage_to_string(percentage_range.max_percentage);
+	sprintf(attribute_string, "%s..%s", (char *)min_percentage, (char *)max_percentage);
 	return attribute_string;
 }
 
@@ -4689,9 +4724,34 @@ direction_to_string(direction dir)
 }
 
 static string
+direction_range_to_string(dirrange dir_range)
+{
+	string min_direction = direction_to_string(dir_range.min_direction);
+	if (dir_range.min_direction.angle_x == dir_range.max_direction.angle_x && dir_range.min_direction.angle_y == dir_range.max_direction.angle_y) {
+		return min_direction;
+	}
+	string max_direction = direction_to_string(dir_range.max_direction);
+	sprintf(attribute_string, "%s..%s", (char *)min_direction, (char *)max_direction);
+	return attribute_string;
+}
+
+static string
 location_to_string(int column, int row, int level)
 {
 	sprintf(attribute_string, "(%d, %d, %d)", column + 1, row + 1, world_ptr->ground_level_exists ? level : level + 1);
+	return attribute_string;
+}
+
+static string
+map_coords_to_string(mapcoords map_coords)
+{
+	return location_to_string(map_coords.column, map_coords.row, map_coords.level);
+}
+
+static string
+vertex_to_string(vertex v)
+{
+	sprintf(attribute_string, "(%g, %g, %g)", v.x * TEXELS_PER_UNIT, v.y * TEXELS_PER_UNIT, v.z * TEXELS_PER_UNIT);
 	return attribute_string;
 }
 
@@ -4735,6 +4795,39 @@ generate_exit_tag(FILE *fp, const char *prefix, hyperlink *exit_ptr, int column 
 	fprintf(fp, "/>\n");
 }
 
+static void
+generate_light_tag(FILE *fp, const char *prefix, light *light_ptr, bool has_map_coords)
+{
+	bool is_point_light = light_ptr->style == STATIC_POINT_LIGHT || light_ptr->style == PULSATING_POINT_LIGHT;
+	fprintf(fp, "%s<", prefix);
+	if (is_point_light) {
+		fprintf(fp, "point_light style=\"%s\"", (char *)attribute_value_to_string(VALUE_POINT_LIGHT_STYLE, light_ptr->style));
+	} else {
+		fprintf(fp, "spot_light style=\"%s\"", (char *)attribute_value_to_string(VALUE_SPOT_LIGHT_STYLE, light_ptr->style));
+	}
+	if (light_ptr->name != "") {
+		fprintf(fp, " name=\"%s\"", (char *)light_ptr->name);
+	}
+	if (light_ptr->position.x != UNITS_PER_HALF_BLOCK && light_ptr->position.y != UNITS_PER_HALF_BLOCK && light_ptr->position.z != UNITS_PER_HALF_BLOCK) {
+		fprintf(fp, " position=\"%s\"", (char *)vertex_to_string(light_ptr->position));
+	}
+	fprintf(fp, " brightness=\"%s\"", (char *)percentage_range_to_string(light_ptr->intensity_range));
+	fprintf(fp, " radius=\"%s\"", (char *)radius_to_string(light_ptr->radius));
+	if (light_ptr->speed) {
+		fprintf(fp, " speed=\"%g\"", light_ptr->speed);
+	}
+	fprintf(fp, " flood=\"%s\"", (char *)boolean_to_string(light_ptr->flood));
+	fprintf(fp, " color=\"%s\"", (char *)colour_to_string(light_ptr->colour));
+	if (!is_point_light) {
+		fprintf(fp, " direction=\"%s\"", (char *)direction_range_to_string(light_ptr->dir_range));
+		fprintf(fp, " cone=\"%g\"", light_ptr->cone_angle);
+	}
+	if (has_map_coords) {
+		fprintf(fp, " location=\"%s\"", (char *)map_coords_to_string(light_ptr->map_coords));
+	}
+	fprintf(fp, "/>\n");
+}
+
 void
 save_spot_file(const char *spot_file_path)
 {
@@ -4749,7 +4842,7 @@ save_spot_file(const char *spot_file_path)
 		// If a debug tag was present, generate it.
 
 		if (got_debug_tag) {
-			fprintf(fp, "\t\t<debug warnings=\"%s\"/>\n", (char *)attribute_value_to_string(VALUE_BOOLEAN, debug_warnings)); 
+			fprintf(fp, "\t\t<debug warnings=\"%s\"/>\n", (char *)boolean_to_string(debug_warnings)); 
 		}
 
 		// If a base tag was present, or this spot came from the web, generate it.
@@ -4902,6 +4995,22 @@ save_spot_file(const char *spot_file_path)
 			fprintf(fp, "\t\t<define>%s</define>\n", (char *)global_script);
 		}
 
+		// Generate a player tag, if the player was defined.
+
+		if (got_player_tag) {
+			fprintf(fp, "\t\t<player");
+			if (player_block_symbol != 0) {
+				fprintf(fp, " block=\"%s\"", (char *)get_symbol(player_block_symbol));
+			}
+			if (got_player_size) {
+				fprintf(fp, " size=\"%s\"", (char *)vertex_to_string(player_size));
+			}
+			if (got_player_camera) {
+				fprintf(fp, " camera=\"%s\"", (char *)vertex_to_string(player_camera));
+			}
+			fprintf(fp, "/>\n");
+		}
+
 		// Generate an entrance tag for every global entrance.
 
 		entrance *entrance_ptr = global_entrance_list;
@@ -4921,6 +5030,14 @@ save_spot_file(const char *spot_file_path)
 					}
 				}
 			}
+		}
+
+		// Generate a tag for every global light.
+
+		light *light_ptr = global_light_list;
+		while (light_ptr) {
+			generate_light_tag(fp, "\t\t", light_ptr, true);
+			light_ptr = light_ptr->next_light_ptr;
 		}
 
 		// Generate a create tag for every custom block definition.
@@ -4945,6 +5062,14 @@ save_spot_file(const char *spot_file_path)
 
 			if (block_def_ptr->exit_ptr && block_def_ptr->custom_exit) {
 				generate_exit_tag(fp, "\t\t\t", block_def_ptr->exit_ptr);
+			}
+
+			// Generate a tag for every block light.
+
+			light *light_ptr = block_def_ptr->light_list;
+			while (light_ptr) {
+				generate_light_tag(fp, "\t\t\t", light_ptr, false);
+				light_ptr = light_ptr->next_light_ptr;
 			}
 
 			// Generate the end create tag.

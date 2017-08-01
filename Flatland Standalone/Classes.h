@@ -922,18 +922,21 @@ struct square;						// Forward declaration.
 struct light {
 	string name;					// Name.
 	int style;						// Style.
-	vertex position;				// Position.
+	mapcoords map_coords;			// Map coordinates of light.
+	vertex position;				// Map coordinates plus offset.
 	dirrange dir_range;				// Direction range.
 	direction delta_dir;			// Change in direction per second.
 	direction curr_dir;				// Current direction.
 	vector dir;						// Current direction as a vector.
 	RGBcolour colour;				// Colour.
 	pcrange intensity_range;		// Intensity range.
+	float speed;					// Speed for intensity or direction.
 	float delta_intensity;			// Change in intensity per second.
 	float intensity;				// Intensity.
 	RGBcolour lit_colour;			// Colour at intensity.
 	float radius;					// Radius of light.
 	float one_on_radius;			// 1 / radius.
+	float cone_angle;				// Cone angle in degrees.
 	float cos_cone_angle;			// Cosine of cone angle.
 	float cone_angle_M;				// 1 / (1 - cosine of cone angle).
 	bool flood;						// TRUE if flood light (no light dropoff).
@@ -1356,6 +1359,7 @@ struct block_def {
 	int polygons;					// Size of polygon definition list. 
 	polygon_def *polygon_def_list;	// List of all polygon definitions in block.
 	light *light_list;				// List of lights (if any).
+	light *last_light_ptr;			// Pointer to last light in list (if any).
 	sound *sound_list;				// List of sounds (if any).
 	int popup_trigger_flags;		// Popup trigger flags.
 	popup *popup_list;				// List of popups (if any).

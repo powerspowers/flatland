@@ -161,6 +161,7 @@ imagemap *imagemap_list;
 // Global list of lights.
 
 light *global_light_list;
+light *last_global_light_ptr;
 
 // Orb direction, light, texture, brightness, size and exit.
 
@@ -985,11 +986,16 @@ start_up_spot(void)
 	last_global_entrance_ptr = NULL;
 	imagemap_list = NULL;
 	global_light_list = NULL;
+	last_global_light_ptr = NULL;
 	global_sound_list = NULL;
 	global_popup_list = NULL;
 	last_global_popup_ptr = NULL;
 	movable_block_list = NULL;
 	fixed_block_list = NULL;
+	first_metadata_ptr = NULL;
+	last_metadata_ptr = NULL;
+	first_load_tag_ptr = NULL;
+	last_load_tag_ptr = NULL;
 
 	// Initialise various global objects.
 
@@ -1221,7 +1227,6 @@ shut_down_spot(void)
 		DEL(first_metadata_ptr, metadata);
 		first_metadata_ptr = next_metadata_ptr;
 	}
-	last_metadata_ptr = NULL;
 
 	// Delete the log tag list.
 
@@ -1230,7 +1235,6 @@ shut_down_spot(void)
 		DEL(first_load_tag_ptr, load_tag);
 		first_load_tag_ptr = next_load_tag_ptr;
 	}
-	last_load_tag_ptr = NULL;
 
 	// Delete map.
 
@@ -3565,10 +3569,6 @@ init_player(void)
 	spot_URL_dir = "";
 	old_blockset_list_ptr = NULL;
 	blockset_list_ptr = NULL;
-	first_metadata_ptr = NULL;
-	last_metadata_ptr = NULL;
-	first_load_tag_ptr = NULL;
-	last_load_tag_ptr = NULL;
 	last_refresh_time_ms = 0;
 	refresh_count = 0;
 
