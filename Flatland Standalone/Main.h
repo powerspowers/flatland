@@ -100,6 +100,11 @@ extern blockset *custom_blockset_ptr;
 extern metadata *first_metadata_ptr;
 extern metadata *last_metadata_ptr;
 
+// Load tag list.
+
+extern load_tag *first_load_tag_ptr;
+extern load_tag *last_load_tag_ptr;
+
 // Symbol to block definition mapping table.
 
 extern block_def *block_symbol_table[16384];

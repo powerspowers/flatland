@@ -3550,6 +3550,8 @@ parse_level_tag(void)
 static void
 parse_load_tag(void)
 {
+	load_tag *load_tag_ptr;
+
 	// Either the texture or sound parameter must be present, but not both.
 
 	if ((!parsed_attribute[LOAD_TEXTURE] && !parsed_attribute[LOAD_SOUND]) ||
@@ -3559,12 +3561,32 @@ parse_load_tag(void)
 		return;
 	}
 
-	// Load the specified texture or wave URL.
+	// Create a new load_tag object, and add it to the end of the load_tag list.
 
-	if (parsed_attribute[LOAD_TEXTURE])
+	NEW(load_tag_ptr, load_tag);
+	if (load_tag_ptr == NULL) {
+		memory_warning("load_tag");
+		return;
+	}
+	load_tag_ptr->next_load_tag_ptr = NULL;
+	if (last_load_tag_ptr != NULL) {
+		last_load_tag_ptr->next_load_tag_ptr = load_tag_ptr;
+	} else {
+		first_load_tag_ptr = load_tag_ptr;
+	}
+	last_load_tag_ptr = load_tag_ptr;
+
+	// Initialize the load tag, and load the specified texture or wave URL.
+
+	if (parsed_attribute[LOAD_TEXTURE]) {
+		load_tag_ptr->is_texture_href = true;
+		load_tag_ptr->href = load_texture_href;
 		load_texture(custom_blockset_ptr, load_texture_href, true);
-	else
+	} else {
+		load_tag_ptr->is_texture_href = false;
+		load_tag_ptr->href = load_sound_href;
 		load_wave(custom_blockset_ptr, load_sound_href);
+	}
 }
 
 //------------------------------------------------------------------------------
@@ -4453,15 +4475,6 @@ parse_spot_file(char *spot_URL, char *spot_file_path)
 	curr_load_index = 0;
 	global_fog_enabled = false;
 
-	// Delete the metadata list.
-
-	while (first_metadata_ptr != NULL) {
-		metadata *next_metadata_ptr = first_metadata_ptr->next_metadata_ptr;
-		DEL(first_metadata_ptr, metadata);
-		first_metadata_ptr = next_metadata_ptr;
-	}
-	last_metadata_ptr = NULL;
-
 #ifdef STREAMING_MEDIA
 
 	stream_set = false;
@@ -4868,6 +4881,20 @@ save_spot_file(const char *spot_file_path)
 
 		fprintf(fp, "\t</head>\n");
 		fprintf(fp, "\t<body>\n");
+
+		// Generate all load tags.
+
+		load_tag *load_tag_ptr = first_load_tag_ptr;
+		while (load_tag_ptr) {
+			fprintf(fp, "\t\t<load");
+			if (load_tag_ptr->is_texture_href) {
+				fprintf(fp, " texture=\"%s\"", (char *)load_tag_ptr->href);
+			} else {
+				fprintf(fp, " sound=\"%s\"", (char *)load_tag_ptr->href);
+			}
+			fprintf(fp, "/>\n");
+			load_tag_ptr = load_tag_ptr->next_load_tag_ptr;
+		}
 
 		// Generate a define tag for the global script, if it's not empty.
 

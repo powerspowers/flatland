@@ -130,6 +130,11 @@ blockset *custom_blockset_ptr;
 metadata *first_metadata_ptr;
 metadata *last_metadata_ptr;
 
+// Load tag list.
+
+load_tag *first_load_tag_ptr;
+load_tag *last_load_tag_ptr;
+
 // Symbol to block definition mapping table.  If single character symbols are
 // being used, only the first 127 entries are valid.  If double character
 // symbols are being used, all entries are valid.
@@ -1208,6 +1213,24 @@ shut_down_spot(void)
 	}
 
 #endif
+
+	// Delete the metadata list.
+
+	while (first_metadata_ptr != NULL) {
+		metadata *next_metadata_ptr = first_metadata_ptr->next_metadata_ptr;
+		DEL(first_metadata_ptr, metadata);
+		first_metadata_ptr = next_metadata_ptr;
+	}
+	last_metadata_ptr = NULL;
+
+	// Delete the log tag list.
+
+	while (first_load_tag_ptr != NULL) {
+		load_tag *next_load_tag_ptr = first_load_tag_ptr->next_load_tag_ptr;
+		DEL(first_load_tag_ptr, load_tag);
+		first_load_tag_ptr = next_load_tag_ptr;
+	}
+	last_load_tag_ptr = NULL;
 
 	// Delete map.
 
@@ -3544,6 +3567,8 @@ init_player(void)
 	blockset_list_ptr = NULL;
 	first_metadata_ptr = NULL;
 	last_metadata_ptr = NULL;
+	first_load_tag_ptr = NULL;
+	last_load_tag_ptr = NULL;
 	last_refresh_time_ms = 0;
 	refresh_count = 0;
 
