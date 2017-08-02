@@ -115,7 +115,6 @@ semaphore<float> curr_jump_delta;
 semaphore<int> curr_move_rate;
 semaphore<int> curr_turn_rate;
 semaphore<float> master_brightness;
-semaphore<bool> download_sounds;
 semaphore<bool> use_classic_controls;
 semaphore<int> visible_block_radius;
 semaphore<bool> snapshot_in_progress;
@@ -737,7 +736,6 @@ options_window_callback(int option_ID, int option_value)
 		save_config_file();
 		break;
 	case CANCEL_BUTTON:
-		download_sounds.set(old_download_sounds);
 		visible_block_radius.set(old_visible_block_radius);
 		use_classic_controls.set(old_use_classic_controls);
 		curr_move_rate.set(old_curr_move_rate);
@@ -748,9 +746,6 @@ options_window_callback(int option_ID, int option_value)
 		break;
 	case VIEW_RADIUS_SLIDER:
 		visible_block_radius.set(option_value);
-		break;
-	case DOWNLOAD_SOUNDS_CHECKBOX:
-		download_sounds.set(option_value ? true : false);
 		break;
 	case CLASSIC_CONTROLS_CHECKBOX:
 		use_classic_controls.set(option_value ? true : false);
@@ -853,15 +848,13 @@ key_event_callback(byte key_code, bool key_down)
 void
 show_options_window()
 {
-	old_download_sounds = download_sounds.get();
 	old_visible_block_radius = visible_block_radius.get();
 	old_use_classic_controls = use_classic_controls.get();
 	old_curr_move_rate = curr_move_rate.get();
 	old_curr_turn_rate = curr_turn_rate.get();
 	old_user_debug_level = user_debug_level.get();
 	old_force_software_rendering = force_software_rendering.get();
-	open_options_window(old_download_sounds, old_visible_block_radius,
-		old_use_classic_controls, old_curr_move_rate, old_curr_turn_rate,
+	open_options_window(old_visible_block_radius, old_use_classic_controls, old_curr_move_rate, old_curr_turn_rate,
 		old_user_debug_level, old_force_software_rendering, options_window_callback);
 }
 
@@ -1355,7 +1348,6 @@ run_app(void *instance_handle, int show_command, char *spot_file_path)
 	curr_move_rate.create_semaphore();
 	curr_turn_rate.create_semaphore();
 	master_brightness.create_semaphore();
-	download_sounds.create_semaphore();
 	use_classic_controls.create_semaphore();
 	visible_block_radius.create_semaphore();
 	downloaded_URL.create_semaphore();
@@ -1495,7 +1487,6 @@ shut_down_app()
 	curr_move_rate.destroy_semaphore();
 	curr_turn_rate.destroy_semaphore();
 	master_brightness.destroy_semaphore();
-	download_sounds.destroy_semaphore();
 	use_classic_controls.destroy_semaphore();
 	visible_block_radius.destroy_semaphore();
 	downloaded_URL.destroy_semaphore();

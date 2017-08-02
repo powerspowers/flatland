@@ -1306,7 +1306,7 @@ parse_popup_tag(popup *&popup_list, popup *&last_popup_ptr, bool allow_replaceme
 //------------------------------------------------------------------------------
 
 static sound *
-parse_sound_tag(sound *&sound_list, bool allow_replacement,
+parse_sound_tag(sound *&sound_list, sound *&last_sound_ptr, bool allow_replacement,
 				blockset *blockset_ptr)
 {
 	sound *sound_ptr;
@@ -1373,8 +1373,10 @@ parse_sound_tag(sound *&sound_list, bool allow_replacement,
 
 	// If the file parameter was given, assign the wave to the sound.
 
-	if (parsed_attribute[SOUND_FILE])
+	if (parsed_attribute[SOUND_FILE]) {
+		sound_ptr->URL = sound_file;
 		sound_ptr->wave_ptr = wave_ptr;
+	}
 	
 	// If the volume parameter was given, set the sound volume.
 
@@ -1400,8 +1402,7 @@ parse_sound_tag(sound *&sound_list, bool allow_replacement,
 
 	if (parsed_attribute[SOUND_ROLLOFF]) {
 		if (sound_rolloff < 0.0f)
-			warning("Sound rolloff must be greater than zero; using default "
-				"rolloff of 1.0");
+			warning("Sound rolloff must be greater than zero; using default rolloff of 1.0");
 		else
 			sound_ptr->rolloff = sound_rolloff;
 	}
@@ -1588,9 +1589,7 @@ parse_block_file(blockset *blockset_ptr, block_def *block_def_ptr)
 				parse_point_light_tag(block_def_ptr->light_list, block_def_ptr->last_light_ptr, true);
 				break;
 			case TOKEN_SOUND:
-				if (sound_on)
-					parse_sound_tag(block_def_ptr->sound_list, true,
-						blockset_ptr);
+				parse_sound_tag(block_def_ptr->sound_list, block_def_ptr->last_sound_ptr, true, blockset_ptr);
 				break;
 			case TOKEN_SPOT_LIGHT:
 				parse_spot_light_tag(block_def_ptr->light_list, block_def_ptr->last_light_ptr, true);
@@ -1658,9 +1657,7 @@ parse_block_file(blockset *blockset_ptr, block_def *block_def_ptr)
 				parse_point_light_tag(block_def_ptr->light_list, block_def_ptr->last_light_ptr, true);
 				break;
 			case TOKEN_SOUND:
-				if (sound_on)
-					parse_sound_tag(block_def_ptr->sound_list, true, 
-						blockset_ptr);
+				parse_sound_tag(block_def_ptr->sound_list, block_def_ptr->last_sound_ptr, true, blockset_ptr);
 				break;
 			case TOKEN_SPOT_LIGHT:
 				parse_spot_light_tag(block_def_ptr->light_list, block_def_ptr->last_light_ptr, true);
@@ -1982,11 +1979,6 @@ parse_ambient_sound_tag(void)
 		return;
 	}
 	got_ambient_sound_tag = true;
-	
-	// If sound is not enabled, we can ignore this tag.
-
-	if (!sound_on)
-		return;
 
 	// Load the wave from the given wave file.  If this fails, generate a 
 	// warning and return.
@@ -3662,7 +3654,7 @@ parse_script_tag(block_def *block_def_ptr, bool need_location_param)
 	int part_no;
 	part *part_ptr;
 
-	// If the LOCATION parameter is missing, it is required, and the trigger is
+	// If the LOCATION parameter is missing and it is required, and the trigger is
 	// not "timer", this is an error.
 
 	got_location_param = parsed_attribute[ACTION_LOCATION];
@@ -3813,9 +3805,7 @@ parse_next_create_tag(int tag_token, tag_def *create_tag_list,
 		break;
 
 	case TOKEN_SOUND:
-		if (sound_on)
-			parse_sound_tag(custom_block_def_ptr->sound_list, true,
-				custom_blockset_ptr);
+		parse_sound_tag(custom_block_def_ptr->sound_list, custom_block_def_ptr->last_sound_ptr, true, custom_blockset_ptr);
 		break;
 
 	case TOKEN_POPUP:
@@ -3823,13 +3813,11 @@ parse_next_create_tag(int tag_token, tag_def *create_tag_list,
 		// Parse the popup tag and add it to the custom block definition's
 		// popup list.
 
-		popup_ptr = parse_popup_tag(custom_block_def_ptr->popup_list, 
-			custom_block_def_ptr->last_popup_ptr, true);
+		popup_ptr = parse_popup_tag(custom_block_def_ptr->popup_list, custom_block_def_ptr->last_popup_ptr, true);
 
 		// Update the custom block definition's popup trigger flags.
 
-		custom_block_def_ptr->popup_trigger_flags |= 
-			popup_ptr->trigger_flags;
+		custom_block_def_ptr->popup_trigger_flags |= popup_ptr->trigger_flags;
 		break;
 
 	case TOKEN_ENTRANCE:
@@ -4200,23 +4188,14 @@ parse_next_body_tag(int tag_token, bool allow_import_tag)
 	
 	case TOKEN_SOUND:
 
-		// Only parse the sound tag if sound is enabled.
+		// Parse the sound tag, adding the sound to the global sound list.
 
-		if (sound_on) {
+		sound_ptr = parse_sound_tag(global_sound_list, last_global_sound_ptr, false, custom_blockset_ptr);
 
-			// Parse the sound tag, adding the sound to the global sound
-			// list.
+		// Save the sound's map coordinates.
 
-			sound_ptr = parse_sound_tag(global_sound_list, false,
-				custom_blockset_ptr);
-
-			// Translate the sound's position by the map coordinates.
-
-			if (sound_ptr != NULL) {
-				translation.set_map_translation(sound_location.column, 
-					sound_location.row, sound_location.level);
-				sound_ptr->position = sound_ptr->position + translation;
-			}
+		if (sound_ptr != NULL) {
+			sound_ptr->map_coords = sound_location;
 		}
 		break;
 
@@ -4512,11 +4491,6 @@ parse_spot_file(char *spot_URL, char *spot_file_path)
 		fprintf(fp, "<BODY BGCOLOR=\"#ffcc66\">\n");
 		fclose(fp);
 	}
-
-	// Enable sound if the sound system started up, and downloading of sounds
-	// is enabled.
-
-	sound_on = (sound_available && download_sounds.get());
 
 	// Delete the old blockset list, if it exists.  This will only happen if the
 	// previous spot failed to load.
@@ -4825,6 +4799,26 @@ print_popup_tag(popup *popup_ptr)
 	close_empty_tag();
 }
 
+static void
+print_sound_tag(sound *sound_ptr, bool has_map_coords)
+{
+	open_empty_tag("sound");
+	print_attr("name", sound_ptr->name);
+	print_attr("file", sound_ptr->URL);
+	if (sound_ptr->radius > 0.0f) {
+		print_attr("radius", radius_to_string(sound_ptr->radius));
+	}
+	print_attr("volume", percentage_to_string(sound_ptr->volume));
+	print_attr("playback", value_to_string(VALUE_PLAYBACK_MODE, sound_ptr->playback_mode));
+	print_attr("delay", delay_range_to_string(sound_ptr->delay_range));
+	print_attr("flood", boolean_to_string(sound_ptr->flood));
+	print_attr("rolloff", float_to_string(sound_ptr->rolloff));
+	if (has_map_coords) {
+		print_attr("location", map_coords_to_string(sound_ptr->map_coords));
+	}
+	close_empty_tag();
+}
+
 void
 save_spot_file(const char *spot_file_path)
 {
@@ -5071,6 +5065,14 @@ save_spot_file(const char *spot_file_path)
 			popup_ptr = popup_ptr->next_popup_ptr;
 		}
 
+		// Generate a tag for every global sound.
+
+		sound *sound_ptr = global_sound_list;
+		while (sound_ptr) {
+			print_sound_tag(sound_ptr, true);
+			sound_ptr = sound_ptr->next_sound_ptr;
+		}
+
 		// Generate a create tag for every custom block definition.
 
 		block_def *block_def_ptr = custom_blockset_ptr->block_def_list;
@@ -5112,6 +5114,14 @@ save_spot_file(const char *spot_file_path)
 			while (popup_ptr) {
 				print_popup_tag(popup_ptr);
 				popup_ptr = popup_ptr->next_popup_ptr;
+			}
+
+			// Generate a tag for every block sound.
+
+			sound *sound_ptr = block_def_ptr->sound_list;
+			while (sound_ptr) {
+				print_sound_tag(sound_ptr, false);
+				sound_ptr = sound_ptr->next_sound_ptr;
 			}
 
 			// Generate the end create tag.
@@ -5300,7 +5310,6 @@ load_config_file(void)
 	FILE *fp;
 	char line[80];
 	char name[80], value[80];
-	int download_sounds_value;
 	int use_classic_controls_value;
 	int visible_block_radius_value;
 	int curr_move_rate_value, curr_turn_rate_value;
@@ -5310,7 +5319,6 @@ load_config_file(void)
 
 	// Initialise the configuration options with their default values.
 
-	download_sounds_value = 1;
 	use_classic_controls_value = 0;
 	visible_block_radius_value = DEFAULT_VIEW_RADIUS;
 	curr_move_rate_value = DEFAULT_MOVE_RATE;
@@ -5329,9 +5337,7 @@ load_config_file(void)
 			!_strnicmp(line, "Flatland Rover configuration:", 29))
 			while (read_string(fp, line, 80)) {
 				read_config_line(line, name, value);
-				if (!_stricmp(name, "download sounds"))
-					read_config_bool(value, &download_sounds_value);
-				else if (!_stricmp(name, "use classic controls"))
+				if (!_stricmp(name, "use classic controls"))
 					read_config_bool(value, &use_classic_controls_value);
 				else if (!_stricmp(name, "view radius"))
 					read_config_int(value, &visible_block_radius_value);
@@ -5359,7 +5365,6 @@ load_config_file(void)
 
 	// Initialise any global variables affected by the configuration file.
 
-	download_sounds.set(download_sounds_value ? true : false);
 	use_classic_controls.set(use_classic_controls_value ? true : false);
 	visible_block_radius.set(visible_block_radius_value);
 	curr_move_rate.set(curr_move_rate_value);
@@ -5421,7 +5426,6 @@ save_config_file(void)
 
 	if ((fp = fopen(config_file_path, "w")) != NULL) {
 		fprintf(fp, "Flatland Rover configuration:\n");
-		write_config_bool(fp, "download sounds", download_sounds.get());
 		write_config_bool(fp, "use classic controls", use_classic_controls.get());
 		write_config_int(fp, "view radius", visible_block_radius.get(), "blocks");
 		write_config_int(fp, "move rate multiplier", curr_move_rate.get(), "x blocks/second");

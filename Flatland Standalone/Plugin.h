@@ -116,7 +116,6 @@ extern semaphore<float> curr_jump_delta;
 extern semaphore<int> curr_move_rate;
 extern semaphore<int> curr_turn_rate;
 extern semaphore<float> master_brightness;
-extern semaphore<bool> download_sounds;
 extern semaphore<bool> use_classic_controls;
 extern semaphore<int> visible_block_radius;
 extern semaphore<bool> snapshot_in_progress;

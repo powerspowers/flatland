@@ -25,13 +25,12 @@
 
 #define OK_BUTTON							0
 #define	CANCEL_BUTTON						1
-#define DOWNLOAD_SOUNDS_CHECKBOX			2
-#define CLASSIC_CONTROLS_CHECKBOX			3
-#define	VIEW_RADIUS_SLIDER					4
-#define MOVE_RATE_SLIDER					5
-#define TURN_RATE_SLIDER					6
-#define	DEBUG_LEVEL_OPTION					7
-#define FORCE_SOFTWARE_RENDERING_CHECKBOX	8
+#define CLASSIC_CONTROLS_CHECKBOX			2
+#define	VIEW_RADIUS_SLIDER					3
+#define MOVE_RATE_SLIDER					4
+#define TURN_RATE_SLIDER					5
+#define	DEBUG_LEVEL_OPTION					6
+#define FORCE_SOFTWARE_RENDERING_CHECKBOX	7
 
 // Command menu item IDs.
 
@@ -154,9 +153,8 @@ extern int window_width, window_height;
 
 extern bool main_window_ready;
 
-// Flag indicating whether sound is available and enabled.
+// Flag indicating whether sound is on.
 
-extern bool sound_available;
 extern bool sound_on;
 
 //------------------------------------------------------------------------------
@@ -323,7 +321,7 @@ close_light_window(void);
 // Options window functions (called by the plugin thread only).
 
 void
-open_options_window(bool download_sounds_value, int viewing_distance_value, bool use_classic_controls_value,
+open_options_window(int viewing_distance_value, bool use_classic_controls_value,
 					int move_rate_value, int turn_rate_value, int user_debug_level_value, bool force_software_rendering,
 					void (*options_callback)(int option_ID, int option_value));
 

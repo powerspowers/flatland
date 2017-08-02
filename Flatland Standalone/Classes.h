@@ -990,6 +990,7 @@ struct sound {
 	string URL;						// URL to sound file.
 	wave *wave_ptr;					// Pointer to wave.
 	void *sound_buffer_ptr;			// Pointer to sound buffer.
+	mapcoords map_coords;			// Map coordinates of sound.
 	vertex position;				// Position of sound.
 	float volume;					// Volume of sound.
 	float radius;					// Radius of sound field.
@@ -1364,6 +1365,7 @@ struct block_def {
 	light *light_list;				// List of lights (if any).
 	light *last_light_ptr;			// Pointer to last light in list (if any).
 	sound *sound_list;				// List of sounds (if any).
+	sound *last_sound_ptr;			// Pointer to last sound in list (if any).
 	int popup_trigger_flags;		// Popup trigger flags.
 	popup *popup_list;				// List of popups (if any).
 	popup *last_popup_ptr;			// Pointer to last popup in list (if any).

@@ -146,6 +146,7 @@ extern hyperlink *orb_exit_ptr;
 // Global sound list, and ambient sound.
 
 extern sound *global_sound_list;
+extern sound *last_global_sound_ptr;
 extern sound *ambient_sound_ptr;
 
 // Global list of popups.

@@ -2686,6 +2686,7 @@ block_def::block_def()
 	light_list = NULL;
 	last_light_ptr = NULL;
 	sound_list = NULL;
+	last_sound_ptr = NULL;
 	popup_trigger_flags = 0;
 	popup_list = NULL;
 	last_popup_ptr = NULL;
@@ -2914,8 +2915,13 @@ block_def::dup_block_def(block_def *block_def_ptr)
 		if (new_light_ptr == NULL)
 			memory_error("light");
 		*new_light_ptr = *old_light_ptr;
-		new_light_ptr->next_light_ptr = light_list;
-		light_list = new_light_ptr;
+		new_light_ptr->next_light_ptr = NULL;
+		if (last_light_ptr) {
+			last_light_ptr->next_light_ptr = new_light_ptr;
+		} else {
+			light_list = new_light_ptr;
+		}
+		last_light_ptr = new_light_ptr;
 		old_light_ptr = old_light_ptr->next_light_ptr;
 	}
 
@@ -2927,8 +2933,13 @@ block_def::dup_block_def(block_def *block_def_ptr)
 		if (new_sound_ptr == NULL)
 			memory_error("sound");
 		*new_sound_ptr = *old_sound_ptr;
-		new_sound_ptr->next_sound_ptr = sound_list;
-		sound_list = new_sound_ptr;
+		new_sound_ptr->next_sound_ptr = NULL;
+		if (last_sound_ptr) {
+			last_sound_ptr->next_sound_ptr = new_sound_ptr;
+		} else {
+			sound_list = new_sound_ptr;
+		}
+		last_sound_ptr = new_sound_ptr;
 		old_sound_ptr = old_sound_ptr->next_sound_ptr;
 	}
 
@@ -2940,8 +2951,13 @@ block_def::dup_block_def(block_def *block_def_ptr)
 		if (new_popup_ptr == NULL)
 			memory_error("popup");
 		*new_popup_ptr = *old_popup_ptr;
-		new_popup_ptr->next_popup_ptr = popup_list;
-		popup_list = new_popup_ptr;
+		new_popup_ptr->next_popup_ptr = NULL;
+		if (last_popup_ptr) {
+			last_popup_ptr->next_popup_ptr = new_popup_ptr;
+		} else {
+			popup_list = new_popup_ptr;
+		}
+		last_popup_ptr = new_popup_ptr;
 		old_popup_ptr = old_popup_ptr->next_popup_ptr;
 	}
 
@@ -2966,7 +2982,7 @@ block_def::dup_block_def(block_def *block_def_ptr)
 		// Copy the frame list with the sets of vertices.
 
 		create_frames_list(block_def_ptr->animation->frames);
-		for (index=0; index < animation->frames; index++) {
+		for (index =0 ; index < animation->frames; index++) {
 			animation->angles[index]   = block_def_ptr->animation->angles[index];
 			animation->vertices[index] = block_def_ptr->animation->vertices[index];
 			create_vertex_list(block_def_ptr->animation->vertices[index]);
@@ -2979,7 +2995,7 @@ block_def::dup_block_def(block_def *block_def_ptr)
 		// Copy the loop information.
 
 		create_loops_list(animation->loops);
-		for (j=0; j < animation->loops; j++) {
+		for (j = 0; j < animation->loops; j++) {
 			animation->loops_list[j] = block_def_ptr->animation->loops_list[j];
 		}
 		animation->original_frames = true;

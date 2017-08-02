@@ -178,6 +178,7 @@ hyperlink *orb_exit_ptr;
 // Global list of sounds, and ambient sound.
 
 sound *global_sound_list;
+sound *last_global_sound_ptr;
 sound *ambient_sound_ptr;
 
 // Global list of popups.
@@ -737,8 +738,7 @@ update_sounds_in_block_list(block *block_list)
 	block *block_ptr = block_list;
 	while (block_ptr != NULL) {
 		if (block_ptr->sound_list != NULL)
-			update_sounds_in_sound_list(block_ptr->sound_list, 
-				&block_ptr->translation);
+			update_sounds_in_sound_list(block_ptr->sound_list, &block_ptr->translation);
 		block_ptr = block_ptr->next_block_ptr;
 	}
 }
@@ -988,6 +988,7 @@ start_up_spot(void)
 	global_light_list = NULL;
 	last_global_light_ptr = NULL;
 	global_sound_list = NULL;
+	last_global_sound_ptr = NULL;
 	global_popup_list = NULL;
 	last_global_popup_ptr = NULL;
 	movable_block_list = NULL;
@@ -3192,7 +3193,7 @@ render_next_frame(void)
 	viewpoint_has_changed = FNE(turn_delta, 0.0f) || FNE(look_delta, 0.0f) ||
 		player_viewpoint.position != player_viewpoint.last_position;
 
-	// Update all lights and sounds
+	// Update all lights and sounds.
 
 	update_all_lights(elapsed_time);
 	if (sound_on)

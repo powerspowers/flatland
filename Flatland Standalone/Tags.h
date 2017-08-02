@@ -1138,7 +1138,7 @@ static tag_def cache_tag_list[] = {
 	{TOKEN_NONE}
 };
 
-// CREATE tag list for structural blocks (block file only).
+// CREATE tag list for structural blocks (spot file only).
 
 static tag_def structural_create_tag_list[] = {
 	{TOKEN_ACTION, action_attr_list, ACTION_ATTRIBUTES - 1, true},
@@ -1156,7 +1156,7 @@ static tag_def structural_create_tag_list[] = {
 	{TOKEN_NONE}
 };
 
-// CREATE tag list for sprites (block file only).
+// CREATE tag list for sprites (spot file only).
 
 static tag_def sprite_create_tag_list[] = {
 	{TOKEN_ACTION, action_attr_list, ACTION_ATTRIBUTES - 1, true},

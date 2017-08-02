@@ -166,9 +166,8 @@ int window_width, window_height;
 
 bool main_window_ready;
 
-// Flag indicating whether sound is available and enabled.
+// Flag indicating whether sound is on.
 
-bool sound_available;
 bool sound_on;
 
 //==============================================================================
@@ -3267,9 +3266,9 @@ create_main_window(void (*key_callback)(byte key_code, bool key_down),
 
 	if (!start_up_DirectSound()) {
 		shut_down_DirectSound();
-		sound_available = false;
+		sound_on = false;
 	} else
-		sound_available = true;
+		sound_on = true;
 
 	// Indicate the main window is ready.
 
@@ -3308,7 +3307,7 @@ destroy_main_window(void)
 
 	// Shut down DirectSound, if it were started up.
 
-	if (sound_available)
+	if (sound_on)
 		shut_down_DirectSound();
 
 	// Destroy the label texture.
@@ -3905,12 +3904,6 @@ handle_options_event(HWND window_handle, UINT message, WPARAM wParam,
 			case IDB_CANCEL:
 				(*options_callback_ptr)(CANCEL_BUTTON, 1);
 				break;
-			case IDB_DOWNLOAD_SOUNDS:
-				if (SendMessage(control_handle, BM_GETCHECK, 0, 0) == BST_CHECKED)
-					(*options_callback_ptr)(DOWNLOAD_SOUNDS_CHECKBOX, 1);
-				else
-					(*options_callback_ptr)(DOWNLOAD_SOUNDS_CHECKBOX, 0);
-				break;
 			case IDB_CLASSIC_CONTROLS:
 				if (SendMessage(control_handle, BM_GETCHECK, 0, 0) == BST_CHECKED)
 					(*options_callback_ptr)(CLASSIC_CONTROLS_CHECKBOX, 1);
@@ -3957,7 +3950,7 @@ handle_options_event(HWND window_handle, UINT message, WPARAM wParam,
 //------------------------------------------------------------------------------
 
 void
-open_options_window(bool download_sounds_value, int viewing_distance_value, bool use_classic_controls_value,
+open_options_window(int viewing_distance_value, bool use_classic_controls_value,
 					int move_rate_value, int turn_rate_value, int user_debug_level_value, bool force_software_rendering,
 					void (*options_callback)(int option_ID, int option_value))
 {
@@ -3975,13 +3968,6 @@ open_options_window(bool download_sounds_value, int viewing_distance_value, bool
 	// Create the options window.
 
 	options_window_handle = CreateDialog(app_instance_handle, MAKEINTRESOURCE(IDD_OPTIONS), main_window_handle, handle_options_event);
-
-	// Initialise the "download sounds" check box.
-
-	control_handle = GetDlgItem(options_window_handle, IDB_DOWNLOAD_SOUNDS);
-	SendMessage(control_handle, BM_SETCHECK, download_sounds_value ? BST_CHECKED : BST_UNCHECKED, 0);
-	if (!sound_available)
-		EnableWindow(control_handle, false);
 
 	// Initialize the "classic controls" check box.
 
@@ -8867,8 +8853,11 @@ update_sound(sound *sound_ptr, vertex *translation_ptr)
 			sound_position.y += 1.0f;
 		} else if (translation_ptr != NULL)
 			sound_position = sound_ptr->position + *translation_ptr;
-		else
-			sound_position = sound_ptr->position;
+		else {
+			vertex translation;
+			translation.set_map_translation(sound_ptr->map_coords.column, sound_ptr->map_coords.row, sound_ptr->map_coords.level);
+			sound_position = sound_ptr->position + translation;
+		}
 
 		// Determine the position of the sound source relative to the player 
 		// position, then compute the distance between the player position and
