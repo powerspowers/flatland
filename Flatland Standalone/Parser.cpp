@@ -2034,13 +2034,13 @@ check_float_greater_or_equal(float value, float min)
 //==============================================================================
 
 //------------------------------------------------------------------------------
-// Parse a name, or a list containing a single wildcard character or one or more
-// names seperated by commas.  Only letters, digits and underscores are allowed
-// in a name.  Leading and trailing spaces will be removed.
+// Parse a name, a wildcard, or a list of names seperated by commas.  
+// Only letters, digits and underscores are allowed in a name.  Leading and
+// trailing spaces will be removed.
 //------------------------------------------------------------------------------
 
 bool
-parse_name(const char *old_name, string *new_name, bool list)
+parse_name(const char *old_name, string *new_name, bool allow_list, bool allow_wildcard)
 {
 	const char *old_name_ptr;
 	char *temp_name;
@@ -2074,10 +2074,10 @@ parse_name(const char *old_name, string *new_name, bool list)
 
 		if (*old_name_ptr == '*') {
 
-			// If we're not parsing a list of names or this is not the first
+			// If we're not allowing a wildcard, or this is not the first
 			// name parsed, this is an error.
 
-			if (!list || temp_name_ptr != temp_name) {
+			if (!allow_wildcard || temp_name_ptr != temp_name) {
 				DELBASEARRAY(temp_name, char, strlen(old_name) + 1);
 				return(false);
 			}
@@ -2136,7 +2136,7 @@ parse_name(const char *old_name, string *new_name, bool list)
 
 		// If a list was not requested, a comma is an error.
 
-		if (!list) {
+		if (!allow_list) {
 			DELBASEARRAY(temp_name, char, strlen(old_name) + 1);
 			return(false);
 		}
@@ -2385,17 +2385,22 @@ parse_float_in_value(float *float_ptr)
 //------------------------------------------------------------------------------
 
 static bool
-parse_name_in_value(string *string_ptr, bool list)
+parse_name_in_value(string *string_ptr, bool allow_list, bool allow_wildcard)
 {
 	const char *end_msg = " (a valid name begins with an alphanumeric character, "
 		"and may only contain alphanumeric and underscore characters)";
-	if (!parse_name(value_string_ptr, string_ptr, list)) {
-		if (list)
-			bad_attribute_value("either a list of one or more valid names "
-				"seperated by commas, or the wildcard <I>\"*\"</I>", 
-				end_msg);
-		else
+	if (!parse_name(value_string_ptr, string_ptr, allow_list, allow_wildcard)) {
+		if (allow_list) {
+			if (allow_wildcard) {
+				bad_attribute_value("either a list of one or more valid names seperated by commas, or the wildcard <I>\"*\"</I>", end_msg);
+			} else {
+				bad_attribute_value("a list of one or more valid names seperated by commas", end_msg);
+			}
+		} else if (allow_wildcard) {
+			bad_attribute_value("either a valid name or the wildcard <I>\"*\"</I>", end_msg);
+		} else {
 			bad_attribute_value("a valid name", end_msg);
+		}
 		return(false);
 	}
 	value_string_ptr += strlen(value_string_ptr);
@@ -4030,10 +4035,13 @@ parse_attribute_value(int value_type, void *value_ptr)
 			MAP_STYLE_VALUES, false, true));
 
 	case VALUE_NAME:
-		return(parse_name_in_value((string *)value_ptr, false));
+		return(parse_name_in_value((string *)value_ptr, false, false));
 
 	case VALUE_NAME_LIST:
-		return(parse_name_in_value((string *)value_ptr, true));
+		return(parse_name_in_value((string *)value_ptr, true, true));
+
+	case VALUE_NAME_OR_WILDCARD:
+		return(parse_name_in_value((string *)value_ptr, false, true));
 		
 	case VALUE_ORIENTATION:
 		return(parse_orientation((orientation *)value_ptr));
@@ -4525,10 +4533,14 @@ value_to_string(int value_type, int value)
 	switch (value_type) {
 	case VALUE_BOOLEAN:
 		return get_value_str_from_list(value, boolean_value_list, BOOLEAN_VALUES);
+	case VALUE_ACTION_TRIGGER:
+		return get_value_str_from_list(value, action_trigger_value_list, ACTION_TRIGGER_VALUES);
 	case VALUE_EXIT_TRIGGER:
 		return get_value_str_from_list(value, exit_trigger_value_list, EXIT_TRIGGER_VALUES);
 	case VALUE_FOG_STYLE:
 		return get_value_str_from_list(value, fog_style_value_list, FOG_STYLE_VALUES);
+	case VALUE_KEY_CODE:
+		return get_value_str_from_list(value, key_code_value_list, KEY_CODE_VALUES);
 	case VALUE_MAP_STYLE:
 		return get_value_str_from_list(value, map_style_value_list, MAP_STYLE_VALUES);
 	case VALUE_ALIGNMENT:
@@ -4555,6 +4567,17 @@ string
 boolean_to_string(bool flag)
 {
 	return value_to_string(VALUE_BOOLEAN, flag);
+}
+
+string
+key_code_to_string(byte key_code)
+{
+	if ((key_code >= '0' && key_code <= '9') || (key_code >= 'A' && key_code <= 'Z')) {
+		sprintf(attribute_string, "%c", key_code);
+	} else {
+		sprintf(attribute_string, "[%s]", (char *)value_to_string(VALUE_KEY_CODE, key_code));
+	}
+	return attribute_string;
 }
 
 string

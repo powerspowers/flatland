@@ -1484,12 +1484,9 @@ show_trigger_label(trigger *trigger_list)
 {
 	trigger *trigger_ptr = trigger_list;
 	bool label_shown = false;
-
-
 	while (trigger_ptr != NULL) {
 		if ((trigger_ptr->trigger_flag == CLICK_ON) &&
-			(trigger_ptr->partindex == ALL_PARTS || trigger_ptr->partindex == curr_selected_part_ptr->number))
-		{
+			(trigger_ptr->part_index == ALL_PARTS || trigger_ptr->part_index == curr_selected_part_ptr->number)) {
 			selection_active.set(true);
 			if (strlen(trigger_ptr->label) != 0) {
 					show_label(trigger_ptr->label);
@@ -1873,7 +1870,7 @@ add_triggers_to_active_list(square *square_ptr, block *block_ptr,
 
 	trigger_ptr = trigger_list;
 	while (trigger_ptr != NULL) {
-		if (trigger_ptr->partindex == ALL_PARTS) {
+		if (trigger_ptr->part_index == ALL_PARTS) {
 			if ((trigger_ptr->trigger_flag & CLICK_ON) || (trigger_ptr->trigger_flag & ROLL_ON)) {
 				add_trigger_to_active_list(square_ptr, block_ptr, trigger_ptr); 
 			} else if ((trigger_ptr->trigger_flag & trigger_flags) != 0) {
@@ -1882,7 +1879,7 @@ add_triggers_to_active_list(square *square_ptr, block *block_ptr,
 				else
 					add_trigger_to_active_list(square_ptr, block_ptr, trigger_ptr);
 			}
-		} else if ((curr_selected_part_ptr->number == trigger_ptr->partindex ) &&
+		} else if ((curr_selected_part_ptr->number == trigger_ptr->part_index) &&
 			((trigger_ptr->trigger_flag & CLICK_ON) || (trigger_ptr->trigger_flag & ROLL_ON))) {
 			add_trigger_to_active_list(square_ptr, block_ptr, trigger_ptr); 
 		}

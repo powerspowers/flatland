@@ -96,7 +96,7 @@ get_block_def(const char *block_identifier)
 	// block name is invalid, return a NULL pointer.
 
 	parse_identifier(block_identifier, blockset_name, block_name);
-	if (!parse_name(block_name, &new_block_name, false))
+	if (!parse_name(block_name, &new_block_name, false, false))
 		return(NULL);
 
 	// If the blockset name is an empty string, search the blockset list for

@@ -2695,6 +2695,7 @@ block_def::block_def()
 	exit_ptr = NULL;
 	trigger_flags = 0;
 	trigger_list = NULL;
+	last_trigger_ptr = NULL;
 	free_block_list = NULL;
 	used_block_list = NULL;
 	root_polygon_ref = 0;
@@ -2982,7 +2983,7 @@ block_def::dup_block_def(block_def *block_def_ptr)
 		// Copy the frame list with the sets of vertices.
 
 		create_frames_list(block_def_ptr->animation->frames);
-		for (index =0 ; index < animation->frames; index++) {
+		for (index = 0; index < animation->frames; index++) {
 			animation->angles[index]   = block_def_ptr->animation->angles[index];
 			animation->vertices[index] = block_def_ptr->animation->vertices[index];
 			create_vertex_list(block_def_ptr->animation->vertices[index]);

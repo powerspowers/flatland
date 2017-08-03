@@ -34,7 +34,7 @@ static attr_def action_attr_list[ACTION_ATTRIBUTES] = {
 	{TOKEN_DELAY, VALUE_DELAY_RANGE, &action_delay, false},
 	{TOKEN_TARGET, VALUE_MAP_COORDS, &action_target, false}, 
 	{TOKEN_KEY, VALUE_KEY_CODE, &action_key, false},
-	{TOKEN_PARTNAME, VALUE_NAME_LIST, &action_part_name, false},
+	{TOKEN_PARTNAME, VALUE_NAME_OR_WILDCARD, &action_part_name, false},
 	{TOKEN_LOCATION, VALUE_MAP_COORDS, &action_location, false}
 };
 
@@ -572,7 +572,6 @@ static attr_def create_part_attr_list[CREATE_PART_ATTRIBUTES] = {
 	{TOKEN_ANGLE, VALUE_DEGREES, &part_angle, false},
 	{TOKEN_SOLID, VALUE_BOOLEAN, &part_solid, false},
 	{TOKEN_PROJECTION, VALUE_PROJECTION, &part_projection, false}
-
 };
 
 #endif

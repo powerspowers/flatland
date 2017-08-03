@@ -74,11 +74,6 @@ static polygon_def *polygon_def_list;
 static int parts;
 static part *part_list;
 
-// List of triggers in the current CREATE tag.
-
-static trigger *create_tag_last_trigger_ptr, *create_tag_trigger_list;
-static int create_tag_trigger_flags;
-
 // Global SimKin script.
 
 static string global_script;
@@ -2874,7 +2869,7 @@ parse_imagemap_action_tag(imagemap *imagemap_ptr)
 	// Store pointer to action list in trigger.
 
 	trigger_ptr->action_list = action_list;
-	trigger_ptr->partindex = ALL_PARTS;
+	trigger_ptr->part_index = ALL_PARTS;
 
 	// Parse the coords parameter based upon the area shape, then add the
 	// area with the trigger to the imagemap.
@@ -2977,7 +2972,7 @@ parse_imagemap_script_tag(imagemap *imagemap_ptr)
 		delete trigger_ptr;
 		return;
 	}
-	trigger_ptr->partindex = ALL_PARTS;
+	trigger_ptr->part_index = ALL_PARTS;
 
 	// Parse the coords parameter based upon the area shape, then add the
 	// area with the trigger to the imagemap.
@@ -3148,7 +3143,6 @@ parse_action_tag(block_def *block_def_ptr, bool need_location_param)
 	trigger *trigger_ptr;
 	action *action_ptr, *last_action_ptr, *action_list;
 	int tag_token;
-	char *curr_part_name;
 	int part_no;
 
 	// If the LOCATION parameter is missing and it is required, this is an 
@@ -3175,8 +3169,10 @@ parse_action_tag(block_def *block_def_ptr, bool need_location_param)
 
 	// Initialize the part ptr to all parts which is the default.
 
-	if (!need_location_param)
-		trigger_ptr->partindex = ALL_PARTS;
+	if (!need_location_param) {
+		trigger_ptr->part_name = "*";
+		trigger_ptr->part_index = ALL_PARTS;
+	}
 
 	// If the trigger parameter was given, set the trigger flag.
 
@@ -3186,10 +3182,12 @@ parse_action_tag(block_def *block_def_ptr, bool need_location_param)
 	// If the radius parameter was given, set the trigger radius, otherwise
 	// use a default radius of one block.
 
-	if (parsed_attribute[ACTION_RADIUS])
-		trigger_ptr->radius_squared = action_radius * action_radius;
-	else
-		trigger_ptr->radius_squared = UNITS_PER_BLOCK * UNITS_PER_BLOCK;
+	if (parsed_attribute[ACTION_RADIUS]) {
+		trigger_ptr->radius = action_radius;
+	} else {
+		trigger_ptr->radius = UNITS_PER_BLOCK;
+	}
+	trigger_ptr->radius_squared = trigger_ptr->radius * trigger_ptr->radius;
 
 	// If the delay parameter was given, set the delay range of the trigger.
 
@@ -3215,34 +3213,32 @@ parse_action_tag(block_def *block_def_ptr, bool need_location_param)
 	if (parsed_attribute[ACTION_KEY])
 		trigger_ptr->key_code = action_key;
 
-	// If the part parameter was given, set the part name
+	// If the part parameter was given, set the part name.
+
 	if (parsed_attribute[ACTION_PART_NAME] && !need_location_param) {
-
-		curr_part_name = strtok(action_part_name,",");
-
-		if (!_stricmp(curr_part_name,"*") || curr_part_name == NULL) 
-			trigger_ptr->partindex = ALL_PARTS;
+		trigger_ptr->part_name = action_part_name;
+		if (!_stricmp(action_part_name, "*")) 
+			trigger_ptr->part_index = ALL_PARTS;
 		else {
 		  
 			// Search for this name in the block definition's part list.
 			
 			for (part_no = 0; part_no < block_def_ptr->parts; part_no++) {
-				if (!_stricmp(curr_part_name, block_def_ptr->part_list[part_no].name)) 
+				if (!_stricmp(action_part_name, block_def_ptr->part_list[part_no].name)) 
 					break;
 			}
 
 			// If not found, generate a warning message.
 
 			if (part_no == block_def_ptr->parts) {
-				warning("There is no part with name \"%s\"", curr_part_name);
-				trigger_ptr->partindex = ALL_PARTS;
-
+				warning("There is no part with name \"%s\"", (char *)action_part_name);
+				trigger_ptr->part_index = ALL_PARTS;
 			}
 
 			// Otherwise hold the part number in the trigger.
 
 			else {
-				trigger_ptr->partindex = part_no;
+				trigger_ptr->part_index = part_no;
 			}
 		}
 	}
@@ -3256,13 +3252,11 @@ parse_action_tag(block_def *block_def_ptr, bool need_location_param)
 
 	got_action_exit_tag = false;
 
-	// Parse all action tags.  This is done in a try block so we can delete
-	// the trigger on an error.
+	// Parse all action tags.  This is done in a try block so we can delete the trigger on an error.
 
 	try {
 		start_parsing_nested_tags();
-		while (parse_next_nested_tag(TOKEN_ACTION, action_tag_list, false,
-			&tag_token)) {
+		while (parse_next_nested_tag(TOKEN_ACTION, action_tag_list, false, &tag_token)) {
 
 			// Parse the replace or exit tag.
 
@@ -3650,7 +3644,6 @@ parse_script_tag(block_def *block_def_ptr, bool need_location_param)
 {
 	trigger *trigger_ptr;
 	string script;
-	char *curr_part_name;
 	int part_no;
 	part *part_ptr;
 
@@ -3686,8 +3679,10 @@ parse_script_tag(block_def *block_def_ptr, bool need_location_param)
 
 	// Initialize the part_ptr to be all parts which is the default.
 
-    if (!need_location_param)
-	    trigger_ptr->partindex = ALL_PARTS;
+    if (!need_location_param) {
+		trigger_ptr->part_name = "*";
+	    trigger_ptr->part_index = ALL_PARTS;
+	}
 
 	// If the trigger parameter was given, set the trigger flag.
 
@@ -3729,31 +3724,30 @@ parse_script_tag(block_def *block_def_ptr, bool need_location_param)
 	// If the part parameter was given, set the part name.
 
 	if (parsed_attribute[ACTION_PART_NAME] && !need_location_param) {
-		curr_part_name = strtok(action_part_name, ",");
-		if (!_stricmp(curr_part_name,"*") || curr_part_name == NULL) {
-			trigger_ptr->partindex = ALL_PARTS;
+		trigger_ptr->part_name = action_part_name;
+		if (!_stricmp(action_part_name, "*")) {
+			trigger_ptr->part_index = ALL_PARTS;
 		} else {
 
 			// Search for this name in the block definition's part list.
 
             for (part_no = 0; part_no < block_def_ptr->parts; part_no++) {
 				part_ptr = &block_def_ptr->part_list[part_no];
-				if (!_stricmp(curr_part_name, part_ptr->name))
+				if (!_stricmp(action_part_name, part_ptr->name))
 					break;
 			}
 
 			// If not found, generate a warning message.
 
 			if (part_no == block_def_ptr->parts) {
-				warning("There is no part with name \"%s\"", curr_part_name);
-				trigger_ptr->partindex = ALL_PARTS;
-
+				warning("There is no part with name \"%s\"", (char *)action_part_name);
+				trigger_ptr->part_index = ALL_PARTS;
 			}
 
 			// Otherwise hold the part name pointer in the trigger.
 
 			else {
-				trigger_ptr->partindex = part_no;
+				trigger_ptr->part_index = part_no;
 			}
 		}
 	}
@@ -3855,16 +3849,15 @@ parse_next_create_tag(int tag_token, tag_def *create_tag_list,
 		// Add the trigger the end of the trigger list.
 
 		if (trigger_ptr != NULL) {
-			if (create_tag_last_trigger_ptr != NULL)
-				create_tag_last_trigger_ptr->next_trigger_ptr = trigger_ptr;
+			if (custom_block_def_ptr->last_trigger_ptr != NULL)
+				custom_block_def_ptr->last_trigger_ptr->next_trigger_ptr = trigger_ptr;
 			else
-				create_tag_trigger_list = trigger_ptr;
-			create_tag_last_trigger_ptr = trigger_ptr;
+				custom_block_def_ptr->trigger_list = trigger_ptr;
+			custom_block_def_ptr->last_trigger_ptr = trigger_ptr;
 
-			// Update the trigger flags so we know what kind of triggers are
-			// in the list.
+			// Update the trigger flags so we know what kind of triggers are in the list.
 
-			create_tag_trigger_flags |= trigger_ptr->trigger_flag;
+			custom_block_def_ptr->trigger_flags |= trigger_ptr->trigger_flag;
 		}
 
 		break;
@@ -3994,12 +3987,6 @@ parse_create_tag(void)
 	got_param_tag = false;
 	got_exit_tag = false;
 
-	// Initialise the trigger flags and trigger list.
- 
-	create_tag_trigger_flags = 0;
-	create_tag_trigger_list = NULL;
-	create_tag_last_trigger_ptr = NULL;
-
 	// Choose the appropiate create tag list.
 
 	if (custom_block_def_ptr->type & SPRITE_BLOCK)
@@ -4010,16 +3997,9 @@ parse_create_tag(void)
 	// Parse all create tags.
 
 	start_parsing_nested_tags();
-	while (parse_next_nested_tag(TOKEN_CREATE, create_tag_list, false,
-		&tag_token))
-		parse_next_create_tag(tag_token,create_tag_list, custom_block_def_ptr, 
-			true);
+	while (parse_next_nested_tag(TOKEN_CREATE, create_tag_list, false, &tag_token))
+		parse_next_create_tag(tag_token, create_tag_list, custom_block_def_ptr, true);
 	stop_parsing_nested_tags();
-
-	// Store the trigger flags and trigger list in the custom block definition.
-
-	custom_block_def_ptr->trigger_flags = create_tag_trigger_flags;
-	custom_block_def_ptr->trigger_list = create_tag_trigger_list;
 }
 
 //==============================================================================
@@ -4819,6 +4799,95 @@ print_sound_tag(sound *sound_ptr, bool has_map_coords)
 	close_empty_tag();
 }
 
+static void
+print_action_tag(action *action_ptr)
+{
+	switch (action_ptr->type) {
+	case REPLACE_ACTION:
+		break;
+	case EXIT_ACTION:
+		break;
+	case RIPPLE_ACTION:
+		break;
+	case SPIN_ACTION:
+		break;
+	case ORBIT_ACTION:
+		break;
+	case MOVE_ACTION:
+		break;
+	case SETFRAME_ACTION:
+		break;
+	case ANIMATE_ACTION:
+		break;
+	case SETLOOP_ACTION:
+		break;
+	case STOPSPIN_ACTION:
+		break;
+	case STOPMOVE_ACTION:
+		break;
+	case STOPRIPPLE_ACTION:
+		break;
+	case STOPORBIT_ACTION:
+		break;
+	}
+}
+
+static void
+print_action_or_script_tag(trigger *trigger_ptr)
+{
+	// Print the start tag for the action or script.
+
+	if (trigger_ptr->action_list) {
+		open_start_tag("action");
+	} else {
+		open_start_tag("script");
+	}
+	print_attr("trigger", value_to_string(VALUE_ACTION_TRIGGER, trigger_ptr->trigger_flag));
+	print_attr("text", trigger_ptr->label);
+	if ((trigger_ptr->trigger_flag & RADIUS_TRIGGERS) != 0) {
+		print_attr("radius", radius_to_string(trigger_ptr->radius));
+	}
+	if ((trigger_ptr->trigger_flag & TIMER_TRIGGERS) != 0) {
+		print_attr("delay", delay_range_to_string(trigger_ptr->delay_range));
+	}
+	if (trigger_ptr->trigger_flag == LOCATION) {
+		print_attr("target", map_coords_to_string(trigger_ptr->target));
+	}
+	if ((trigger_ptr->trigger_flag & KEY_TRIGGERS) != 0) {
+		print_attr("key", key_code_to_string(trigger_ptr->key_code));
+	}
+	if ((trigger_ptr->trigger_flag & PART_TRIGGERS) != 0) {
+		print_attr("partname", trigger_ptr->part_name);
+	}
+	if (trigger_ptr->square_ptr) {
+		print_attr("location", square_location_to_string(trigger_ptr->square_ptr));
+	}
+	close_start_tag();
+
+	// Print out the action tags, or the script, following by an end tag.
+
+	if (trigger_ptr->action_list) {
+		action *action_ptr = trigger_ptr->action_list;
+		while (action_ptr) {
+			print_action_tag(action_ptr);
+			action_ptr = action_ptr->next_action_ptr;
+		}
+		print_end_tag("action");
+	} else {
+		fprintf(save_fp, "%s", (char *)trigger_ptr->script_def_ptr->script);
+		print_end_tag("script");
+	}
+}
+
+static void
+print_trigger_list(trigger *trigger_ptr)
+{
+	while (trigger_ptr) {
+		print_action_or_script_tag(trigger_ptr);
+		trigger_ptr = trigger_ptr->next_trigger_ptr;
+	}
+}
+
 void
 save_spot_file(const char *spot_file_path)
 {
@@ -5073,6 +5142,19 @@ save_spot_file(const char *spot_file_path)
 			sound_ptr = sound_ptr->next_sound_ptr;
 		}
 
+		// Generate an action or script tag for every global trigger.
+		// This includes all triggers associated with squares.
+
+		print_trigger_list(global_trigger_list);
+		for (int level = 0; level < world_ptr->levels; level++) {
+			for (int row = 0; row < world_ptr->rows; row++) {
+				for (int column = 0; column < world_ptr->columns; column++) {
+					square *square_ptr = world_ptr->get_square_ptr(column, row, level);
+					print_trigger_list(square_ptr->trigger_list);
+				}
+			}
+		}
+
 		// Generate a create tag for every custom block definition.
 
 		block_def *block_def_ptr = custom_blockset_ptr->block_def_list;
@@ -5123,6 +5205,10 @@ save_spot_file(const char *spot_file_path)
 				print_sound_tag(sound_ptr, false);
 				sound_ptr = sound_ptr->next_sound_ptr;
 			}
+
+			// Generate an action or script tag for every block trigger.
+
+			print_trigger_list(block_def_ptr->trigger_list);
 
 			// Generate the end create tag.
 

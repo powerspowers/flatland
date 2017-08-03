@@ -209,6 +209,9 @@ enum audiostyle { PASS_AUDIO, OCCLUDE_AUDIO };
 #define START_UP		16384
 #define	MOUSE_TRIGGERS	(ROLL_ON | ROLL_OFF | ROLLOVER | CLICK_ON)
 #define KEY_TRIGGERS	(KEY_DOWN | KEY_UP | KEY_HOLD)
+#define RADIUS_TRIGGERS	(STEP_IN | STEP_OUT | PROXIMITY)
+#define TIMER_TRIGGERS	(TIMER | KEY_HOLD)
+#define PART_TRIGGERS	(ROLL_ON | CLICK_ON)
 
 // Alignments.
 
@@ -1080,6 +1083,7 @@ struct trigger {
 	square *square_ptr;			// Square that trigger belongs to (if any).
 	block *block_ptr;			// Block that the trigger belongs to (if any).
 	vertex position;			// Position of trigger (for "step in/out").
+	float radius;				// Radius of trigger.
 	float radius_squared;		// Radius squared of trigger (for "step in/out").
 	bool previously_inside;		// TRUE if player was previously inside radius.
 	delayrange delay_range;		// Range of timer delays allowed (for "timer").
@@ -1091,7 +1095,8 @@ struct trigger {
 	action *action_list;		// List of actions.
 	script_def *script_def_ptr;	// Script to execute (if action list is NULL).
 	string label;				// Text for label (only used for "click on").
-	int partindex;              // *mp* Part that this trigger activates with - need to change
+	string part_name;			// Part name. 
+	int part_index;             // Part index.
 	trigger *next_trigger_ptr;	// Next trigger in list.
 
 	trigger();
@@ -1374,6 +1379,7 @@ struct block_def {
 	hyperlink *exit_ptr;			// Pointer to exit (if any).
 	int trigger_flags;				// Trigger flags.
 	trigger *trigger_list;			// List of triggers (if any).
+	trigger *last_trigger_ptr;		// Pointer to last trigger in list (if any).
 	block *free_block_list;			// List of free blocks (if any).
 	block *used_block_list;			// List of used blocks (if any).
 	int root_polygon_ref;			// Root polygon reference in BSP tree.

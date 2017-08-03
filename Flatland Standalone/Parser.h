@@ -163,13 +163,12 @@ check_float_range(float value, float min, float max);
 // Name parsing function.
 
 bool
-parse_name(const char *old_name, string *new_name, bool list);
+parse_name(const char *old_name, string *new_name, bool allow_list, bool allow_wildcard);
 
 // Attribute value parsing functions.
 
 void
-start_parsing_value(int tag_token, int attr_token, char *attr_value,
-					bool attr_required);
+start_parsing_value(int tag_token, int attr_token, char *attr_value, bool attr_required);
 
 bool
 parse_integer_in_value(int *int_ptr);
@@ -226,6 +225,9 @@ string
 boolean_to_string(bool flag);
 
 string
+key_code_to_string(byte key_code);
+
+string
 int_to_string(int value);
 
 string
@@ -266,4 +268,3 @@ vertex_to_string(vertex v);
 
 string
 size_to_string(int width, int height);
-
