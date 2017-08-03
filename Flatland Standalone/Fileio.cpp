@@ -4450,6 +4450,7 @@ parse_spot_file(char *spot_URL, char *spot_file_path)
 
 	// Reset various parse variables.
 
+	spot_entity_list = NULL;
 	curr_load_index = 0;
 	global_fog_enabled = false;
 
@@ -4559,9 +4560,9 @@ parse_spot_file(char *spot_URL, char *spot_file_path)
 	if (!got_body_tag)
 		error("Missing body tag");
 
-	// Close the spot file.
+	// Close the spot file, storing its entity list for later.
 
-	pop_file();
+	spot_entity_list = pop_file(true);
 
 	// Check that all necessary level tags were seen.  If the ground tag was
 	// seen in the header, the number of levels seen should be one less than
@@ -4616,6 +4617,7 @@ parse_spot_file(char *spot_URL, char *spot_file_path)
 // Spot saving function.
 //==============================================================================
 
+/*
 static FILE *save_fp;
 static int indent_level;
 
@@ -4887,10 +4889,15 @@ print_trigger_list(trigger *trigger_ptr)
 		trigger_ptr = trigger_ptr->next_trigger_ptr;
 	}
 }
+*/
 
 void
 save_spot_file(const char *spot_file_path)
 {
+	if (spot_entity_list) {
+		save_document(spot_file_path, spot_entity_list);
+	}
+/*
 	// Open the spot file for writing and reset the indent level.
 
 	if ((save_fp = fopen(spot_file_path, "w")) != NULL) {
@@ -5242,6 +5249,7 @@ save_spot_file(const char *spot_file_path)
 		print_end_tag("spot");
 		fclose(save_fp);
 	}
+	*/
 }
 
 //==============================================================================

@@ -84,7 +84,7 @@ string_to_symbol(const char *string_ptr, word *symbol_ptr,
 char *
 version_number_to_string(unsigned int version_number);
 
-// File functions.
+// Zip archive functions.
 
 bool
 open_zip_archive(const char *file_path, const char *file_name);
@@ -94,6 +94,11 @@ open_blockset(const char *blockset_URL, const char *blockset_name);
 
 void
 close_zip_archive(void);
+
+// File functions.
+
+void
+destroy_entity_list(entity *entity_list);
 
 bool
 push_file(const char *file_path, const char *file_URL, bool text_file);
@@ -113,8 +118,8 @@ push_buffer(const char *buffer_ptr, int buffer_size);
 void
 rewind_file(void);
 
-void
-pop_file(void);
+entity *
+pop_file(bool return_entity_list = false);
 
 void
 pop_all_files(void);
@@ -215,6 +220,9 @@ nested_text_to_string(int start_tag_token);
 
 void
 stop_parsing_nested_tags(void);
+
+void
+save_document(const char *file_name, entity *entity_list);
 
 // Attribute value to string functions.
 

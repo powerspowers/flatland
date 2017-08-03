@@ -29,6 +29,12 @@ typedef int fixed;
 #define FRAC_BITS	16
 #define INT_MASK	0xffff0000
 
+// XML entity types.
+
+#define TEXT_ENTITY		0
+#define COMMENT_ENTITY	1
+#define TAG_ENTITY		2
+
 // Minimum delays before checking for an update.
 
 #define SECONDS_PER_MINUTE			60
@@ -656,6 +662,33 @@ struct load_tag {
 	bool is_texture_href;
 	string href;
 	load_tag *next_load_tag_ptr;
+};
+
+//==============================================================================
+// XML classes.
+//==============================================================================
+
+//------------------------------------------------------------------------------
+// Attribute structure.
+//------------------------------------------------------------------------------
+
+struct attr {
+	string name;
+	string value;
+	attr *next_attr_ptr;
+};
+
+//------------------------------------------------------------------------------
+// Entity structure.
+//------------------------------------------------------------------------------
+
+struct entity {
+	int line_no;
+	int type;
+	string text;
+	attr *attr_list;
+	entity *nested_entity_list;
+	entity *next_entity_ptr;
 };
 
 //==============================================================================

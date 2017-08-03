@@ -33,28 +33,6 @@ static char error_str[ERROR_MSG_SIZE];
 static bool strict_XML_compliance;
 static bool inside_tag;
 
-// Attribute structure.
-
-struct attr {
-	string name;
-	string value;
-	attr *next_attr_ptr;
-};
-
-// Entity structure.
-
-#define TEXT_ENTITY		0
-#define COMMENT_ENTITY	1
-#define TAG_ENTITY		2
-
-struct entity {
-	int line_no;
-	int type;
-	string text;
-	attr *attr_list;
-	entity *nested_entity_list;
-	entity *next_entity_ptr;
-};
 
 // Parse stack element class.
 
@@ -1164,7 +1142,7 @@ destroy_attr_list(attr *attr_list)
 // Destroy an entity list.
 //------------------------------------------------------------------------------
 
-static void
+void
 destroy_entity_list(entity *entity_list)
 {
 	entity *entity_ptr, *next_entity_ptr;
@@ -1440,22 +1418,30 @@ rewind_file(void)
 }
 
 //------------------------------------------------------------------------------
-// Pop the top file from the stack.
+// Pop the top file from the stack, returning its entity list if requested
+// (otherwise the entity list will be destroyed).
 //------------------------------------------------------------------------------
 
-void
-pop_file(void)
+entity *
+pop_file(bool return_entity_list)
 {
+	entity *entity_list = NULL;
+
 	// Delete the file buffer, if it exists.
 
 	if (file_stack_ptr->file_buffer != NULL)
 		DELBASEARRAY(file_stack_ptr->file_buffer, char, 
 			file_stack_ptr->file_size + 1);
 
-	// Destroy the entity list, if it exists.
+	// Save or destroy the entity list, if it exists.
 
-	if (file_stack_ptr->parse_stack_depth > 0)
-		destroy_entity_list(file_stack_ptr->parse_stack->entity_list);
+	if (file_stack_ptr->parse_stack_depth > 0) {
+		if (return_entity_list) {
+			entity_list = file_stack_ptr->parse_stack->entity_list;
+		} else {
+			destroy_entity_list(file_stack_ptr->parse_stack->entity_list);
+		}
+	}
 	
 	// Pop the file off the stack.  If there is a file below it, make it the
 	// new top file.
@@ -1465,6 +1451,10 @@ pop_file(void)
 		file_stack_ptr = &file_stack[file_stack_depth - 1];
 	else
 		file_stack_ptr = NULL;
+
+	// Return the entity list that was saved, if any.
+
+	return entity_list;
 }
 
 //------------------------------------------------------------------------------
@@ -3819,7 +3809,8 @@ static entity *
 parse_tag(bool *is_start_tag)
 {
 	string tag_name;
-	attr *attr_list, *attr_ptr;
+	attr *attr_list, *last_attr_ptr;
+	attr *attr_ptr;
 	entity *entity_ptr;
 	int tag_line_no;
 
@@ -3835,11 +3826,16 @@ parse_tag(bool *is_start_tag)
 
 	read_token();
 	attr_list = NULL;
+	last_attr_ptr = NULL;
 	while (file_token != TOKEN_CLOSE_TAG && 
 		file_token != TOKEN_CLOSE_SINGLE_TAG) {
 		attr_ptr = parse_attribute();
-		attr_ptr->next_attr_ptr = attr_list;
-		attr_list = attr_ptr;
+		if (last_attr_ptr) {
+			last_attr_ptr->next_attr_ptr = attr_ptr;
+		} else {
+			attr_list = attr_ptr;
+		}
+		last_attr_ptr = attr_ptr;
 		read_token();
 	}
 	if (file_token == TOKEN_CLOSE_TAG)
@@ -4515,6 +4511,36 @@ void
 stop_parsing_nested_tags(void)
 {
 	pop_parse_stack();
+}
+
+//------------------------------------------------------------------------------
+//------------------------------------------------------------------------------
+
+entity *
+get_document_entity_list()
+{
+	entity *entity_list = file_stack_ptr->parse_stack->entity_list;
+	file_stack_ptr->parse_stack->entity_list = NULL;
+	file_stack_ptr->parse_stack_depth = 0;
+	file_stack_ptr->parse_stack_ptr = NULL;
+	return entity_list;
+}
+
+//------------------------------------------------------------------------------
+// Save the current XML document to a file.
+//------------------------------------------------------------------------------
+
+void
+save_document(const char *file_name, entity *entity_list)
+{
+	string text;
+	FILE *fp;
+
+	text = entity_list_to_string(entity_list);
+	if ((fp = fopen(file_name, "w")) != NULL) {
+		text.write(fp);
+		fclose(fp);
+	}
 }
 
 //==============================================================================

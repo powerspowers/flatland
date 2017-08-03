@@ -90,6 +90,10 @@ int recent_spots;
 string selected_recent_spot_URL;
 void *recent_spot_list_semaphore;
 
+// The XML entity list representing the current spot.
+
+entity *spot_entity_list;
+
 // URL directory of currently open spot, current spot URL without the
 // entrance name, and a flag indicating if the spot URL is web-based.
 
@@ -1058,6 +1062,13 @@ start_up_spot(void)
 		pop_all_files();
 		write_error_log(message);
 
+		// If we got as far as producing an entity list, destroy it.
+
+		if (spot_entity_list) {
+			destroy_entity_list(spot_entity_list);
+			spot_entity_list = NULL;
+		}
+
 		// If memory was low, display a low memory error.  Otherwise display
 		// the error.
 
@@ -1346,6 +1357,13 @@ shut_down_spot(void)
 		DEL(custom_blockset_ptr, blockset);
 	if (ground_block_def_ptr != NULL)
 		DEL(ground_block_def_ptr, block_def);
+
+	// Destroy the spot entity list, if it exists.
+
+	if (spot_entity_list) {
+		destroy_entity_list(spot_entity_list);
+		spot_entity_list = NULL;
+	}
 
 	// Reset the movement delta so character is standing still.
 

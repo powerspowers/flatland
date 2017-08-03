@@ -60,6 +60,10 @@ extern int recent_spots;
 extern string selected_recent_spot_URL;
 extern void *recent_spot_list_semaphore;
 
+// The XML entity list representing the current spot.
+
+extern entity *spot_entity_list;
+
 // URL directory of currently open spot, current spot URL without the
 // entrance name, and a flag indicating if the spot URL is web-based.
 

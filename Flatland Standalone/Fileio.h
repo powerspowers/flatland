@@ -6,7 +6,7 @@
 
 // Spot parsing function.
 
-void 
+void
 parse_spot_file(char *spot_URL, char *spot_file_path);
 
 // Spot saving function.
