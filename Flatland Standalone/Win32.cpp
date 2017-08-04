@@ -1944,12 +1944,8 @@ LRESULT CALLBACK app_window_proc(HWND hWnd, UINT message, WPARAM wParam, LPARAM 
 				break;
 			case ID_FILE_OPENSPOTURL:
 				{
-					string spot_URL;
-					if (open_URL_dialog(&spot_URL)) {
-						raise_semaphore(recent_spot_list_semaphore);
-						selected_recent_spot_URL = spot_URL;
-						recent_spot_selected.send_event(true);
-						lower_semaphore(recent_spot_list_semaphore);
+					if (open_URL_dialog(&spot_URL_to_load)) {
+						spot_load_requested.send_event(true);
 					}
 				}
 				break;
@@ -1957,10 +1953,8 @@ LRESULT CALLBACK app_window_proc(HWND hWnd, UINT message, WPARAM wParam, LPARAM 
 				{	
 					char file_path[_MAX_PATH];
 					if (open_file_dialog(file_path, _MAX_PATH)) {
-						raise_semaphore(recent_spot_list_semaphore);
-						selected_recent_spot_URL = file_path;
-						recent_spot_selected.send_event(true);
-						lower_semaphore(recent_spot_list_semaphore);
+						spot_URL_to_load = file_path;
+						spot_load_requested.send_event(true);
 					}
 				}
 				break;
@@ -2119,9 +2113,6 @@ start_up_platform_API(void *instance_handle, int show_command, void (*quit_callb
 	error_log_file_path = flatland_dir + "errlog.html";
 	config_file_path = flatland_dir + "config.txt";
 	version_file_path = flatland_dir + "version.txt";
-	directory_file_path = flatland_dir + "directory.txt";
-	new_directory_file_path = flatland_dir + "new_directory.txt";
-	recent_spots_file_path = flatland_dir + "recent_spots.txt";
 	curr_spot_file_path = flatland_dir + "curr_spot.txt";
 	cache_file_path = flatland_dir + "cache.txt";
 	new_rover_file_path = flatland_dir + "new_rover.txt";

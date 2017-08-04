@@ -30,9 +30,6 @@ string log_file_path;
 string error_log_file_path;
 string config_file_path;
 string version_file_path;
-string directory_file_path;
-string new_directory_file_path;
-string recent_spots_file_path;
 string curr_spot_file_path;
 string cache_file_path;
 string new_rover_file_path;
@@ -66,7 +63,6 @@ event player_window_initialised;
 event URL_download_requested;
 event URL_cancel_requested;
 event player_window_shut_down;
-event show_spot_directory;
 
 // Display error event.
 
@@ -87,12 +83,9 @@ event player_window_init_requested;
 event downloader_thread_termination_requested;
 event pause_player_thread;
 event resume_player_thread;
-event spot_dir_entry_selected;
-event recent_spot_selected;
+event spot_load_requested;
 event check_for_update_requested;
-event registration_requested;
 event save_3DML_source_requested;
-event snapshot_requested;
 #ifdef _DEBUG
 event polygon_info_requested;
 #endif
@@ -117,7 +110,6 @@ semaphore<int> curr_turn_rate;
 semaphore<float> master_brightness;
 semaphore<bool> use_classic_controls;
 semaphore<int> visible_block_radius;
-semaphore<bool> snapshot_in_progress;
 semaphore<bool> fly_mode;
 
 // Saved spot file path.
@@ -1268,7 +1260,6 @@ run_app(void *instance_handle, int show_command, char *spot_file_path)
 	URL_download_requested.create_event();
 	URL_cancel_requested.create_event();
 	player_window_shut_down.create_event();
-	show_spot_directory.create_event();
 	display_error.create_event();
 
 	// Create the events sent by the plugin thread.
@@ -1285,19 +1276,15 @@ run_app(void *instance_handle, int show_command, char *spot_file_path)
 	downloader_thread_termination_requested.create_event();
 	pause_player_thread.create_event();
 	resume_player_thread.create_event();
-	spot_dir_entry_selected.create_event();
-	recent_spot_selected.create_event();
+	spot_load_requested.create_event();
 	check_for_update_requested.create_event();
-	registration_requested.create_event();
 	save_3DML_source_requested.create_event();
 #ifdef _DEBUG
 	polygon_info_requested.create_event();
 #endif
-	snapshot_requested.create_event();
 
 	// Create the semaphores which are protecting multiple data structures.
 
-	recent_spot_list_semaphore = create_semaphore();
 	key_event_semaphore = create_semaphore();
 #ifdef STREAMING_MEDIA 
 	image_updated_semaphore = create_semaphore();
@@ -1325,7 +1312,6 @@ run_app(void *instance_handle, int show_command, char *spot_file_path)
 	visible_block_radius.create_semaphore();
 	downloaded_URL.create_semaphore();
 	downloaded_file_path.create_semaphore();
-	snapshot_in_progress.create_semaphore();
 	fly_mode.create_semaphore();
 
 	// Load the configuration file.
@@ -1348,7 +1334,6 @@ run_app(void *instance_handle, int show_command, char *spot_file_path)
 	curr_jump_delta.set(0.0f);
 	curr_mouse_x.set(-1);
 	curr_mouse_y.set(-1);
-	snapshot_in_progress.set(false);
 	fly_mode.set(false);
 
 	// Initialise other variables.
@@ -1435,7 +1420,6 @@ shut_down_app()
 
 	// Destroy the semaphores that were protecting multiple data structures.
 
-	destroy_semaphore(recent_spot_list_semaphore);
 	destroy_semaphore(key_event_semaphore);
 #ifdef STREAMING_MEDIA
 	destroy_semaphore(image_updated_semaphore);
@@ -1462,7 +1446,6 @@ shut_down_app()
 	visible_block_radius.destroy_semaphore();
 	downloaded_URL.destroy_semaphore();
 	downloaded_file_path.destroy_semaphore();
-	snapshot_in_progress.destroy_semaphore();
 	fly_mode.destroy_semaphore();
 
 	// Destroy the events sent by the player thread.
@@ -1472,7 +1455,6 @@ shut_down_app()
 	URL_download_requested.destroy_event();
 	URL_cancel_requested.destroy_event();
 	player_window_shut_down.destroy_event();
-	show_spot_directory.destroy_event();
 	display_error.destroy_event();
 
 	// Destroy the events sent by the plugin thread.
@@ -1489,15 +1471,12 @@ shut_down_app()
 	downloader_thread_termination_requested.destroy_event();
 	pause_player_thread.destroy_event();
 	resume_player_thread.destroy_event();
-	spot_dir_entry_selected.destroy_event();
-	recent_spot_selected.destroy_event();
+	spot_load_requested.destroy_event();
 	check_for_update_requested.destroy_event();
-	registration_requested.destroy_event();
 	save_3DML_source_requested.destroy_event();
 #ifdef _DEBUG
 	polygon_info_requested.destroy_event();
 #endif
-	snapshot_requested.destroy_event();
 
 	// Shut down the platform API.
 

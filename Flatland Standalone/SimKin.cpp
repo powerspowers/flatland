@@ -1083,12 +1083,6 @@ spot_simkin_object::method(const skString& method, skRValueArray& arguments, skR
 		if (array_simkin_object_ptr != NULL)
 			DEL(array_simkin_object_ptr, array_simkin_object);
 	}
-
-	// If the method is "show_spot_directory", then signal the plugin thread
-	// to do just that.
-
-	else if (method == "show_spot_directory")
-		show_spot_directory.send_event(true);
 	
 	// All other methods are passed to the default method function for
 	// processing.

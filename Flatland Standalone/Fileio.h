@@ -58,11 +58,3 @@ check_for_blockset_update(const char *version_file_URL, const char *blockset_nam
 
 bool
 parse_rover_version_file(unsigned int &version_number, string &message);
-
-// Spot directory file functions.
-
-void
-destroy_spot_dir_list(spot_dir_entry *spot_dir_list);
-
-void
-load_spot_directory(void);

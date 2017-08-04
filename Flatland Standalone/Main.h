@@ -47,18 +47,9 @@ extern bool low_memory;
 extern cached_blockset *cached_blockset_list;
 extern cached_blockset *last_cached_blockset_ptr;
 
-// Spot directory list.
+// URL of spot to load.
 
-extern spot_dir_entry *spot_dir_list;
-extern spot_dir_entry *selected_spot_dir_entry_ptr;
-
-// Recent spot list.
-
-#define MAX_RECENT_SPOTS	15
-extern recent_spot recent_spot_list[MAX_RECENT_SPOTS];
-extern int recent_spots;
-extern string selected_recent_spot_URL;
-extern void *recent_spot_list_semaphore;
+extern string spot_URL_to_load;
 
 // The XML entity list representing the current spot.
 
@@ -240,7 +231,8 @@ extern block *curr_area_block_ptr;
 extern square *prev_area_square_ptr;
 extern square *curr_area_square_ptr;
 
-//*mp* Previously and currently selected part
+// Previously and currently selected part.
+
 extern part *prev_selected_part_ptr;
 extern part *curr_selected_part_ptr;
 

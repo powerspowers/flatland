@@ -78,17 +78,9 @@ bool low_memory;
 cached_blockset *cached_blockset_list;
 cached_blockset *last_cached_blockset_ptr;
 
-// Spot directory list.
+// URL of new spot to load.
 
-spot_dir_entry *spot_dir_list;
-spot_dir_entry *selected_spot_dir_entry_ptr;
-
-// Recent spot list.
-
-recent_spot recent_spot_list[MAX_RECENT_SPOTS];
-int recent_spots;
-string selected_recent_spot_URL;
-void *recent_spot_list_semaphore;
+string spot_URL_to_load;
 
 // The XML entity list representing the current spot.
 
@@ -880,62 +872,6 @@ teleport(const char *entrance_name)
 }
 
 //------------------------------------------------------------------------------
-// Add a new entry to the end of the recent spot list.
-//------------------------------------------------------------------------------
-
-static void
-add_recent_spot(const char *label, const char *URL)
-{
-	int index;
-
-	// If there are entries in the recent spot list...
-
-	if (recent_spots > 0) {
-
-		// See if there is an existing entry that duplicates the URL of the new
-		// entry.
-
-		for (index = 0; index < recent_spots; index++)
-			if (!_stricmp(recent_spot_list[index].URL, URL))
-				break;
-
-		// If a duplicate was found, but it's already the most recent, then 
-		// we're done after updating the label.
-
-		if (index == 0) {
-			recent_spot_list[index].label = label;
-			return;
-		}
-
-		// If there is no duplicate, then we want to move all entries down to
-		// make room for the new entry, dropping the least recent entry if the
-		// list is full.  Otherwise we want to remove the duplicate entry,
-		// moving all entries above it down to make room for the new entry.
-
-		if (index == recent_spots) {
-			if (recent_spots == MAX_RECENT_SPOTS)
-				index = recent_spots - 1;
-			else
-				recent_spots++;
-		}
-		for (; index > 0; index--) {
-			recent_spot_list[index].label = recent_spot_list[index - 1].label;
-			recent_spot_list[index].URL = recent_spot_list[index - 1].URL;
-		}
-	}
-
-	// If the list is empty, we simply add the new entry to it.
-
-	else
-		recent_spots++;
-	
-	// Initialise the new entry at the top of the list.
-
-	recent_spot_list->label = label;
-	recent_spot_list->URL = URL;
-}
-
-//------------------------------------------------------------------------------
 // Start up the current spot.
 //------------------------------------------------------------------------------
 
@@ -1088,7 +1024,6 @@ start_up_spot(void)
 	if (spot_on_web) {
 		curr_time = time(NULL);
 
-
 		// If the minimum version required for this spot is greater than 
 		// Rover's version number, check for a Rover update.
 
@@ -1103,20 +1038,6 @@ start_up_spot(void)
 			last_rover_update = curr_time;
 			save_config_file();
 			check_for_rover_update(AUTO_UPDATE);
-		}
-
-		// If the time since the last spot directory update has exceeded a day,
-		// check for a spot directory update after saving the time of this
-		// update in the configuration file.
-
-		if (curr_time - last_spot_dir_update > SECONDS_PER_DAY) {
-			last_spot_dir_update = curr_time;
-			save_config_file();
-			if (download_URL(DIRECTORY_URL, new_directory_file_path, true)) {
-				remove(directory_file_path);
-				rename(new_directory_file_path, directory_file_path);
-			} else
-				remove(new_directory_file_path);
 		}
 	}
 
@@ -1156,12 +1077,6 @@ start_up_spot(void)
 		start_streaming_thread();
 
 #endif
-
-	// Add or move this spot to the top of the recent spot list.
-
-	raise_semaphore(recent_spot_list_semaphore);
-	add_recent_spot(spot_title, curr_spot_URL);
-	lower_semaphore(recent_spot_list_semaphore);
 
 	// Teleport to the selected entrance.
 
@@ -3571,10 +3486,6 @@ resume_spot(void)
 static bool
 init_player(void)
 {
-	int index;
-	FILE *fp;
-	char label[80], URL[_MAX_PATH];
-
 	// Initialise the random number generator.
 
 	srand((unsigned int)time(NULL));
@@ -3590,7 +3501,7 @@ init_player(void)
 
 	// Initialise key down list.
 
-	for (index = 0; index < 256; index++)
+	for (int index = 0; index < 256; index++)
 		key_down_list[index] = false;
 
 	// Initialise the parser, renderer and collision detection code.
@@ -3603,34 +3514,6 @@ init_player(void)
 
 	if (!load_cached_blockset_list())
 		create_cached_blockset_list();
-
-	// Load the spot directory.
-
-	load_spot_directory();
-
-	// Load the recent spot list, if it exists.  Otherwise a fresh one will
-	// be started.
-
-	recent_spots = 0;
-	if ((fp = fopen(recent_spots_file_path, "r")) != NULL) {
-		if (fscanf(fp, "%d\n", &recent_spots) == 1) {
-			if (recent_spots > 0) {
-				if (recent_spots > MAX_RECENT_SPOTS)
-					recent_spots = MAX_RECENT_SPOTS;
-				for (index = 0; index < recent_spots; index++)
-					if (read_string(fp, label, 80) && 
-						read_string(fp, URL, _MAX_PATH)) {
-						recent_spot_list[index].label = label;
-						recent_spot_list[index].URL = URL;
-					} else {
-						recent_spots = index;
-						break;
-					}
-			} else
-				recent_spots = 0;
-		}
-		fclose(fp);
-	}
 	return(true);
 }
 
@@ -3641,24 +3524,6 @@ init_player(void)
 static void
 shut_down_player(void)
 {
-	FILE *fp;
-	int index;
-
-	// Save the recent spot list.
-
-	if ((fp = fopen(recent_spots_file_path, "w")) != NULL) {
-		fprintf(fp, "%d\n", recent_spots);
-		for (index = 0; index < recent_spots; index++) {
-			fprintf(fp, "%s\n", (char *)recent_spot_list[index].label);
-			fprintf(fp, "%s\n", (char *)recent_spot_list[index].URL);
-		}
-		fclose(fp);
-	}
-
-	// Delete the spot directory list.
-
-	destroy_spot_dir_list(spot_dir_list);
-
 	// Delete the cached blockset list and loaded blockset lists, and clean up
 	// the renderer and collision detection code.
 
@@ -3929,118 +3794,6 @@ load_spot(void)
 }
 
 //------------------------------------------------------------------------------
-// Take a snapshot of the current spot.
-//------------------------------------------------------------------------------
-
-static void
-take_snapshot(void)
-{
-	viewpoint old_player_viewpoint;
-	vector old_player_camera_offset;
-	float old_horz_field_of_view, old_vert_field_of_view;
-	float old_visible_radius;
-	float x, y, z;
-
-	// If the snapshot is the current view, move the player viewpoint to eye
-	// level.
-
-	if (snapshot_position == CURRENT_VIEW)
-		player_viewpoint.position.y += player_dimensions.y;
-
-	// If the snapshot position is not the current view...
-
-	else {
-
-		// Save the current view.
-
-		old_player_viewpoint = player_viewpoint;
-		old_player_camera_offset = player_camera_offset;
-		old_horz_field_of_view = horz_field_of_view;
-		old_vert_field_of_view = vert_field_of_view;
-		old_visible_radius = visible_radius;
-
-		// Place the player viewpoint at the top of the map, looking down at
-		// a 45 degree angle, with no camera offset.
-
-		player_viewpoint.position.y = world_ptr->levels * UNITS_PER_BLOCK;
-		player_viewpoint.look_angle = 45.0f;
-		player_camera_offset.set(0.0f, 0.0f, 0.0f);
-
-		// Set the player's horzontal position and turn angle based on the
-		// snapshot position.
-
-		switch (snapshot_position) {
-		case TOP_NW_CORNER:
-			player_viewpoint.position.x = 0.0f;
-			player_viewpoint.position.z = world_ptr->rows * UNITS_PER_BLOCK;
-			player_viewpoint.turn_angle = 135.0f;
-			break;
-		case TOP_NE_CORNER:
-			player_viewpoint.position.x = world_ptr->columns * UNITS_PER_BLOCK;
-			player_viewpoint.position.z = world_ptr->rows * UNITS_PER_BLOCK;
-			player_viewpoint.turn_angle = 225.0f;
-			break;
-		case TOP_SW_CORNER:
-			player_viewpoint.position.x = 0.0f;
-			player_viewpoint.position.z = 0.0f;
-			player_viewpoint.turn_angle = 45.0f;
-			break;
-		case TOP_SE_CORNER:
-			player_viewpoint.position.x = world_ptr->columns * UNITS_PER_BLOCK;
-			player_viewpoint.position.z = 0.0f;
-			player_viewpoint.turn_angle = 315.0f;
-		}
-
-		// Calculate the inverse turn and look angles.
-
-		player_viewpoint.inv_turn_angle_radians = RAD(360.0f - player_viewpoint.turn_angle);
-		player_viewpoint.inv_look_angle_radians = RAD(360.0f - player_viewpoint.look_angle);
-
-		// Use a horizontal and vertical field of view that is wide enough
-		// to encompass the entire spot.
-
-		horz_field_of_view = 90.0f;
-		vert_field_of_view = 90.0f;
-
-		// Set a visible radius that is large enough to encompass the entire
-		// spot.
-
-		x = world_ptr->columns * UNITS_PER_BLOCK;
-		y = world_ptr->levels * UNITS_PER_BLOCK;
-		z = world_ptr->rows * UNITS_PER_BLOCK;
-		visible_radius = (float)sqrt(x * x + y * y + z * z);
-
-		// Now set all other viewport variables.
-
-		set_viewport();
-	}
-
-	// Render the frame that the snapshot will be taken from, then save the
-	// frame buffer in the selected JPEG file using the selected size, scaling
-	// the frame buffer if necessary.
-
-	render_frame();
-	// TODO: New save function needed.
-
-	// Restore the current view.
-
-	if (snapshot_position == CURRENT_VIEW)
-		player_viewpoint.position.y -= player_dimensions.y;
-	else {
-		player_viewpoint = old_player_viewpoint;
-		player_camera_offset = old_player_camera_offset;
-		horz_field_of_view = old_horz_field_of_view;
-		vert_field_of_view = old_vert_field_of_view;
-		visible_radius = old_visible_radius;
-		set_viewport();
-	}
-	
-	// Indicate the snapshot has been taken.
-
-	snapshot_in_progress.set(false);
-}
-
-//------------------------------------------------------------------------------
 // Handle any spot events.  Returns TRUE if the event loop should continue,
 // or FALSE otherwise.
 //------------------------------------------------------------------------------
@@ -4118,12 +3871,6 @@ handle_spot_events(void)
 
 	if (window_resize_requested.event_sent() && !handle_window_resize())
 		return(false);
-
-	// If a snapshot is requested, handle it.
-	
-	if (snapshot_requested.event_sent()) {
-		//take_snapshot();
-	}
 
 	// Indicate the event loop should continue.
 	
@@ -4216,23 +3963,10 @@ player_thread(void *arg_list)
 			if (check_for_update_requested.event_sent())
 				check_for_rover_update(USER_REQUESTED_UPDATE);
 
-			// If an entry from the spot directory was selected, teleport to it.
+			// If a spot load is requested, teleport to it.
 
-			if (spot_dir_entry_selected.event_sent()) {
-				if (!handle_exit(selected_spot_dir_entry_ptr->URL, NULL, false)) {
-					shut_down_spot();
-					spot_loaded.set(false);
-					set_title("No spot loaded");
-				}
-			}
-
-			// If a recent spot was selected, teleport to it.
-
-			if (recent_spot_selected.event_sent()) {
-				raise_semaphore(recent_spot_list_semaphore);
-				string recent_spot_URL = selected_recent_spot_URL;
-				lower_semaphore(recent_spot_list_semaphore);
-				if (!handle_exit(recent_spot_URL, NULL, true)) {
+			if (spot_load_requested.event_sent()) {
+				if (!handle_exit(spot_URL_to_load, NULL, true)) {
 					shut_down_spot();
 					spot_loaded.set(false);
 					set_title("No spot loaded");

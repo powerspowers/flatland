@@ -36,9 +36,6 @@ extern string log_file_path;
 extern string error_log_file_path;
 extern string config_file_path;
 extern string version_file_path;
-extern string directory_file_path;
-extern string new_directory_file_path;
-extern string recent_spots_file_path;
 extern string curr_spot_file_path;
 extern string cache_file_path;
 extern string new_rover_file_path;
@@ -67,7 +64,6 @@ extern event player_window_initialised;
 extern event URL_download_requested;
 extern event URL_cancel_requested;
 extern event player_window_shut_down;
-extern event show_spot_directory;
 
 // Display error event.
 
@@ -88,12 +84,9 @@ extern event player_window_init_requested;
 extern event downloader_thread_termination_requested;
 extern event pause_player_thread;
 extern event resume_player_thread;
-extern event spot_dir_entry_selected;
-extern event recent_spot_selected;
+extern event spot_load_requested;
 extern event check_for_update_requested;
-extern event registration_requested;
 extern event save_3DML_source_requested;
-extern event snapshot_requested;
 #ifdef _DEBUG
 extern event polygon_info_requested;
 #endif
@@ -118,7 +111,6 @@ extern semaphore<int> curr_turn_rate;
 extern semaphore<float> master_brightness;
 extern semaphore<bool> use_classic_controls;
 extern semaphore<int> visible_block_radius;
-extern semaphore<bool> snapshot_in_progress;
 extern semaphore<bool> fly_mode;
 
 // Saved spot file path.
