@@ -6,7 +6,7 @@
 
 // Version string.
 
-#define ROVER_VERSION_NUMBER			0x0306000D // ff at the end usually unless beta
+#define ROVER_VERSION_NUMBER			0x0306000E // ff at the end usually unless beta
 
 // Activation status.
 
@@ -146,7 +146,7 @@ extern int max_texture_size;
 
 // Display properties.
 
-extern int display_width, display_height, display_depth;
+extern int display_depth;
 extern int window_width, window_height;
 
 // Flag indicating whether the main window is ready.
@@ -297,18 +297,6 @@ open_file_dialog(char *file_path_buffer, int buffer_size);
 bool
 open_URL_dialog(string *URL_ptr);
 
-// Progress window functions (called by the plugin thread only).
-
-void
-open_progress_window(int file_size, void (*progress_callback)(void),
-					 char *format, ...);
-
-void
-update_progress_window(int file_pos, int file_size);
-
-void
-close_progress_window(void);
-
 // Light window functions (called by the plugin thread only).
 
 void
@@ -343,20 +331,6 @@ open_help_window(void);
 
 void
 close_help_window(void);
-
-// Snapshot window functions (called by the plugin thread only).
-
-void
-open_snapshot_window(int width, int height, void (*snapshot_callback)(int width,
-					 int height, int position));
-
-void
-close_snapshot_window(void);
-
-// Filename function (called by the plugin thread only).
-
-const char *
-get_save_file_name(char *title, char *filter, char *initial_dir_path);
 
 // Blockset manager window functions (called by the plugin thread only).
 
@@ -394,12 +368,6 @@ recreate_frame_buffer(void);
 void
 destroy_frame_buffer(void);
 
-void
-begin_3D_scene(void);
-
-void
-end_3D_scene(void);
-
 bool
 lock_frame_buffer(byte *&frame_buffer_ptr, int &frame_buffer_width);
 
@@ -408,6 +376,9 @@ unlock_frame_buffer(void);
 
 bool
 display_frame_buffer(void);
+
+void
+clear_frame_buffer(void);
 
 void
 clear_frame_buffer(int x, int y, int width, int height);
@@ -425,15 +396,6 @@ render_colour_span24(span *span_ptr);
 
 void
 render_colour_span32(span *span_ptr);
-
-void
-render_opaque_span16(span *span_ptr);
-
-void
-render_opaque_span24(span *span_ptr);
-
-void
-render_opaque_span32(span *span_ptr);
 
 void
 render_transparent_span16(span *span_ptr);
@@ -486,23 +448,15 @@ hardware_render_polygon(tpolygon *tpolygon_ptr);
 // Pixmap drawing function (called by the player thread only).
 
 void
-draw_pixmap(pixmap *pixmap_ptr, int brightness_index, int x, int y,
-			int width, int height);
+draw_pixmap(pixmap *pixmap_ptr, int brightness_index, int x, int y, int width, int height);
 
 // Colour functions (called by the player thread only).
 
 pixel
 RGB_to_display_pixel(RGBcolour colour);
 
-void
-display_pixel_to_RGB(pixel display_pixel, byte *red_ptr, byte *green_ptr, 
-					 byte *blue_ptr); 
-
 pixel
 RGB_to_texture_pixel(RGBcolour colour);
-
-RGBcolour *
-get_standard_RGB_palette(void);
 
 byte
 get_standard_palette_index(RGBcolour colour_ptr);

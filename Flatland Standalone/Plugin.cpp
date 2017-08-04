@@ -765,29 +765,6 @@ options_window_callback(int option_ID, int option_value)
 }
 
 //------------------------------------------------------------------------------
-// Snapshot window callback function.
-//------------------------------------------------------------------------------
-
-static void
-snapshot_window_callback(int width, int height, int position)
-{
-	// Get the path of the snapshot JPEG file.
-
-	if ((snapshot_file_path = get_save_file_name("Save snapshot to JPEG file",
-		"JPEG image file\0*.jpeg;*.jpg\0", NULL)) != NULL) {
-
-		// Now send an event to the player thread to take a snapshot of the given
-		// size and save it to the given JPEG file.
-
-		snapshot_width = width;
-		snapshot_height = height;
-		snapshot_position = position;
-		snapshot_in_progress.set(true);
-		snapshot_requested.send_event(true);
-	}
-}
-
-//------------------------------------------------------------------------------
 // Callback function to handle key events.
 //------------------------------------------------------------------------------
 
@@ -812,10 +789,6 @@ key_event_callback(byte key_code, bool key_down)
 	}
 
 #endif
-
-	if (key_code == 'C' && !key_down)
-		open_snapshot_window(window_width, window_height,
-			snapshot_window_callback);
 
 	// Check whether the key is a recognised function key, and if so execute
 	// it's function.
@@ -1449,12 +1422,10 @@ shut_down_app()
 
 	// Close any windows that might still be open.
 
-	close_progress_window();
 	close_light_window();
 	close_options_window();
 	close_about_window();
 	close_help_window();
-	close_snapshot_window();
 	close_blockset_manager_window();
 
 	// If Rover had started up successfully, save the configuration file.

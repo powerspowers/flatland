@@ -3044,11 +3044,11 @@ render_frame(void)
 	pixmap *pixmap_ptr;
 	int row;
 
-	// If hardware acceleration is enabled, begin the 3D scene, otherwise lock
-	// the frame buffer.
+	// If hardware acceleration is enabled clear the frame buffer, 
+	// otherwise lock the frame buffer.
 
 	if (hardware_acceleration)
-		begin_3D_scene();
+		clear_frame_buffer();
 	else
 		lock_frame_buffer(frame_buffer_ptr, frame_buffer_width);
 
@@ -3313,11 +3313,8 @@ render_frame(void)
 		}
 	}
 
-	// If hardware acceleration is enabled, end the 3D scene, otherwise unlock
-	// the frame buffer.
+	// If hardware acceleration is not enabled, unlock the frame buffer.
 
-	if (hardware_acceleration)
-		end_3D_scene();
 	else
 		unlock_frame_buffer();
 

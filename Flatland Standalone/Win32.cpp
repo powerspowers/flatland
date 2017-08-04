@@ -59,9 +59,6 @@ using namespace DirectX;
 #include "Spans.h"
 #include "Utils.h"
 
-static LRESULT CALLBACK
-handle_main_window_event(HWND window_handle, UINT message, WPARAM wParam, LPARAM lParam);
-
 //==============================================================================
 // Global definitions.
 //==============================================================================
@@ -140,10 +137,6 @@ event::wait_for_event(void)
 // Global variables.
 //------------------------------------------------------------------------------
 
-// Operating system name and version.
-
-string os_version;
-
 // Application directory.
 
 string app_dir;
@@ -159,7 +152,7 @@ int max_texture_size;
 
 // Display properties.
 
-int display_width, display_height, display_depth;
+int display_depth;
 int window_width, window_height;
 
 // Flag indicating whether the main window is ready.
@@ -462,15 +455,11 @@ static byte *dither00, *dither01, *dither10, *dither11;
 
 static pixel *light_table[BRIGHTNESS_LEVELS];
 
-// The standard colour palette in both RGB and pixel format, the table used
-// to get the index of a colour in the 6x6x6 colour cube, and the index of
-// the standard transparent pixel.
+// The standard colour palette, and the table used to get the index of a colour in the 6x6x6 colour cube.
 
 static HPALETTE standard_palette_handle;
 static RGBcolour standard_RGB_palette[256];
-static pixel standard_palette[256];
 static byte colour_index[216];
-static byte standard_transparent_index;
 
 // Colour component masks.
 
@@ -547,7 +536,6 @@ static ID3D11RasterizerState *d3d_rasterizer_state_ptr;
 static ID3D11SamplerState *d3d_sampler_state_ptr;
 static ID3D11Buffer *d3d_constant_buffer_list[2];
 static XMMATRIX d3d_projection_matrix;
-
 static byte *framebuffer_ptr;
 static int framebuffer_width;
 
@@ -608,12 +596,6 @@ static void (*timer_callback_ptr)(void);
 static void (*resize_callback_ptr)(void *window_handle, int width, int height);
 static void (*display_callback_ptr)(void);
 
-// Progress window data.
-
-static HWND progress_window_handle;
-static HWND progress_bar_handle;
-static void (*progress_callback_ptr)(void);
-
 // Light window data.
 
 static HWND light_window_handle;
@@ -635,14 +617,6 @@ static HWND help_window_handle;
 static HFONT bold_font_handle;
 static HFONT symbol_font_handle;
 
-// Snapshot window data.
-
-static HWND snapshot_window_handle;
-static HWND snapshot_width_spin_control_handle;
-static HWND snapshot_height_spin_control_handle;
-static void (*snapshot_callback_ptr)(int width, int height, int position);
-static int curr_snapshot_position;
-
 // Blockset manager window data.
 
 static HWND blockset_manager_window_handle;
@@ -650,15 +624,6 @@ static HWND blockset_list_view_handle;
 static HWND blockset_update_button_handle;
 static HWND blockset_delete_button_handle;
 static HWND update_period_spin_control_handle;
-
-// Message log window data.
-
-static HWND message_log_window_handle;
-static HWND log_edit_control_handle;
-
-// Inactive window callback procedure prototype.
-
-typedef void (*inactive_callback)(void *window_data_ptr);
 
 // Macro for converting a point size into pixel units
 
@@ -745,69 +710,6 @@ const float fixed_shift = 65536.0;
 	__asm fistp	DWORD PTR u \
 	__asm fmul  v_on_tz \
 	__asm fistp DWORD PTR v \
-}
-
-// Assembly macro for drawing a 16-bit pixel.
-
-#define DRAW_PIXEL16 __asm \
-{ \
-	__asm mov edi, ebx \
-	__asm and edi, ecx \
-	__asm shr edi, FRAC_BITS \
-	__asm mov eax, edx \
-	__asm and eax, ecx \
-	__asm and eax, INT_MASK \
-	__asm shr eax, cl \
-	__asm or  edi, eax \
-	__asm mov eax, image_ptr \
-	__asm mov ax, [eax + edi * 2] \
-	__asm add ebx, delta_u \
-	__asm mov [esi], ax \
-	__asm add edx, delta_v \
-	__asm add esi, 2 \
-}
-
-// Assembly macro for drawing a 24-bit pixel.
-
-#define DRAW_PIXEL24 __asm \
-{ \
-	__asm mov edi, ebx \
-	__asm and edi, ecx \
-	__asm shr edi, FRAC_BITS \
-	__asm mov eax, edx \
-	__asm and eax, ecx \
-	__asm and eax, INT_MASK \
-	__asm shr eax, cl \
-	__asm or  edi, eax \
-	__asm mov eax, image_ptr \
-	__asm mov eax, [eax + edi * 4] \
-	__asm add ebx, delta_u \
-	__asm mov edi, [esi] \
-	__asm and edi, 0xff000000 \
-	__asm or edi, eax \
-	__asm mov [esi], edi \
-	__asm add edx, delta_v \
-	__asm add esi, 3 \
-}
-
-// Assembly macro for drawing a 32-bit pixel.
-
-#define DRAW_PIXEL32 __asm \
-{ \
-	__asm mov edi, ebx \
-	__asm and edi, ecx \
-	__asm shr edi, FRAC_BITS \
-	__asm mov eax, edx \
-	__asm and eax, ecx \
-	__asm and eax, INT_MASK \
-	__asm shr eax, cl \
-	__asm or  edi, eax \
-	__asm mov eax, image_ptr \
-	__asm mov eax, [eax + edi * 4] \
-	__asm add ebx, delta_u \
-	__asm mov [esi], eax \
-	__asm add edx, delta_v \
-	__asm add esi, 4 \
 }
 
 // Assembly macro for drawing a possibly transparent 16-bit pixel.
@@ -905,18 +807,6 @@ failed_to_create(const char *message)
 	diagnose("Failed to create the %s", message);
 }
 
-static void
-failed_to_get(const char *message)
-{
-	diagnose("Failed to get %s", message);
-}
-
-static void
-failed_to_set(const char *message)
-{
-	diagnose("Failed to set %s", message);
-}
-
 //------------------------------------------------------------------------------
 // Blit the frame buffer onto the primary surface.  This is only used in
 // software rendering mode.
@@ -935,8 +825,8 @@ blit_frame_buffer(void)
 
 	framebuffer_surface_rect.left = 0;
 	framebuffer_surface_rect.top = 0;
-	framebuffer_surface_rect.right = display_width;
-	framebuffer_surface_rect.bottom = display_height;
+	framebuffer_surface_rect.right = window_width;
+	framebuffer_surface_rect.bottom = window_height;
 	primary_surface_rect = framebuffer_surface_rect;
 
 	// Offset the primary surface rectangle by the position of the main 
@@ -1616,7 +1506,6 @@ create_standard_palette()
 		for (index = 0; index < 256; index++)
 			if (!used_palette_entry[index])
 				break;
-		standard_transparent_index = index;
 	}
 
 	// For all other colour depths, simply create our own standard palette.
@@ -1644,11 +1533,6 @@ create_standard_palette()
 		standard_RGB_palette[index].blue = GetBValue(GetSysColor(COLOR_MENU));
 		index++;
 
-		// Assign the standard transparent pixel to the next available palette
-		// entry.
-
-		standard_transparent_index = index;
-
 		// Fill the remaining palette entries with black.
 
 		while (index < 256) {
@@ -1660,40 +1544,6 @@ create_standard_palette()
 	}
 
 	// Indicate success.
-
-	return(true);
-}
-
-//------------------------------------------------------------------------------
-// Initialise an icon.
-//------------------------------------------------------------------------------
-
-static bool
-init_icon(icon *icon_ptr)
-{
-	// If the display depth is 8, create the palette index tables for the icon
-	// textures.
-
-	if (display_depth == 8) {
-		if (icon_ptr->texture0_ptr &&
-			!icon_ptr->texture0_ptr->create_palette_index_table())
-			return(false);
-		if (icon_ptr->texture1_ptr &&
-			!icon_ptr->texture1_ptr->create_palette_index_table())
-			return(false);
-	}
-
-	// If the display depth is 16, 24 or 32, create the display palette list for
-	// the icon textures.
-
-	else {
-		if (icon_ptr->texture0_ptr != NULL)
-			icon_ptr->texture0_ptr->create_display_palette_list();
-		if (icon_ptr->texture1_ptr != NULL)
-			icon_ptr->texture1_ptr->create_display_palette_list();
-	}
-
-	// Return success status.
 
 	return(true);
 }
@@ -2014,7 +1864,9 @@ exception_filter(EXCEPTION_POINTERS *exception_ptr)
 // Start up/Shut down functions.
 //==============================================================================
 
+//------------------------------------------------------------------------------
 // About box dialog procedure.
+//------------------------------------------------------------------------------
 
 INT_PTR CALLBACK about_box_dialog_proc(HWND hDlg, UINT message, WPARAM wParam, LPARAM lParam)
 {
@@ -2040,7 +1892,40 @@ INT_PTR CALLBACK about_box_dialog_proc(HWND hDlg, UINT message, WPARAM wParam, L
 	return (INT_PTR)FALSE;
 }
 
+//------------------------------------------------------------------------------
+// Display a dialog box for selecting a file to save, and return a pointer to
+// the file name (or NULL if none was selected).
+//------------------------------------------------------------------------------
+
+static char save_file_path[_MAX_PATH];
+
+const char *
+get_save_file_name(char *title, char *filter, char *initial_dir_path)
+{
+	OPENFILENAME save_file_name;
+
+	// Set up the save file dialog and call it.
+
+	*save_file_path = '\0';
+	memset(&save_file_name, 0, sizeof(OPENFILENAME));
+	save_file_name.lStructSize = sizeof(OPENFILENAME);
+	save_file_name.hwndOwner = main_window_handle;
+	save_file_name.lpstrFilter = filter;
+	save_file_name.lpstrInitialDir = initial_dir_path;
+	save_file_name.lpstrFile = save_file_path;
+	save_file_name.nMaxFile = _MAX_PATH;
+	save_file_name.lpstrTitle = title;
+	save_file_name.Flags = OFN_LONGNAMES | OFN_PATHMUSTEXIST | 
+		OFN_OVERWRITEPROMPT | OFN_HIDEREADONLY;
+	if (GetSaveFileName(&save_file_name))
+		return(save_file_path);
+	else
+		return(NULL);
+}
+
+//------------------------------------------------------------------------------
 // Application window procedure.
+//------------------------------------------------------------------------------
 
 LRESULT CALLBACK app_window_proc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 {
@@ -2139,6 +2024,9 @@ LRESULT CALLBACK app_window_proc(HWND hWnd, UINT message, WPARAM wParam, LPARAM 
 //------------------------------------------------------------------------------
 // Start up the platform API.
 //------------------------------------------------------------------------------
+
+static LRESULT CALLBACK
+handle_main_window_event(HWND window_handle, UINT message, WPARAM wParam, LPARAM lParam);
 
 bool
 start_up_platform_API(void *instance_handle, int show_command, void (*quit_callback)())
@@ -2279,7 +2167,6 @@ start_up_platform_API(void *instance_handle, int show_command, void (*quit_callb
 	options_window_handle = NULL;
 	about_window_handle = NULL;
 	help_window_handle = NULL;
-	snapshot_window_handle = NULL;
 	blockset_manager_window_handle = NULL;
 
 	// Show and update the app window.
@@ -2960,8 +2847,6 @@ handle_main_window_event(HWND window_handle, UINT message, WPARAM wParam,
 void
 set_main_window_size(int width, int height)
 {
-	display_width = width;
-	display_height = height;
 	window_width = width;
 	window_height = height;
 }
@@ -3038,9 +2923,7 @@ create_main_window(void (*key_callback)(byte key_code, bool key_down),
 	framebuffer_ptr = NULL;
 	dsound_object_ptr = NULL;
 	label_visible = false;
-	progress_window_handle = NULL;	
 	light_window_handle = NULL;
-	message_log_window_handle = NULL;
 	key_callback_ptr = NULL;
 	mouse_callback_ptr = NULL;
 	timer_callback_ptr = NULL;
@@ -3228,12 +3111,6 @@ create_main_window(void (*key_callback)(byte key_code, bool key_down),
 		failed_to_create("standardised palette");
 		return(false);
 	}
-
-	// Convert the standard palette from RGB values to display pixels.
-
-	for (index = 0; index < 256; index++)
-		standard_palette[index] = 
-			RGB_to_display_pixel(standard_RGB_palette[index]);
 
 	// Create the light tables.
 
@@ -3663,137 +3540,6 @@ open_URL_dialog(string *URL_ptr)
 }
 
 //==============================================================================
-// Progress window functions.
-//==============================================================================
-
-//------------------------------------------------------------------------------
-// Handle a progress window event.
-//------------------------------------------------------------------------------
-
-static BOOL CALLBACK
-handle_progress_event(HWND window_handle, UINT message, WPARAM wParam,
-					  LPARAM lParam)
-{
-	switch (message) {
-	case WM_INITDIALOG:
-		return(TRUE);
-	case WM_COMMAND:
-		if (HIWORD(wParam) == BN_CLICKED && LOWORD(wParam) == IDB_CANCEL)
-			(*progress_callback_ptr)();
-		return(TRUE);
-	default:
-		return(FALSE);
-	}
-}
-
-//------------------------------------------------------------------------------
-// Create the progress window.
-//------------------------------------------------------------------------------
-
-void
-open_progress_window(int file_size, void (*progress_callback)(void),
-					 char *format, ...)
-{
-	va_list arg_ptr;
-	char message[BUFSIZ];
-	HWND control_handle;
-
-	// If the progress window is already open, do nothing.
-
-	if (progress_window_handle != NULL)
-		return;
-
-	// Save the pointer to the progress callback function.
-
-	progress_callback_ptr = progress_callback;
-
-	// Create the progress message string by parsing the variable argument list
-	// according to the contents of the format string.
-
-	va_start(arg_ptr, format);
-	vbprintf(message, BUFSIZ, format, arg_ptr);
-	va_end(arg_ptr);
-
-	// Create the progress window.
-
-	progress_window_handle = CreateDialog(app_instance_handle,
-		MAKEINTRESOURCE(IDD_PROGRESS), NULL, handle_progress_event);
-
-	// Get the handle to the progress text static control, and set it's text.
-
-	control_handle = GetDlgItem(progress_window_handle, IDC_PROGRESS_TEXT);
-	SetWindowText(control_handle, message);
-
-	// Get the handle to the file size static control, and set it's text.
-
-	control_handle = GetDlgItem(progress_window_handle, IDC_FILE_SIZE);
-	if (file_size > 0) {
-		bprintf(message, BUFSIZ, "File Size:\t%d KB", file_size / 1024);
-		SetWindowText(control_handle, message);
-	} else
-		SetWindowText(control_handle, "File Size:\tNot yet determined");
-
-	// Get the handle to the progress bar control, and initialise it's range
-	// to match the file size.
-
-	progress_bar_handle = GetDlgItem(progress_window_handle, IDC_PROGRESS_BAR);
-	SendMessage(progress_bar_handle, PBM_SETRANGE, 0, 
-		MAKELPARAM(0, file_size / 1024));
-	SendMessage(progress_bar_handle, PBM_SETPOS, 0, 0);
-
-	// Show the progress window.
-
-	ShowWindow(progress_window_handle, SW_NORMAL);
-}
-
-//------------------------------------------------------------------------------
-// Update the progress window.  We allow the file size to be passed in here
-// because some containers (such as the ActiveX control) doesn't know the size
-// of a URL stream when first opened.
-//------------------------------------------------------------------------------
-
-void
-update_progress_window(int file_pos, int file_size)
-{	
-	char message[BUFSIZ];
-	HWND control_handle;
-
-	// Update the file size.
-
-	control_handle = GetDlgItem(progress_window_handle, IDC_FILE_SIZE);
-	if (file_size > 0) {
-		bprintf(message, BUFSIZ, "File Size:\t%d KB", file_size / 1024);
-		SetWindowText(control_handle, message);
-	} else
-		SetWindowText(control_handle, "File Size:\tNot yet determined");
-
-	// Update the file status.
-
-	control_handle = GetDlgItem(progress_window_handle, IDC_FILE_STATUS);
-	bprintf(message, BUFSIZ, "File Status:\t%d KB downloaded", file_pos / 1024);
-	SetWindowText(control_handle, message);
-
-	// Set the position of the progress bar.
-
-	SendMessage(progress_bar_handle, PBM_SETRANGE, 0, 
-		MAKELPARAM(0, file_size / 1024));
-	SendMessage(progress_bar_handle, PBM_SETPOS, file_pos / 1024, 0);
-}
-
-//------------------------------------------------------------------------------
-// Close the progress window.
-//------------------------------------------------------------------------------
-
-void
-close_progress_window(void)
-{
-	if (progress_window_handle) {
-		DestroyWindow(progress_window_handle);
-		progress_window_handle = NULL;
-	}
-}
-
-//==============================================================================
 // Light window functions.
 //==============================================================================
 
@@ -4214,162 +3960,6 @@ close_about_window(void)
 		DestroyWindow(about_window_handle);
 		about_window_handle = NULL;
 	}
-}
-
-//==============================================================================
-// Snapshot window functions.
-//==============================================================================
-
-//------------------------------------------------------------------------------
-// Function to handle snapshot window events.
-//------------------------------------------------------------------------------
-
-static BOOL CALLBACK
-handle_snapshot_event(HWND window_handle, UINT message, WPARAM wParam,
-					  LPARAM lParam)
-{
-	int width, height;
-
-	switch (message) {
-
-	// Load the required fonts, and set the font for each control that needs
-	// it.
-
-	case WM_INITDIALOG:
-		return(TRUE);
-	case WM_DESTROY:
-		return(TRUE);
-	case WM_COMMAND:
-		switch (HIWORD(wParam)) {
-		case BN_CLICKED:
-			switch (LOWORD(wParam)) {
-			case IDB_OK:
-				width = LOWORD(SendMessage(snapshot_width_spin_control_handle, 
-					UDM_GETPOS, 0, 0));
-				height = LOWORD(SendMessage(snapshot_height_spin_control_handle,
-					UDM_GETPOS, 0, 0));
-				close_snapshot_window();
-				(*snapshot_callback_ptr)(width, height, curr_snapshot_position);
-				break;
-			case IDB_CANCEL:
-				close_snapshot_window();
-				break;
-			case IDB_CURRENT_VIEW:
-				curr_snapshot_position = CURRENT_VIEW;
-				break;
-			case IDB_TOP_NW_CORNER:
-				curr_snapshot_position = TOP_NW_CORNER;
-				break;
-			case IDB_TOP_NE_CORNER:
-				curr_snapshot_position = TOP_NE_CORNER;
-				break;
-			case IDB_TOP_SW_CORNER:
-				curr_snapshot_position = TOP_SW_CORNER;
-				break;
-			case IDB_TOP_SE_CORNER:
-				curr_snapshot_position = TOP_SE_CORNER;
-			}
-		}
-		return(TRUE);
-	default:
-		return(FALSE);
-	}
-}
-
-//------------------------------------------------------------------------------
-// Open the snapshot window.
-//------------------------------------------------------------------------------
-
-void
-open_snapshot_window(int width, int height, void (*snapshot_callback)(int width,
-					 int height, int position))
-{
-	HWND control_handle;
-
-	// If the snapshot window is already open, do nothing.
-
-	if (snapshot_window_handle != NULL)
-		return;
-
-	// Save the pointer to the snapshot callback function.
-
-	snapshot_callback_ptr = snapshot_callback;
-
-	// Create the snapshot window.
-
-	snapshot_window_handle = CreateDialog(app_instance_handle,
-		MAKEINTRESOURCE(IDD_SNAPSHOT), main_window_handle,
-		handle_snapshot_event);
-
-	// Initialise the snapshot width edit box and spin control.
-
-	snapshot_width_spin_control_handle = GetDlgItem(snapshot_window_handle,
-		IDC_SPIN_SNAPSHOT_WIDTH);
-	init_spin_control(snapshot_width_spin_control_handle,
-		GetDlgItem(snapshot_window_handle, IDC_EDIT_SNAPSHOT_WIDTH),
-		4, 1, 1024, width);
-
-	// Initialise the snapshot height edit box and spin control.
-
-	snapshot_height_spin_control_handle = GetDlgItem(snapshot_window_handle,
-		IDC_SPIN_SNAPSHOT_HEIGHT);
-	init_spin_control(snapshot_height_spin_control_handle,
-		GetDlgItem(snapshot_window_handle, IDC_EDIT_SNAPSHOT_HEIGHT),
-		3, 1, 768, height);
-
-	// Initialise the default snapshot position radio box.
-
-	curr_snapshot_position = CURRENT_VIEW;
-	control_handle = GetDlgItem(snapshot_window_handle, IDB_CURRENT_VIEW);
-	SendMessage(control_handle, BM_SETCHECK, BST_CHECKED, 0);
-
-	// Show the snapshot window.
-
-	ShowWindow(snapshot_window_handle, SW_NORMAL);
-}
-
-//------------------------------------------------------------------------------
-// Close the snapshot window.
-//------------------------------------------------------------------------------
-
-void
-close_snapshot_window(void)
-{
-	if (snapshot_window_handle != NULL) {
-		DestroyWindow(snapshot_window_handle);
-		snapshot_window_handle = NULL;
-	}
-}
-
-//------------------------------------------------------------------------------
-// Display a dialog box for selecting a file to save, and return a pointer to
-// the file name (or NULL if none was selected).
-//------------------------------------------------------------------------------
-
-static char save_file_path[_MAX_PATH];
-
-const char *
-get_save_file_name(char *title, char *filter, char *initial_dir_path)
-{
-	OPENFILENAME save_file_name;
-
-	// Set up the save file dialog and call it.
-
-	*save_file_path = '\0';
-	memset(&save_file_name, 0, sizeof(OPENFILENAME));
-	save_file_name.lStructSize = sizeof(OPENFILENAME);
-	save_file_name.hwndOwner = main_window_handle;
-	save_file_name.lpstrFilter = filter;
-	save_file_name.lpstrInitialDir = initial_dir_path;
-	save_file_name.lpstrFile = save_file_path;
-	save_file_name.nMaxFile = _MAX_PATH;
-	save_file_name.lpstrTitle = title;
-	save_file_name.Flags = OFN_LONGNAMES | OFN_PATHMUSTEXIST | 
-		OFN_OVERWRITEPROMPT | OFN_HIDEREADONLY;
-	if (GetSaveFileName(&save_file_name))
-		return(save_file_path);
-	else
-		return(NULL);
 }
 
 //==============================================================================
@@ -4805,8 +4395,8 @@ create_frame_buffer(void)
 	ddraw_surface_desc.dwFlags = DDSD_CAPS | DDSD_WIDTH | DDSD_HEIGHT;
 	ddraw_surface_desc.ddsCaps.dwCaps = DDSCAPS_OFFSCREENPLAIN | 
 		DDSCAPS_SYSTEMMEMORY;
-	ddraw_surface_desc.dwWidth = display_width;
-	ddraw_surface_desc.dwHeight = display_height;
+	ddraw_surface_desc.dwWidth = window_width;
+	ddraw_surface_desc.dwHeight = window_height;
 	if ((result = ddraw_object_ptr->CreateSurface(&ddraw_surface_desc,
 		&ddraw_framebuffer_surface_ptr, NULL)) != DD_OK) {
 		failed_to_create("frame buffer surface");
@@ -4880,28 +4470,6 @@ destroy_frame_buffer(void)
 }
 
 //------------------------------------------------------------------------------
-// Begin a 3D scene.
-//------------------------------------------------------------------------------
-
-void
-begin_3D_scene(void)
-{
-	// Clear the back buffer and the depth stencil.
-
-	d3d_device_context_ptr->ClearRenderTargetView(d3d_render_target_view_ptr, Colors::Black);
-	d3d_device_context_ptr->ClearDepthStencilView(d3d_depth_stencil_view_ptr, D3D11_CLEAR_DEPTH, 1.0f, 0);
-}
-
-//------------------------------------------------------------------------------
-// End a 3D scene.
-//------------------------------------------------------------------------------
-
-void
-end_3D_scene(void)
-{
-}
-
-//------------------------------------------------------------------------------
 // Lock the frame buffer and return it's address and the width of the frame
 // buffer in bytes (software renderer only).
 //------------------------------------------------------------------------------
@@ -4914,7 +4482,7 @@ lock_frame_buffer(byte *&fb_ptr, int &row_pitch)
 
 	if (display_depth == 8) {
 		fb_ptr = framebuffer_ptr;
-		row_pitch = display_width << 1;
+		row_pitch = window_width << 1;
 	}
 
 	// Else if the display depth is 16, 24 or 32...
@@ -5000,12 +4568,12 @@ display_frame_buffer(void)
 
 		old_pixel_ptr = (word *)framebuffer_ptr;
 		new_pixel_ptr = fb_ptr;
-		row_gap = row_pitch - display_width;
+		row_gap = row_pitch - window_width;
 
 		// Perform the dither.
 
 		for (row = 0; row < window_height - 1; row += 2) {
-			for (col = 0; col < display_width - 1; col += 2) {
+			for (col = 0; col < window_width - 1; col += 2) {
 				*new_pixel_ptr++ = dither00[*old_pixel_ptr++];
 				*new_pixel_ptr++ = dither01[*old_pixel_ptr++];
 			}
@@ -5048,6 +4616,19 @@ display_frame_buffer(void)
 	} else
 		blit_frame_buffer();
 	return(true);
+}
+
+//------------------------------------------------------------------------------
+// Clear the frame buffer (hardware renderer only).
+//------------------------------------------------------------------------------
+
+void
+clear_frame_buffer(void)
+{
+	// Clear the back buffer and the depth stencil.
+
+	d3d_device_context_ptr->ClearRenderTargetView(d3d_render_target_view_ptr, Colors::Black);
+	d3d_device_context_ptr->ClearDepthStencilView(d3d_depth_stencil_view_ptr, D3D11_CLEAR_DEPTH, 1.0f, 0);
 }
 
 //------------------------------------------------------------------------------
@@ -5679,654 +5260,6 @@ render_colour_span32(span *span_ptr)
 
 		dec ecx
 		jnz next_pixel32
-	}
-}
-
-//------------------------------------------------------------------------------
-// Render an opaque span to a 16-bit frame buffer.
-//------------------------------------------------------------------------------
-
-void
-render_opaque_span16(span *span_ptr)
-{
-	cache_entry *cache_entry_ptr;
-	fixed u, v;
-	fixed end_u, end_v;
-	fixed delta_u, delta_v;
-	float one_on_tz, u_on_tz, v_on_tz;
-	float end_one_on_tz, end_tz;
-	span_data scaled_delta_span;
-	byte *image_ptr, *fb_ptr;
-	int mask, shift;
-	int span_width;
-	int span_start_sx, span_end_sx;
-	int end_sx;
-
-	// Ignore span if it has zero width.
-
-	if (span_ptr->start_sx == span_ptr->end_sx)
-		return;
-
-	// Get the image data.
-
-	cache_entry_ptr = get_cache_entry(span_ptr->pixmap_ptr, 
-		span_ptr->brightness_index);
-	image_ptr = cache_entry_ptr->lit_image_ptr;
-	mask = cache_entry_ptr->lit_image_mask;
-	shift = cache_entry_ptr->lit_image_shift;
-
-	// Pre-scale the deltas for faster calculations when rendering spans that
-	// are SPAN_WIDTH in width.
-
-	scaled_delta_span.one_on_tz = span_ptr->delta_span.one_on_tz * SPAN_WIDTH;
-	scaled_delta_span.u_on_tz = span_ptr->delta_span.u_on_tz * SPAN_WIDTH;
-	scaled_delta_span.v_on_tz = span_ptr->delta_span.v_on_tz * SPAN_WIDTH;
-
-	// Get the starting 1/tz value; if it is zero, make it one (this is used
-	// by sky spans to ensure they are furthest from the viewer, rather than
-	// using a tiny 1/tz value that introduces errors into the texture
-	// coordinates).
-
-	one_on_tz = span_ptr->start_span.one_on_tz;
-	if (one_on_tz == 0.0)
-		one_on_tz = 1.0;
-
-	// Get the pointer to the starting pixel in the frame buffer.
-	
-	fb_ptr = frame_buffer_ptr + frame_buffer_width * span_ptr->sy + 
-		(span_ptr->start_sx << 1);
-
-	// Compute (u,v) for that pixel.  We are now representing (u,v) as true fixed
-	// point values for speed.
-
-	u_on_tz = span_ptr->start_span.u_on_tz;
-	v_on_tz = span_ptr->start_span.v_on_tz;
-	end_tz = 1.0f / one_on_tz;
-	COMPUTE_UV(u, v, u_on_tz, v_on_tz, end_tz);
-
-	// Compute the start and end values for the first span.
-
-	span_start_sx = span_ptr->start_sx;
-	span_end_sx = span_ptr->start_sx + SPAN_WIDTH;
-	end_sx = span_ptr->end_sx;
-	end_one_on_tz = one_on_tz + scaled_delta_span.one_on_tz;
-	end_tz = 1.0f / end_one_on_tz;
-
-	// Now render the row one span at a time, until we have less than a span's
-	// width of pixels left.
-
-	while (span_end_sx < end_sx) {
-			
-		// Compute (end_u, end_v) and (delta_u, delta_v) for this span,
-		// storing them as fixed point numbers for speed.  We also compute 
-		// the ending 1/tz value for the *next* span.
-		
-		u_on_tz += scaled_delta_span.u_on_tz;
-		v_on_tz += scaled_delta_span.v_on_tz;
-		COMPUTE_UV(end_u, end_v, u_on_tz, v_on_tz, end_tz);
-		delta_u = (end_u - u) >> SPAN_SHIFT;
-		delta_v = (end_v - v) >> SPAN_SHIFT;
-		end_one_on_tz += scaled_delta_span.one_on_tz;
-
-		// The rest of the render span code is done in assembler for speed...
-
-		__asm {
-
-			// Start computing 1/one_on_tz for the next span (the floating
-			// point divide will overlap the span render loop on a Pentium).
-
-			fld const_1
-			fdiv end_one_on_tz
-
-			// Put u in EBX and v in EDX.
-
-			mov ebx, u
-			mov edx, v
-
-			// Combine the mask and shift in ECX; the mask occupies the top
-			// word, and the shift occupies CL.
-
-			mov ecx, mask
-			or  ecx, shift
-
-			// Move the frame buffer pointer into ESI.
-
-			mov esi, fb_ptr
-
-			// Render 32 texture mapped pixels.
-
-			DRAW_PIXEL16
-			DRAW_PIXEL16
-			DRAW_PIXEL16
-			DRAW_PIXEL16
-			DRAW_PIXEL16
-			DRAW_PIXEL16
-			DRAW_PIXEL16
-			DRAW_PIXEL16
-			DRAW_PIXEL16
-			DRAW_PIXEL16
-			DRAW_PIXEL16
-			DRAW_PIXEL16
-			DRAW_PIXEL16
-			DRAW_PIXEL16
-			DRAW_PIXEL16
-			DRAW_PIXEL16
-			DRAW_PIXEL16
-			DRAW_PIXEL16
-			DRAW_PIXEL16
-			DRAW_PIXEL16
-			DRAW_PIXEL16
-			DRAW_PIXEL16
-			DRAW_PIXEL16
-			DRAW_PIXEL16
-			DRAW_PIXEL16
-			DRAW_PIXEL16
-			DRAW_PIXEL16
-			DRAW_PIXEL16
-			DRAW_PIXEL16
-			DRAW_PIXEL16
-			DRAW_PIXEL16
-			DRAW_PIXEL16
-			
-			// Save new value of the frame buffer pointer.
-
-			mov fb_ptr, esi
-
-			// Store the result of 1/one_on_tz in end_tz (this computation
-			// should be well and truly completed by now).
-
-			fstp end_tz
-		}
-		
-		// Get ready for the next span.
-	
-		u = end_u;
-		v = end_v;
-		span_start_sx = span_end_sx;
-		span_end_sx += SPAN_WIDTH;
-	}
-
-	// If there are pixels left, render one more shorter span.
-
-	if (span_start_sx < end_sx) {
-
-		// Compute (end_u, end_v) and (delta_u, delta_v) for this span,
-		// storing them as fixed point numbers for speed.
-		
-		u_on_tz += scaled_delta_span.u_on_tz;
-		v_on_tz += scaled_delta_span.v_on_tz;
-		COMPUTE_UV(end_u, end_v, u_on_tz, v_on_tz, end_tz);
-		delta_u = (end_u - u) >> SPAN_SHIFT;
-		delta_v = (end_v - v) >> SPAN_SHIFT;
-
-		// Compute the size of this last span.
-
-		span_width = (end_sx - span_start_sx) << 8;
-
-		// The rest of the render span code is done in assembler for speed...
-
-		__asm {
-
-			// Put u in EBX and v in EDX.
-
-			mov ebx, u
-			mov edx, v
-
-			// Combine the mask, shift and span width in ECX; the mask
-			// occupies the top word, the shift occupies CL, and the span 
-			// width occupies CH.
-
-			mov ecx, mask
-			or  ecx, shift
-			or	ecx, span_width
-
-			// Move the the frame buffer pointer into ESI.
-
-			mov esi, fb_ptr
-
-			// Render span_width texture mapped pixels.
-
-		next_pixel16:
-			DRAW_PIXEL16
-			dec ch
-			jnz next_pixel16
-			
-			// Save new value of the frame buffer pointer.
-
-			mov fb_ptr, esi
-		}
-	}
-}
-
-//------------------------------------------------------------------------------
-// Render an opaque span to a 24-bit frame buffer.
-//------------------------------------------------------------------------------
-
-void
-render_opaque_span24(span *span_ptr)
-{
-	cache_entry *cache_entry_ptr;
-	fixed u, v;
-	fixed end_u, end_v;
-	fixed delta_u, delta_v;
-	float one_on_tz, u_on_tz, v_on_tz;
-	float end_one_on_tz, end_tz;
-	span_data scaled_delta_span;
-	byte *image_ptr, *fb_ptr;
-	int mask, shift;
-	int span_width;
-	int span_start_sx, span_end_sx;
-	int end_sx;
-
-	// Ignore span if it has zero width.
-
-	if (span_ptr->start_sx == span_ptr->end_sx)
-		return;
-
-	// Get the image data.
-
-	cache_entry_ptr = get_cache_entry(span_ptr->pixmap_ptr, 
-		span_ptr->brightness_index);
-	image_ptr = cache_entry_ptr->lit_image_ptr;
-	mask = cache_entry_ptr->lit_image_mask;
-	shift = cache_entry_ptr->lit_image_shift;
-
-	// Pre-scale the deltas for faster calculations when rendering spans that
-	// are SPAN_WIDTH in width.
-
-	scaled_delta_span.one_on_tz = span_ptr->delta_span.one_on_tz * SPAN_WIDTH;
-	scaled_delta_span.u_on_tz = span_ptr->delta_span.u_on_tz * SPAN_WIDTH;
-	scaled_delta_span.v_on_tz = span_ptr->delta_span.v_on_tz * SPAN_WIDTH;
-
-	// Get the starting 1/tz value; if it is zero, make it one (this is used
-	// by sky spans to ensure they are furthest from the viewer, rather than
-	// using a tiny 1/tz value that introduces errors into the texture
-	// coordinates).
-
-	one_on_tz = span_ptr->start_span.one_on_tz;
-	if (one_on_tz == 0.0)
-		one_on_tz = 1.0;
-
-	// Get the pointer to the starting pixel in the frame buffer.
-	
-	fb_ptr = frame_buffer_ptr + frame_buffer_width * span_ptr->sy + 
-		span_ptr->start_sx * 3;
-
-	// Compute (u,v) for that pixel.  We are now representing (u,v) as true fixed
-	// point values for speed.
-
-	u_on_tz = span_ptr->start_span.u_on_tz;
-	v_on_tz = span_ptr->start_span.v_on_tz;
-	end_tz = 1.0f / one_on_tz;
-	COMPUTE_UV(u, v, u_on_tz, v_on_tz, end_tz);
-
-	// Compute the start and end values for the first span.
-
-	span_start_sx = span_ptr->start_sx;
-	span_end_sx = span_ptr->start_sx + SPAN_WIDTH;
-	end_sx = span_ptr->end_sx;
-	end_one_on_tz = one_on_tz + scaled_delta_span.one_on_tz;
-	end_tz = 1.0f / end_one_on_tz;
-
-	// Now render the row one span at a time, until we have less than a span's
-	// width of pixels left.
-
-	while (span_end_sx < end_sx) {
-		
-		// Compute (end_u, end_v) and (delta_u, delta_v) for this span,
-		// storing them as fixed point numbers for speed.  We also compute 
-		// the ending 1/tz value for the *next* span.
-		
-		u_on_tz += scaled_delta_span.u_on_tz;
-		v_on_tz += scaled_delta_span.v_on_tz;
-		COMPUTE_UV(end_u, end_v, u_on_tz, v_on_tz, end_tz);
-		delta_u = (end_u - u) >> SPAN_SHIFT;
-		delta_v = (end_v - v) >> SPAN_SHIFT;
-		end_one_on_tz += scaled_delta_span.one_on_tz;
-
-		// The rest of the render span code is done in assembler for speed...
-
-		__asm {
-
-			// Start computing 1/one_on_tz for the next span (the floating
-			// point divide will overlap the span render loop on a Pentium).
-
-			fld const_1
-			fdiv end_one_on_tz
-
-			// Put u in EBX and v in EDX.
-
-			mov ebx, u
-			mov edx, v
-
-			// Combine the mask and shift in ECX; the mask occupies the top
-			// word, and the shift occupies CL.
-
-			mov ecx, mask
-			or  ecx, shift
-
-			// Move the frame buffer pointer into ESI.
-
-			mov esi, fb_ptr
-
-			// Render 32 texture mapped pixels.
-
-			DRAW_PIXEL24
-			DRAW_PIXEL24
-			DRAW_PIXEL24
-			DRAW_PIXEL24
-			DRAW_PIXEL24
-			DRAW_PIXEL24
-			DRAW_PIXEL24
-			DRAW_PIXEL24
-			DRAW_PIXEL24
-			DRAW_PIXEL24
-			DRAW_PIXEL24
-			DRAW_PIXEL24
-			DRAW_PIXEL24
-			DRAW_PIXEL24
-			DRAW_PIXEL24
-			DRAW_PIXEL24
-			DRAW_PIXEL24
-			DRAW_PIXEL24
-			DRAW_PIXEL24
-			DRAW_PIXEL24
-			DRAW_PIXEL24
-			DRAW_PIXEL24
-			DRAW_PIXEL24
-			DRAW_PIXEL24
-			DRAW_PIXEL24
-			DRAW_PIXEL24
-			DRAW_PIXEL24
-			DRAW_PIXEL24
-			DRAW_PIXEL24
-			DRAW_PIXEL24
-			DRAW_PIXEL24
-			DRAW_PIXEL24
-			
-			// Save new value of the frame buffer pointer.
-
-			mov fb_ptr, esi
-
-			// Store the result of 1/one_on_tz in end_tz (this computation
-			// should be well and truly completed by now).
-
-			fstp end_tz
-		}
-		
-		// Get ready for the next span.
-	
-		u = end_u;
-		v = end_v;
-		span_start_sx = span_end_sx;
-		span_end_sx += SPAN_WIDTH;
-	}
-
-	// If there are pixels left, render one more shorter span.
-
-	if (span_start_sx < end_sx) {
-
-		// Compute (end_u, end_v) and (delta_u, delta_v) for this span,
-		// storing them as fixed point numbers for speed.
-		
-		u_on_tz += scaled_delta_span.u_on_tz;
-		v_on_tz += scaled_delta_span.v_on_tz;
-		COMPUTE_UV(end_u, end_v, u_on_tz, v_on_tz, end_tz);
-		delta_u = (end_u - u) >> SPAN_SHIFT;
-		delta_v = (end_v - v) >> SPAN_SHIFT;
-
-		// Compute the size of this last span.
-
-		span_width = (end_sx - span_start_sx) << 8;
-
-		// The rest of the render span code is done in assembler for speed...
-
-		__asm {
-
-			// Put u in EBX and v in EDX.
-
-			mov ebx, u
-			mov edx, v
-
-			// Combine the mask, shift and span width in ECX; the mask
-			// occupies the top word, the shift occupies CL, and the span 
-			// width occupies CH.
-
-			mov ecx, mask
-			or  ecx, shift
-			or	ecx, span_width
-
-			// Move the the frame buffer pointer into ESI.
-
-			mov esi, fb_ptr
-
-			// Render span_width texture mapped pixels.
-
-		next_pixel24:
-			DRAW_PIXEL24
-			dec ch
-			jnz next_pixel24
-			
-			// Save new value of the frame buffer pointer.
-
-			mov fb_ptr, esi
-		}
-	}
-}
-
-//------------------------------------------------------------------------------
-// Render an opaque span to a 32-bit frame buffer.
-//------------------------------------------------------------------------------
-
-void
-render_opaque_span32(span *span_ptr)
-{
-	cache_entry *cache_entry_ptr;
-	fixed u, v;
-	fixed end_u, end_v;
-	fixed delta_u, delta_v;
-	float one_on_tz, u_on_tz, v_on_tz;
-	float end_one_on_tz, end_tz;
-	span_data scaled_delta_span;
-	byte *image_ptr, *fb_ptr;
-	int mask, shift;
-	int span_width;
-	int span_start_sx, span_end_sx;
-	int end_sx;
-
-	// Ignore span if it has zero width.
-
-	if (span_ptr->start_sx == span_ptr->end_sx)
-		return;
-
-	// Get the image data.
-
-	cache_entry_ptr = get_cache_entry(span_ptr->pixmap_ptr, 
-		span_ptr->brightness_index);
-	image_ptr = cache_entry_ptr->lit_image_ptr;
-	mask = cache_entry_ptr->lit_image_mask;
-	shift = cache_entry_ptr->lit_image_shift;
-
-	// Pre-scale the deltas for faster calculations when rendering spans that
-	// are SPAN_WIDTH in width.
-
-	scaled_delta_span.one_on_tz = span_ptr->delta_span.one_on_tz * SPAN_WIDTH;
-	scaled_delta_span.u_on_tz = span_ptr->delta_span.u_on_tz * SPAN_WIDTH;
-	scaled_delta_span.v_on_tz = span_ptr->delta_span.v_on_tz * SPAN_WIDTH;
-
-	// Get the starting 1/tz value; if it is zero, make it one (this is used
-	// by sky spans to ensure they are furthest from the viewer, rather than
-	// using a tiny 1/tz value that introduces errors into the texture
-	// coordinates).
-
-	one_on_tz = span_ptr->start_span.one_on_tz;
-	if (one_on_tz == 0.0)
-		one_on_tz = 1.0;
-
-	// Get the pointer to the starting pixel in the frame buffer.
-	
-	fb_ptr = frame_buffer_ptr + frame_buffer_width * span_ptr->sy + 
-		(span_ptr->start_sx << 2);
-
-	// Compute (u,v) for that pixel.  We are now representing (u,v) as true fixed
-	// point values for speed.
-
-	u_on_tz = span_ptr->start_span.u_on_tz;
-	v_on_tz = span_ptr->start_span.v_on_tz;
-	end_tz = 1.0f / one_on_tz;
-	COMPUTE_UV(u, v, u_on_tz, v_on_tz, end_tz);
-
-	// Compute the start and end values for the first span.
-
-	span_start_sx = span_ptr->start_sx;
-	span_end_sx = span_ptr->start_sx + SPAN_WIDTH;
-	end_sx = span_ptr->end_sx;
-	end_one_on_tz = one_on_tz + scaled_delta_span.one_on_tz;
-	end_tz = 1.0f / end_one_on_tz;
-
-	// Now render the row one span at a time, until we have less than a span's
-	// width of pixels left.
-
-	while (span_end_sx < end_sx) {
-		
-		// Compute (end_u, end_v) and (delta_u, delta_v) for this span,
-		// storing them as fixed point numbers for speed.  We also compute 
-		// the ending 1/tz value for the *next* span.
-		
-		u_on_tz += scaled_delta_span.u_on_tz;
-		v_on_tz += scaled_delta_span.v_on_tz;
-		COMPUTE_UV(end_u, end_v, u_on_tz, v_on_tz, end_tz);
-		delta_u = (end_u - u) >> SPAN_SHIFT;
-		delta_v = (end_v - v) >> SPAN_SHIFT;
-		end_one_on_tz += scaled_delta_span.one_on_tz;
-
-		// The rest of the render span code is done in assembler for speed...
-
-		__asm {
-
-			// Start computing 1/one_on_tz for the next span (the floating
-			// point divide will overlap the span render loop on a Pentium).
-
-			fld const_1
-			fdiv end_one_on_tz
-
-			// Put u in EBX and v in EDX.
-
-			mov ebx, u
-			mov edx, v
-
-			// Combine the mask and shift in ECX; the mask occupies the top
-			// word, and the shift occupies CL.
-
-			mov ecx, mask
-			or  ecx, shift
-
-			// Move the frame buffer pointer into ESI.
-
-			mov esi, fb_ptr
-
-			// Render 32 texture mapped pixels.
-
-			DRAW_PIXEL32
-			DRAW_PIXEL32
-			DRAW_PIXEL32
-			DRAW_PIXEL32
-			DRAW_PIXEL32
-			DRAW_PIXEL32
-			DRAW_PIXEL32
-			DRAW_PIXEL32
-			DRAW_PIXEL32
-			DRAW_PIXEL32
-			DRAW_PIXEL32
-			DRAW_PIXEL32
-			DRAW_PIXEL32
-			DRAW_PIXEL32
-			DRAW_PIXEL32
-			DRAW_PIXEL32
-			DRAW_PIXEL32
-			DRAW_PIXEL32
-			DRAW_PIXEL32
-			DRAW_PIXEL32
-			DRAW_PIXEL32
-			DRAW_PIXEL32
-			DRAW_PIXEL32
-			DRAW_PIXEL32
-			DRAW_PIXEL32
-			DRAW_PIXEL32
-			DRAW_PIXEL32
-			DRAW_PIXEL32
-			DRAW_PIXEL32
-			DRAW_PIXEL32
-			DRAW_PIXEL32
-			DRAW_PIXEL32
-			
-			// Save new value of the frame buffer pointer.
-
-			mov fb_ptr, esi
-
-			// Store the result of 1/one_on_tz in end_tz (this computation
-			// should be well and truly completed by now).
-
-			fstp end_tz
-		}
-		
-		// Get ready for the next span.
-	
-		u = end_u;
-		v = end_v;
-		span_start_sx = span_end_sx;
-		span_end_sx += SPAN_WIDTH;
-	}
-
-	// If there are pixels left, render one more shorter span.
-
-	if (span_start_sx < end_sx) {
-
-		// Compute (end_u, end_v) and (delta_u, delta_v) for this span,
-		// storing them as fixed point numbers for speed.
-		
-		u_on_tz += scaled_delta_span.u_on_tz;
-		v_on_tz += scaled_delta_span.v_on_tz;
-		COMPUTE_UV(end_u, end_v, u_on_tz, v_on_tz, end_tz);
-		delta_u = (end_u - u) >> SPAN_SHIFT;
-		delta_v = (end_v - v) >> SPAN_SHIFT;
-
-		// Compute the size of this last span.
-
-		span_width = (end_sx - span_start_sx) << 8;
-
-		// The rest of the render span code is done in assembler for speed...
-
-		__asm {
-
-			// Put u in EBX and v in EDX.
-
-			mov ebx, u
-			mov edx, v
-
-			// Combine the mask, shift and span width in ECX; the mask
-			// occupies the top word, the shift occupies CL, and the span 
-			// width occupies CH.
-
-			mov ecx, mask
-			or  ecx, shift
-			or	ecx, span_width
-
-			// Move the the frame buffer pointer into ESI.
-
-			mov esi, fb_ptr
-
-			// Render span_width texture mapped pixels.
-
-		next_pixel32:
-			DRAW_PIXEL32
-			dec ch
-			jnz next_pixel32
-			
-			// Save new value of the frame buffer pointer.
-
-			mov fb_ptr, esi
-		}
 	}
 }
 
@@ -8063,7 +6996,7 @@ draw_pixmap(pixmap *pixmap_ptr, int brightness_index, int x, int y, int width,
 	// If the pixmap is completely off screen then return without having drawn
 	// anything.
 
-	if (x >= display_width || y >= display_height ||
+	if (x >= window_width || y >= window_height ||
 		x + width <= 0 || y + height <= 0) 
 		return;
 
@@ -8090,10 +7023,10 @@ draw_pixmap(pixmap *pixmap_ptr, int brightness_index, int x, int y, int width,
 	// If the pixmap crosses the right or bottom edge of the display, we must
 	// adjust the size of the area we are going to draw even further.
 
-	if (x + clipped_width > display_width)
-		clipped_width = display_width - x;
-	if (y + clipped_height > display_height)
-		clipped_height = display_height - y;
+	if (x + clipped_width > window_width)
+		clipped_width = window_width - x;
+	if (y + clipped_height > window_height)
+		clipped_height = window_height - y;
 
 	// Lock the frame buffer surface.
 
@@ -8217,27 +7150,6 @@ RGB_to_display_pixel(RGBcolour colour)
 }
 
 //------------------------------------------------------------------------------
-// Convert a display pixel to an RGB colour.
-//------------------------------------------------------------------------------
-
-void
-display_pixel_to_RGB(pixel display_pixel, byte *red_ptr, byte *green_ptr, 
-					 byte *blue_ptr)
-{
-	pixel component;
-
-	component = display_pixel >> display_pixel_format.red_left_shift;
-	component <<= display_pixel_format.red_right_shift;
-	*red_ptr = component & display_pixel_format.red_mask;
-	component = display_pixel >> display_pixel_format.green_left_shift;
-	component <<= display_pixel_format.green_right_shift;
-	*green_ptr = component & display_pixel_format.green_mask;
-	component = display_pixel >> display_pixel_format.blue_left_shift;
-	component <<= display_pixel_format.blue_right_shift;
-	*blue_ptr = component & display_pixel_format.blue_mask;
-}
-
-//------------------------------------------------------------------------------
 // Convert an RGB colour to a texture pixel.
 //------------------------------------------------------------------------------
 
@@ -8259,16 +7171,6 @@ RGB_to_texture_pixel(RGBcolour colour)
 	blue <<= texture_pixel_format.blue_left_shift;
 	alpha = colour.alpha ? texture_pixel_format.alpha_comp_mask : 0;
 	return(red | green | blue | alpha);
-}
-
-//------------------------------------------------------------------------------
-// Return a pointer to the standard RGB palette.
-//------------------------------------------------------------------------------
-
-RGBcolour *
-get_standard_RGB_palette(void)
-{
-	return((RGBcolour *)standard_RGB_palette);
 }
 
 //------------------------------------------------------------------------------
