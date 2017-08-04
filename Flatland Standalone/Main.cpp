@@ -1297,7 +1297,7 @@ shut_down_spot(void)
 //------------------------------------------------------------------------------
 
 static bool
-handle_exit(const char *exit_URL, const char *exit_target, bool is_spot_URL)
+handle_exit(const char *exit_URL, const char *exit_target, bool is_spot_URL, bool force_reload)
 {
 	// If the exit URL starts with the hash sign, then treat this as an
 	// entrance name within the current spot.
@@ -1343,11 +1343,12 @@ handle_exit(const char *exit_URL, const char *exit_target, bool is_spot_URL)
 			}
 
 			// Recreate the spot URL without the entrance name.  If a spot is
-			// loaded and the new spot URL is the same as the current spot URL,
-			// then teleport to the specified entrance.
+			// loaded, the new spot URL is the same as the current spot URL,
+			// and we're not been asked to force a reload, then teleport to the
+			// specified entrance.
 
 			spot_URL = create_URL(URL_dir, file_name);
-			if (spot_loaded.get() && !_stricmp(spot_URL, curr_spot_URL)) {
+			if (spot_loaded.get() && !_stricmp(spot_URL, curr_spot_URL) && !force_reload) {
 				teleport(entrance_name);
 				return(true);
 			}
@@ -2770,8 +2771,7 @@ execute_active_trigger_list(void)
 					remove_clock_action_by_type(action_ptr,MOVE_ACTION);
 					break;
 				case EXIT_ACTION:
-					spot_continues = handle_exit(action_ptr->exit_URL, 
-						action_ptr->exit_target, action_ptr->is_spot_URL);
+					spot_continues = handle_exit(action_ptr->exit_URL, action_ptr->exit_target, action_ptr->is_spot_URL, false);
 					active_trigger_list[0] = NULL;
 					active_trigger_count = 0;
 					return(spot_continues);
@@ -2871,8 +2871,7 @@ execute_trigger(trigger* trigger_ptr)
 				remove_clock_action_by_type(action_ptr,MOVE_ACTION);
 				break;
 			case EXIT_ACTION:
-				spot_continues = handle_exit(action_ptr->exit_URL, 
-					action_ptr->exit_target, action_ptr->is_spot_URL);
+				spot_continues = handle_exit(action_ptr->exit_URL, action_ptr->exit_target, action_ptr->is_spot_URL, false);
 				return(spot_continues);
 		}
 		action_ptr = action_ptr->next_action_ptr;
@@ -3216,9 +3215,7 @@ render_next_frame(void)
 	// If the mouse was clicked, and an exit was selected, handle it.
 
 	if (mouse_was_clicked && curr_selected_exit_ptr != NULL) {
-		return(handle_exit(curr_selected_exit_ptr->URL, 
-			curr_selected_exit_ptr->target, 
-			curr_selected_exit_ptr->is_spot_URL));
+		return(handle_exit(curr_selected_exit_ptr->URL, curr_selected_exit_ptr->target, curr_selected_exit_ptr->is_spot_URL, false));
 	}
 
 	// If we are standing on the same map square as the previous frame (which
@@ -3269,7 +3266,7 @@ render_next_frame(void)
 		}
 	}
 	if (exit_ptr != NULL) {
-		return(handle_exit(exit_ptr->URL, exit_ptr->target, exit_ptr->is_spot_URL));		
+		return(handle_exit(exit_ptr->URL, exit_ptr->target, exit_ptr->is_spot_URL, false));		
 	}
 	return(true);
 }
@@ -3963,10 +3960,10 @@ player_thread(void *arg_list)
 			if (check_for_update_requested.event_sent())
 				check_for_rover_update(USER_REQUESTED_UPDATE);
 
-			// If a spot load is requested, teleport to it.
+			// If a spot load is requested, do it.
 
 			if (spot_load_requested.event_sent()) {
-				if (!handle_exit(spot_URL_to_load, NULL, true)) {
+				if (!handle_exit(spot_URL_to_load, NULL, true, true)) {
 					shut_down_spot();
 					spot_loaded.set(false);
 					set_title("No spot loaded");

@@ -836,6 +836,12 @@ show_light_window()
 static void
 mouse_event_callback(int x, int y, int button_code)
 {
+	// Don't handle a mouse event if a spot is not loaded.
+
+	if (!spot_loaded.get()) {
+		return;
+	}
+
 	// Remove the light window if it is currently displayed.
 
 	close_light_window();
@@ -1071,6 +1077,8 @@ timer_event_callback(void)
 static void
 resize_event_callback(void *window_handle, int width, int height)
 {
+	// Don't resize the window if a spot is not loaded.
+
 	if (!spot_loaded.get()) {
 		return;
 	}
