@@ -3810,7 +3810,7 @@ handle_help_event(HWND window_handle, UINT message, WPARAM wParam,
 		control_handle = GetDlgItem(window_handle, IDC_STATIC_BOLD3);
 		SendMessage(control_handle, WM_SETFONT, (WPARAM)bold_font_handle, 0);
 		control_handle = GetDlgItem(window_handle, IDC_STATIC_SYMBOL);
-		SendMessage(control_handle, WM_SETFONT, (WPARAM)symbol_font_handle, 0);
+		SendMessage(control_handle, WM_SETFONT, (WPARAM)(use_classic_controls.get() ? symbol_font_handle : bold_font_handle), 0);
 		return(TRUE);
 	case WM_DESTROY:
 		DeleteObject(bold_font_handle);
@@ -3846,8 +3846,8 @@ open_help_window(void)
 	// Create the help window.
 
 	help_window_handle = CreateDialog(app_instance_handle,
-		MAKEINTRESOURCE(IDD_HELP), main_window_handle,
-		handle_help_event);
+		MAKEINTRESOURCE(use_classic_controls.get() ? IDD_HELP_CLASSIC_CONTROLS : IDD_HELP_NEW_CONTROLS),
+		main_window_handle, handle_help_event);
 
 	// Show the help window.
 
