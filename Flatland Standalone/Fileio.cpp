@@ -3336,9 +3336,7 @@ parse_define_tag(string &script)
 {
 	// Convert all nested tags contained with the define tag into a string.
 
-	start_parsing_nested_tags();
 	script = nested_tags_to_string();
-	stop_parsing_nested_tags();
 }
 
 //------------------------------------------------------------------------------
@@ -4613,6 +4611,16 @@ save_spot_file(const char *spot_file_path)
 
 	if (!spot_entity_list) {
 		return;
+	}
+
+	// If there is no base tag and this spot was downloaded from a URL, create a
+	// base tag with the URL of this spot so that it will continue to work correctly
+	// when loaded from the saved file.
+
+	entity *head_tag_entity_ptr = find_tag_entity("head", spot_entity_list);
+	if (!find_tag_entity("base", head_tag_entity_ptr->nested_entity_list) && !_strnicmp(spot_URL_dir, "http://", 7)) {
+		entity *base_tag_entity_ptr = create_tag_entity("base", head_tag_entity_ptr->line_no, "href", (char *)spot_URL_dir, NULL);
+		prepend_tag_entity(base_tag_entity_ptr, head_tag_entity_ptr->nested_entity_list);
 	}
 
 	// Reconstruct all of the level text entities with the current state of the map.

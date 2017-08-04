@@ -2952,7 +2952,6 @@ parse_relative_integer_triplet(relinteger_triplet *relinteger_ptr)
 	return(true);
 }
 
-
 //------------------------------------------------------------------------------
 // Parse current file token as absolute or relative map coordinates.
 //------------------------------------------------------------------------------
@@ -3026,7 +3025,6 @@ parse_relative_integer(relinteger *int_ptr)
 	}
 	return(true);
 }
-
 
 //------------------------------------------------------------------------------
 // Parse the current file token as an RGB colour triplet.
@@ -3650,6 +3648,24 @@ read_token(void)
 }
 
 //------------------------------------------------------------------------------
+// Create an attribute with the given name and value.
+//------------------------------------------------------------------------------
+
+static attr *
+create_attr(string name, string value)
+{
+	attr *attr_ptr;
+
+	NEW(attr_ptr, attr);
+	if (attr_ptr == NULL)
+		memory_error("attribute");
+	attr_ptr->name = name;
+	attr_ptr->value = value;
+	attr_ptr->next_attr_ptr = NULL;
+	return attr_ptr;
+}
+
+//------------------------------------------------------------------------------
 // Parse an attribute, returning a pointer to it.  It is assumed that the
 // attribute name identifier token has already been read.  Any error will cause
 // an exception to be thrown.
@@ -3659,7 +3675,6 @@ static attr *
 parse_attribute(void)
 {
 	string attr_name;
-	attr *attr_ptr;
 
 	// Parse the attribute name identifier.
 	
@@ -3680,13 +3695,28 @@ parse_attribute(void)
 	// Create an attribute, and initialise it with the parsed token and value,
 	// then return a pointer to it.
 
-	NEW(attr_ptr, attr);
-	if (attr_ptr == NULL)
-		memory_error("attribute");
-	attr_ptr->name = attr_name;
-	attr_ptr->value = file_token_string;
-	attr_ptr->next_attr_ptr = NULL;
-	return(attr_ptr);
+	return(create_attr(attr_name, file_token_string));
+}
+
+//------------------------------------------------------------------------------
+// Create a tag entity with the given type, line number, text and attribute list.
+//------------------------------------------------------------------------------
+
+static entity *
+create_entity(int type, int line_no, string text, attr *attr_list)
+{
+	entity *entity_ptr;
+
+	NEW(entity_ptr, entity);
+	if (entity_ptr == NULL)
+		memory_error("XML entity");
+	entity_ptr->type = type;
+	entity_ptr->line_no = line_no;
+	entity_ptr->text = text;
+	entity_ptr->attr_list = attr_list;
+	entity_ptr->nested_entity_list = NULL;
+	entity_ptr->next_entity_ptr = NULL;
+	return entity_ptr;
 }
 
 //------------------------------------------------------------------------------
@@ -3726,22 +3756,12 @@ parse_nested_entity_list(const char *end_tag_name)
 
 		switch (token) {
 
-		// If the token is character data or a comment, create a new text or
-		// comment entity.
+		// If the token is character data or a comment, create a new text or comment entity.
 
 		case TOKEN_CHARACTER_DATA:
 		case TOKEN_COMMENT:
-			NEW(entity_ptr, entity);
-			if (entity_ptr == NULL)
-				memory_error("XML entity");
-			entity_ptr->line_no = file_token_line_no;
-			if (token == TOKEN_CHARACTER_DATA)
-				entity_ptr->type = TEXT_ENTITY;
-			else
-				entity_ptr->type = COMMENT_ENTITY;
-			entity_ptr->text = file_token_string;
-			entity_ptr->attr_list = NULL;
-			entity_ptr->nested_entity_list = NULL;
+			entity_ptr = create_entity(token == TOKEN_CHARACTER_DATA ? TEXT_ENTITY : COMMENT_ENTITY,  
+				file_token_line_no, file_token_string, NULL);
 			break;
 			
 		// If the token is an open tag symbol, parse the tag and create a 
@@ -3811,7 +3831,6 @@ parse_tag(bool *is_start_tag)
 	string tag_name;
 	attr *attr_list, *last_attr_ptr;
 	attr *attr_ptr;
-	entity *entity_ptr;
 	int tag_line_no;
 
 	// Read the tag name identifier, and remember the line it was on.
@@ -3843,19 +3862,9 @@ parse_tag(bool *is_start_tag)
 	else
 		*is_start_tag = false;
 	
-	// Create the tag entity, and initialise it with the line number, tag name
-	// token and attribute list.
-	
-	NEW(entity_ptr, entity);
-	if (entity_ptr == NULL)
-		memory_error("entity");
-	entity_ptr->line_no = tag_line_no;
-	entity_ptr->type = TAG_ENTITY;
-	entity_ptr->text = tag_name;
-	entity_ptr->attr_list = attr_list;
-	entity_ptr->nested_entity_list = NULL;
-	entity_ptr->next_entity_ptr = NULL;
-	return(entity_ptr);
+	// Create the tag entity, and initialise it with the line number, tag name token and attribute list.
+
+	return(create_entity(TAG_ENTITY, tag_line_no, tag_name, attr_list));
 }
 
 //------------------------------------------------------------------------------
@@ -4444,6 +4453,16 @@ parse_next_nested_tag(int start_tag_token, tag_def *tag_def_list,
 }
 
 //------------------------------------------------------------------------------
+// Stop parsing nested tags in the current entity.
+//------------------------------------------------------------------------------
+
+void
+stop_parsing_nested_tags(void)
+{
+	pop_parse_stack();
+}
+
+//------------------------------------------------------------------------------
 // Return the text of the current entity being parsed.
 //------------------------------------------------------------------------------
 
@@ -4460,7 +4479,7 @@ text_to_string(void)
 string
 nested_tags_to_string(void)
 {
-	return(entity_list_to_string(file_stack_ptr->parse_stack_ptr->entity_list));
+	return(entity_list_to_string(file_stack_ptr->parse_stack_ptr->curr_entity_ptr->nested_entity_list));
 }
 
 //------------------------------------------------------------------------------
@@ -4518,13 +4537,112 @@ nested_text_to_string(int start_tag_token)
 }
 
 //------------------------------------------------------------------------------
-// Stop parsing nested tags in the current entity.
+// Create a tag entity with the given name and zero or more attribute name/value
+// pairs.
+//------------------------------------------------------------------------------
+
+entity *
+create_tag_entity(string tag_name, int line_no, ...)
+{
+	va_list arg_ptr;
+	attr *attr_list = NULL;
+	attr *last_attr_ptr = NULL;
+
+	// Parse the name/value pairs until a NULL pointer is reached, and create
+	// an attribute list for them.
+
+	va_start(arg_ptr, line_no);
+	for (;;) {
+		char *name = va_arg(arg_ptr, char *);
+		if (name == NULL) {
+			break;
+		}
+		char *value = va_arg(arg_ptr, char *);
+		attr *attr_ptr = create_attr(name, value);
+		if (last_attr_ptr) {
+			last_attr_ptr->next_attr_ptr = attr_ptr;
+		} else {
+			attr_list = attr_ptr;
+		}
+		last_attr_ptr = attr_ptr;
+	}
+	va_end(arg_ptr);
+
+	// Create a tag entity with the specified name, line number and attribute
+	// list.
+
+	return create_entity(TAG_ENTITY, line_no, tag_name, attr_list);
+}
+
+//------------------------------------------------------------------------------
+// Find the first instance of a tag entity with the given name in the given
+// entity list (or one of its children).
+//------------------------------------------------------------------------------
+
+entity *
+find_tag_entity(string tag_name, entity *entity_list)
+{
+	entity *entity_ptr = entity_list;
+	while (entity_ptr) {
+		if (entity_ptr->type == TAG_ENTITY && !_stricmp(entity_ptr->text, tag_name)) {
+			return entity_ptr;
+		}
+		if (entity_ptr->nested_entity_list) {
+			entity *nested_entity_ptr = find_tag_entity(tag_name, entity_ptr->nested_entity_list);
+			if (nested_entity_ptr) {
+				return nested_entity_ptr;
+			}
+		}
+		entity_ptr = entity_ptr->next_entity_ptr;
+	}
+	return NULL;
+}
+
+//------------------------------------------------------------------------------
+// Prepend an entity to an entity list.  For prettiness, insert after the first
+// text entity, if it exists, and duplicate that text entity after the inserted
+// entity so that the indentation is the same (this assumes the entity list is
+// one that only contains tags).
 //------------------------------------------------------------------------------
 
 void
-stop_parsing_nested_tags(void)
+prepend_tag_entity(entity *tag_entity_ptr, entity *entity_list)
 {
-	pop_parse_stack();
+	if (entity_list->type == TEXT_ENTITY) {
+		entity *dup_text_entity = create_entity(TEXT_ENTITY, entity_list->line_no, entity_list->text, NULL);
+		dup_text_entity->next_entity_ptr = entity_list->next_entity_ptr;
+		tag_entity_ptr->next_entity_ptr = dup_text_entity;
+		entity_list->next_entity_ptr = tag_entity_ptr;
+	} else {
+		tag_entity_ptr->next_entity_ptr = entity_list->next_entity_ptr;
+		entity_list->next_entity_ptr = tag_entity_ptr;
+	}
+}
+
+//------------------------------------------------------------------------------
+// Find the first instance of an attribute with the given name in the given
+// entity, or create a new one, and assign it the given value.
+//------------------------------------------------------------------------------
+
+void
+set_entity_attr(entity *entity_ptr, string attr_name, string attr_value)
+{
+	attr *attr_ptr = entity_ptr->attr_list;
+	attr *prev_attr_ptr = NULL;
+	while (attr_ptr) {
+		if (!_stricmp(attr_ptr->name, attr_name)) {
+			attr_ptr->value = attr_value;
+			return;
+		}
+		prev_attr_ptr = attr_ptr;
+		attr_ptr = attr_ptr->next_attr_ptr;
+	}
+	attr_ptr = create_attr(attr_name, attr_value);
+	if (prev_attr_ptr) {
+		prev_attr_ptr = attr_ptr;
+	} else {
+		entity_ptr->attr_list = attr_ptr;
+	}
 }
 
 //------------------------------------------------------------------------------

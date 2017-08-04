@@ -209,6 +209,9 @@ bool
 parse_next_nested_tag(int start_tag_token, tag_def *tag_def_list, 
 					  bool allow_text, int *tag_token_ptr);
 
+void
+stop_parsing_nested_tags(void);
+
 string
 text_to_string(void);
 
@@ -221,8 +224,17 @@ nested_text_entity(int start_tag_token, bool create_if_missing = false);
 string
 nested_text_to_string(int start_tag_token);
 
+entity *
+create_tag_entity(string tag_name, int line_no, ...);
+
+entity *
+find_tag_entity(string tag_name, entity *entity_list);
+
 void
-stop_parsing_nested_tags(void);
+prepend_tag_entity(entity *entity_ptr, entity *entity_list);
+
+void
+set_entity_attr(entity *entity_ptr, string attr_name, string attr_value);
 
 void
 save_document(const char *file_name, entity *entity_list);
