@@ -3839,6 +3839,9 @@ handle_window_resize(void)
 	// window has been initialised or not.
 
 	if (init_player_window()) {
+		if (hardware_acceleration) {
+			hardware_update_fog_settings(global_fog_enabled, &global_fog);
+		}
 		player_window_initialised.send_event(true);
 		return(true);
 	} else {
