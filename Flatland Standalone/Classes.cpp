@@ -4099,25 +4099,29 @@ world::world()
 	map_style = SINGLE_MAP;
 	ground_level_exists = false;
 	square_map = NULL;
+	level_entity_list = NULL;
 	audio_scale = 2.0f / UNITS_PER_BLOCK;
 }
 
-// Default destructor deletes the square, if it exists.
+// Default destructor deletes the square map and level entity list, if they exist.
 
 world::~world()
 {
 	if (square_map != NULL)
 		DELARRAY(square_map, square, columns * rows * levels);
+	if (level_entity_list != NULL)
+		DELARRAY(level_entity_list, entity *, levels);
 }
 
-// Method to create the square map.  It is assumed the dimensions for the
-// square map are already set.
+// Method to create the square map and level entity list.  It is assumed the 
+// dimensions for the square map are already set.
 
 bool
 world::create_square_map(void)
 {
 	NEWARRAY(square_map, square, columns * rows * levels);
-	return(square_map != NULL);
+	NEWARRAY(level_entity_list, entity *, levels);
+	return(square_map != NULL && level_entity_list != NULL);
 }
 
 // Method to return a pointer to the square at a given map position.
@@ -4125,8 +4129,7 @@ world::create_square_map(void)
 square *
 world::get_square_ptr(int column, int row, int level)
 {
-	if (column < 0 || column >= columns || row < 0 || row >= rows ||
-		level < 0 || level >= levels)
+	if (column < 0 || column >= columns || row < 0 || row >= rows || level < 0 || level >= levels)
 		return(NULL);
 	return(&square_map[(level * rows + row) * columns + column]);
 }
@@ -4142,11 +4145,29 @@ world::get_block_ptr(int column, int row, int level)
 	return(NULL);
 }
 
+// Method to return a pointer to the entity for a given level.
+
+entity *
+world::get_level_entity(int level)
+{
+	if (level_entity_list != NULL && level >= 0 && level < levels) {
+		return level_entity_list[level];
+	}
+	return NULL;
+}
+
+void 
+world::set_level_entity(int level, entity *entity_ptr)
+{
+	if (level_entity_list != NULL && level >= 0 && level < levels) {
+		level_entity_list[level] = entity_ptr;
+	}
+}
+
 // Method to return the location of the given square.
 
 void 
-world::get_square_location(square *square_ptr, int *column_ptr, int *row_ptr,
-						   int *level_ptr)
+world::get_square_location(square *square_ptr, int *column_ptr, int *row_ptr, int *level_ptr)
 {
 	int offset;
 

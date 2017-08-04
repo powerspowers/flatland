@@ -215,6 +215,9 @@ text_to_string(void);
 string
 nested_tags_to_string(void);
 
+entity *
+nested_text_entity(int start_tag_token, bool create_if_missing = false);
+
 string
 nested_text_to_string(int start_tag_token);
 

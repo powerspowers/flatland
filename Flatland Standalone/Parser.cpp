@@ -4464,43 +4464,57 @@ nested_tags_to_string(void)
 }
 
 //------------------------------------------------------------------------------
-// Return a nested text entity.  Throws an error if there are also nested tags
+// Return a nested text entity, creating one with an empty string if missing and
+// requested.  Throws an error if there are also nested tags present.
+//------------------------------------------------------------------------------
+
+entity *
+nested_text_entity(int start_tag_token, bool create_if_missing)
+{
+	// If there is no nested entity list, then either return NULL or create a
+	// text entity with an empty string, add it to the current entity's nested
+	// entity list, and return it.
+
+	entity *curr_entity_ptr = file_stack_ptr->parse_stack_ptr->curr_entity_ptr;
+	entity *entity_ptr = curr_entity_ptr->nested_entity_list;
+	if (entity_ptr == NULL) {
+		if (create_if_missing) {
+			NEW(entity_ptr, entity);
+			if (entity_ptr == NULL)
+				memory_error("XML entity");
+			entity_ptr->line_no = curr_entity_ptr->line_no;
+			entity_ptr->type = TEXT_ENTITY;
+			entity_ptr->text = "";
+			entity_ptr->attr_list = NULL;
+			entity_ptr->nested_entity_list = NULL;
+			entity_ptr->next_entity_ptr = NULL;
+			curr_entity_ptr->nested_entity_list = entity_ptr;
+		}
+		return entity_ptr;
+	}
+
+	// There must be one text entity in the list, anything else is an error.
+
+	if (entity_ptr->type != TEXT_ENTITY || entity_ptr->next_entity_ptr != NULL) {
+		error(entity_ptr->line_no, "Tags are not permitted inside of "
+			"the <I>%s</I> tag", get_name(start_tag_token));
+	}
+	return entity_ptr;
+}
+
+//------------------------------------------------------------------------------
+// Return nested text.  Throws an error if there are also nested tags
 // present.
 //------------------------------------------------------------------------------
 
 string
 nested_text_to_string(int start_tag_token)
 {
-	entity *entity_ptr;
-	string text;
-	bool found_tag_entity;
-
-	// If there is no entity list, then return an empty string.
-
-	entity_ptr = file_stack_ptr->parse_stack_ptr->entity_list;
-	if (entity_ptr == NULL)
-		return((char *)NULL);
-
-	// Step through the entity list, and concatenate all text entities together
-	// to produce the string.  If one or more tag entities were found, generate
-	// a warning message about it.
-
-	found_tag_entity = false;
-	while (entity_ptr != NULL) {
-		switch (entity_ptr->type) {
-		case TEXT_ENTITY:
-			text += entity_ptr->text;
-			break;
-		case TAG_ENTITY:
-			if (!found_tag_entity) {
-				found_tag_entity = true;
-				warning(entity_ptr->line_no, "Tags are not permitted inside of "
-					"the <I>%s</I> tag", get_name(start_tag_token));
-			}
-		}
-		entity_ptr = entity_ptr->next_entity_ptr;
+	entity *entity_ptr = nested_text_entity(start_tag_token);
+	if (entity_ptr) {
+		return entity_ptr->text;
 	}
-	return(text);
+	return "";
 }
 
 //------------------------------------------------------------------------------
@@ -4511,19 +4525,6 @@ void
 stop_parsing_nested_tags(void)
 {
 	pop_parse_stack();
-}
-
-//------------------------------------------------------------------------------
-//------------------------------------------------------------------------------
-
-entity *
-get_document_entity_list()
-{
-	entity *entity_list = file_stack_ptr->parse_stack->entity_list;
-	file_stack_ptr->parse_stack->entity_list = NULL;
-	file_stack_ptr->parse_stack_depth = 0;
-	file_stack_ptr->parse_stack_ptr = NULL;
-	return entity_list;
 }
 
 //------------------------------------------------------------------------------

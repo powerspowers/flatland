@@ -1616,6 +1616,7 @@ struct world {
 	int rows;						// Number of rows in square map.
 	int levels;						// Number of levels in square map.
 	square *square_map;				// Map of squares.
+	entity **level_entity_list;		// Array of level entities.
 	float audio_scale;				// Audio scale (in metres per unit).
 
 	world();
@@ -1623,6 +1624,7 @@ struct world {
 	bool create_square_map(void);
 	square *get_square_ptr(int column, int row, int level);
 	block *get_block_ptr(int column, int row, int level);
-	void get_square_location(square *square_ptr, int *column_ptr, int *row_ptr,
-		int *level_ptr);
+	entity *get_level_entity(int level);
+	void set_level_entity(int level, entity *entity_ptr);
+	void get_square_location(square *square_ptr, int *column_ptr, int *row_ptr, int *level_ptr);
 };
