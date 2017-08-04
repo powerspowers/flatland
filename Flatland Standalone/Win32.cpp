@@ -4036,9 +4036,9 @@ add_blockset_list_view_item(cached_blockset *cached_blockset_ptr)
 
 	// Set the version number of the blockset, if available.
 
+	string version = version_number_to_string(cached_blockset_ptr->version);
 	if (cached_blockset_ptr->version > 0) {
-		ListView_SetItemText(blockset_list_view_handle, item_no, 2, 
-			version_number_to_string(cached_blockset_ptr->version));
+		ListView_SetItemText(blockset_list_view_handle, item_no, 2, (char *)version);
 	} else
 		ListView_SetItemText(blockset_list_view_handle, item_no, 2, "N/A");
 

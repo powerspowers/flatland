@@ -4861,8 +4861,6 @@ load_config_file(void)
 	curr_move_rate_value = DEFAULT_MOVE_RATE;
 	curr_turn_rate_value = DEFAULT_TURN_RATE;
 	min_blockset_update_period = SECONDS_PER_WEEK;
-	last_rover_update = 0;
-	last_spot_dir_update = 0;
 	user_debug_level_value = BE_SILENT;
 	force_software_rendering_value = 0;
 	brightness_value = 0.0f;
@@ -4878,20 +4876,15 @@ load_config_file(void)
 					read_config_bool(value, &use_classic_controls_value);
 				else if (!_stricmp(name, "view radius"))
 					read_config_int(value, &visible_block_radius_value);
-				else if (!_stricmp(name, "move rate multiplier")) {
+				else if (!_stricmp(name, "move rate multiplier"))
 					read_config_int(value, &curr_move_rate_value);
-				} else if (!_stricmp(name, "turn rate multiplier"))
+				else if (!_stricmp(name, "turn rate multiplier"))
 					read_config_int(value, &curr_turn_rate_value);
 				else if (!_stricmp(name, "minimum blockset update period")) {
 					if (read_config_int(value, &min_blockset_update_period))
 						min_blockset_update_period *= SECONDS_PER_DAY;
-				} else if (!_stricmp(name, "last Rover update"))
-					read_config_time_t(value, &last_rover_update);
-				else if (!_stricmp(name, "last spot directory update"))
-					read_config_time_t(value, &last_spot_dir_update);
-				else if (!_stricmp(name, "debug option"))
-					read_config_enum(value, &user_debug_level_value,
-						debug_option_value_list, DEBUG_OPTION_VALUES);
+				} else if (!_stricmp(name, "debug option"))
+					read_config_enum(value, &user_debug_level_value, debug_option_value_list, DEBUG_OPTION_VALUES);
 				else if (!_stricmp(name, "force software rendering"))
 					read_config_bool(value, &force_software_rendering_value);
 				else if (!_stricmp(name, "brightness"))
@@ -4968,8 +4961,6 @@ save_config_file(void)
 		write_config_int(fp, "move rate multiplier", curr_move_rate.get(), "x blocks/second");
 		write_config_int(fp, "turn rate multiplier", curr_turn_rate.get(), "x degrees/second or degrees/mouse movement");
 		write_config_int(fp, "minimum blockset update period", min_blockset_update_period / SECONDS_PER_DAY, "days");
-		write_config_time_t(fp, "last Rover update", last_rover_update, "seconds since epoch");
-		write_config_time_t(fp, "last spot directory update", last_spot_dir_update, "seconds since epoch");
 		write_config_enum(fp, "debug option", user_debug_level.get(), debug_option_value_list, DEBUG_OPTION_VALUES);
 		write_config_bool(fp, "force software rendering", force_software_rendering.get());
 		write_config_float(fp, "brightness", master_brightness.get() * 100.0f, "% relative to ambient light");
@@ -5190,8 +5181,7 @@ save_cached_blockset_list(void)
 			if (strlen(cached_blockset_ptr->synopsis) > 0)
 				fprintf(fp, " SYNOPSIS=\"%s\"", (char *)cached_blockset_ptr->synopsis);
 			if (cached_blockset_ptr->version > 0)
-				fprintf(fp, " VERSION=\"%s\"", 
-					version_number_to_string(cached_blockset_ptr->version));
+				fprintf(fp, " VERSION=\"%s\"", (char *)version_number_to_string(cached_blockset_ptr->version));
 			fprintf(fp, "/>\n");
 			cached_blockset_ptr = cached_blockset_ptr->next_cached_blockset_ptr;
 		}
@@ -5402,10 +5392,8 @@ check_for_blockset_update(const char *version_file_URL,
 
 	if (blockset_version_id > blockset_version && 
 		query("New version of blockset available", true, 
-			"Version %s of the %s blockset is available for download.\n\n"
-			"%s\n\nWould you like to download it now?", 
-			version_number_to_string(blockset_version_id), blockset_name,
-			message))
+			"Version %s of the %s blockset is available for download.\n\n%s\n\nWould you like to download it now?", 
+			(char *)version_number_to_string(blockset_version_id), blockset_name, message))
 		return(true);
 
 	// Indicate no update is available or requested.

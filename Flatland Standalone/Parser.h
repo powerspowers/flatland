@@ -81,7 +81,7 @@ bool
 string_to_symbol(const char *string_ptr, word *symbol_ptr, 
 				 bool disallow_dot_dot);
 
-char *
+string
 version_number_to_string(unsigned int version_number);
 
 // Zip archive functions.

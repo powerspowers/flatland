@@ -8,12 +8,9 @@
 // Global variables.
 //------------------------------------------------------------------------------
 
-// Minimum blockset update period, and time of last Rover and spot directory
-// update.
+// Minimum blockset update period.
 
 extern int min_blockset_update_period;
-extern time_t last_rover_update;
-extern time_t last_spot_dir_update;
 
 // Display dimensions and other related information.
 

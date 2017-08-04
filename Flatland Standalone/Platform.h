@@ -8,19 +8,6 @@
 
 #define ROVER_VERSION_NUMBER			0x0306000F // ff at the end usually unless beta
 
-// Activation status.
-
-#define ERROR_STATUS		0
-#define EXPIRED_STATUS		1
-#define DEMO_STATUS			2
-#define ACTIVATED_STATUS	3
-
-// Activation check modes.
-
-#define SILENT_CHECK		0
-#define NORMAL_CHECK		1
-#define DISPLAY_DIALOG		2
-
 // Option window control IDs.
 
 #define OK_BUTTON							0
@@ -36,19 +23,10 @@
 
 #define ABOUT_ROVER_COMMAND				1
 #define ROVER_HELP_COMMAND				2
-#define DOWNLOAD_ROVER_COMMAND			5
-#define VIEW_3DML_SOURCE_COMMAND		6
-#define SAVE_3DML_SOURCE_COMMAND		7
-#define TAKE_SNAPSHOT_COMMAND			8
-#define MANAGE_BLOCKSETS_COMMAND		9
-
-// Snapshot positions.
-
-#define CURRENT_VIEW		0
-#define TOP_NW_CORNER		1
-#define TOP_NE_CORNER		2
-#define TOP_SW_CORNER		3
-#define TOP_SE_CORNER		4
+#define DOWNLOAD_ROVER_COMMAND			3
+#define VIEW_3DML_SOURCE_COMMAND		4
+#define SAVE_3DML_SOURCE_COMMAND		5
+#define MANAGE_BLOCKSETS_COMMAND		6
 
 // Key codes for non-alphabetical keys (ASCII codes used for 'A' to 'Z' and
 // '0' to '9').
@@ -95,12 +73,6 @@
 #define LEFT_BUTTON_UP		2
 #define RIGHT_BUTTON_DOWN	3
 #define RIGHT_BUTTON_UP		4
-
-// Media players supported.
-
-#define ANY_PLAYER				0
-#define REAL_PLAYER				1
-#define WINDOWS_MEDIA_PLAYER	2
 
 // Falling acceleration and maximum speed, and jump deacceleration and maximum speed.
 

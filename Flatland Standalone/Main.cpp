@@ -24,32 +24,13 @@
 #include "Utils.h"
 #include "SimKin.h"
 
-// Update types.
-
-#define AUTO_UPDATE						0
-#define USER_REQUESTED_UPDATE			1	
-#define SPOT_REQUESTED_UPDATE			2
-
-// Predefined URLs.
-
-#define VERSION_URL			"http://download.flatland.com/update/newversion.txt"
-#define DIRECTORY_URL		"http://download.flatland.com/directory.txt"
-#define ROVER_DOWNLOAD_URL	"http://www.flatland.com/download"
-#define RP_DOWNLOAD_URL \
-	"http://www.real.com/products/player/downloadrealplayer.html"
-#define WMP_DOWNLOAD_URL \
-	"http://www.microsoft.com/windows/mediaplayer/en/download/default.asp"
-
 //------------------------------------------------------------------------------
 // Global variable definitions.
 //------------------------------------------------------------------------------
 
-// Minimum blockset update period, and time of last Rover and spot directory
-// update.
+// Minimum blockset update period.
 
 int min_blockset_update_period;
-time_t last_rover_update;
-time_t last_spot_dir_update;
 
 // Display dimensions and other related information.
 
@@ -393,88 +374,6 @@ static vector world_y_axis(0.0, 1.0, 0.0);
 
 static bool key_down_list[256];
 static key_event curr_key_event;
-
-//==============================================================================
-// Plugin update functions.
-//==============================================================================
-
-//------------------------------------------------------------------------------
-// Check for a new Rover update, and if there is one, give the user the
-// opportunity to visit our download page.
-//------------------------------------------------------------------------------
-
-static void
-check_for_rover_update(int update_type)
-{
-	unsigned int version_number;
-	string min_rover_version_str, version_number_str;
-	string message;
-
-	// Download the version file.  If this fails, we can't do an update.
-
-	if (!download_URL(VERSION_URL, version_file_path, true)) {
-		if (update_type == USER_REQUESTED_UPDATE)
-			fatal_error("Error checking for new version of Flatland",
-				"Unable to determine whether or not there is a new version of "
-				"Flatland available.  Check that your Internet connection "
-				"is running, and try again later.");
-		remove(version_file_path);
-		return;
-	}
-
-	// If the version number in the version file is higher than the current
-	// Rover version...
-
-	if (parse_rover_version_file(version_number, message) &&
-		version_number > ROVER_VERSION_NUMBER) {
-		switch (update_type) {
-
-		// If we're doing an auto-update, or the user requested the update, ask
-		// them whether they want to go to Flatland's download page.
-
-		case AUTO_UPDATE:
-		case USER_REQUESTED_UPDATE:
-			if (query("New version of Flatland available", true, 
-				"Version %s of Flatland is available.\n"
-				"Would you like to download it from our web site?", 
-				version_number_to_string(version_number)))
-				request_URL(ROVER_DOWNLOAD_URL, NULL, "_self", true);
-			break;
-
-		// If the spot requested the update and the minimum version of the spot
-		// does not exceed the currently available version, ask the user whether
-		// they want to download it, and if they do request the update URL with
-		// a progress bar.
-
-		case SPOT_REQUESTED_UPDATE:
-			if (min_rover_version <= version_number) {
-				min_rover_version_str = 
-					version_number_to_string(min_rover_version);
-				version_number_str = version_number_to_string(version_number);
-				if (query("Newer version of Flatland required", true, 
-					"This spot makes use of features that are only present in\n"
-					"version %s or later of Flatland (you have version "
-					"%s).\nWould you like to download the latest version (%s) "
-					"from our web site?", min_rover_version_str, 
-					version_number_to_string(ROVER_VERSION_NUMBER),
-					version_number_str))
-					request_URL(ROVER_DOWNLOAD_URL, NULL, "_self", true);
-			}
-		}
-	}
-
-	// Notify the user that there is no update, if necessary, then reset the
-	// update in progress flag and remove the version file.
-
-	else if (update_type == USER_REQUESTED_UPDATE)
-		information("Flatland is up-to-date",
-			"You have the latest version (%s) of Flatland.",
-			version_number_to_string(ROVER_VERSION_NUMBER));
-
-	// Remove the version file now that we're done with it.
-
-	remove(version_file_path);
-}
 
 //==============================================================================
 // Miscellaneous global functions.
@@ -880,7 +779,6 @@ start_up_spot(void)
 {
 	string spot_file_name;
 	trigger *trigger_ptr;
-	time_t curr_time;
 
 	// Hide any label that might be shown.
 
@@ -1019,26 +917,12 @@ start_up_spot(void)
 		return(false);
 	}
 
-	// If this spot is web-based...
+	// If the minimum version required for this spot is greater than Rover's version number, inform the user.
 
-	if (spot_on_web) {
-		curr_time = time(NULL);
-
-		// If the minimum version required for this spot is greater than 
-		// Rover's version number, check for a Rover update.
-
-		if (min_rover_version > ROVER_VERSION_NUMBER)
-			check_for_rover_update(SPOT_REQUESTED_UPDATE);
-				
-		// Otherwise if the time since the last Rover update has exceeded a week,
-		// check for a Rover update after saving the time of this update in the
-		// configuration file.
-
-		else if (curr_time - last_rover_update > SECONDS_PER_WEEK) {
-			last_rover_update = curr_time;
-			save_config_file();
-			check_for_rover_update(AUTO_UPDATE);
-		}
+	if (min_rover_version > ROVER_VERSION_NUMBER) {
+		information("Newer version of Flatland required", 
+			"This spot makes use of features that are only present in\nversion %s or later of Flatland (you have version %s).", 
+			(char *)version_number_to_string(min_rover_version), (char *)version_number_to_string(ROVER_VERSION_NUMBER));
 	}
 
 	// Initialise all triggers in the global trigger list.
@@ -3953,12 +3837,6 @@ player_thread(void *arg_list)
 				}
 			} else if (!refresh_player_window())
 				continue;
-
-			// If a check for a Rover update has been requested explicitly by
-			// the user, do it now.
-		
-			if (check_for_update_requested.event_sent())
-				check_for_rover_update(USER_REQUESTED_UPDATE);
 
 			// If a spot load is requested, do it.
 

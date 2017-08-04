@@ -85,7 +85,6 @@ extern event downloader_thread_termination_requested;
 extern event pause_player_thread;
 extern event resume_player_thread;
 extern event spot_load_requested;
-extern event check_for_update_requested;
 extern event save_3DML_source_requested;
 #ifdef _DEBUG
 extern event polygon_info_requested;

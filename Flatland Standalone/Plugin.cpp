@@ -84,7 +84,6 @@ event downloader_thread_termination_requested;
 event pause_player_thread;
 event resume_player_thread;
 event spot_load_requested;
-event check_for_update_requested;
 event save_3DML_source_requested;
 #ifdef _DEBUG
 event polygon_info_requested;
@@ -1285,7 +1284,6 @@ run_app(void *instance_handle, int show_command, char *spot_file_path)
 	pause_player_thread.create_event();
 	resume_player_thread.create_event();
 	spot_load_requested.create_event();
-	check_for_update_requested.create_event();
 	save_3DML_source_requested.create_event();
 #ifdef _DEBUG
 	polygon_info_requested.create_event();
@@ -1480,7 +1478,6 @@ shut_down_app()
 	pause_player_thread.destroy_event();
 	resume_player_thread.destroy_event();
 	spot_load_requested.destroy_event();
-	check_for_update_requested.destroy_event();
 	save_3DML_source_requested.destroy_event();
 #ifdef _DEBUG
 	polygon_info_requested.destroy_event();

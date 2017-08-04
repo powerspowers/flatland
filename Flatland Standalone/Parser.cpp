@@ -896,7 +896,7 @@ string_to_symbol(const char *string_ptr, word *symbol_ptr,
 
 static char version_string[16];
 
-char *
+string
 version_number_to_string(unsigned int version_number)
 {
 	int version1, version2, version3, version4;
@@ -909,15 +909,12 @@ version_number_to_string(unsigned int version_number)
 		if (version4 == 255)
 			bprintf(version_string, 16, "%d.%d", version1, version2);
 		else
-			bprintf(version_string, 16, "%d.%db%d", version1, version2, 
-				version4);
+			bprintf(version_string, 16, "%d.%db%d", version1, version2, version4);
 	} else {
 		if (version4 == 255)
-			bprintf(version_string, 16, "%d.%d.%d", version1, version2, 
-				version3);
+			bprintf(version_string, 16, "%d.%d.%d", version1, version2, version3);
 		else
-			bprintf(version_string, 16, "%d.%d.%db%d", version1, version2, 
-				version3, version4);
+			bprintf(version_string, 16, "%d.%d.%db%d", version1, version2, version3, version4);
 	}
 	return(version_string);
 }
