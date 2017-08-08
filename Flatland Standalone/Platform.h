@@ -269,7 +269,7 @@ open_file_dialog(char *file_path_buffer, int buffer_size);
 bool
 open_URL_dialog(string *URL_ptr);
 
-// Light window functions (called by the plugin thread only).
+// Light window functions.
 
 void
 open_light_window(float brightness, void (*light_callback)(float brightness,
@@ -278,7 +278,7 @@ open_light_window(float brightness, void (*light_callback)(float brightness,
 void
 close_light_window(void);
 
-// Options window functions (called by the plugin thread only).
+// Options window functions.
 
 void
 open_options_window(int viewing_distance_value, bool use_classic_controls_value,
@@ -288,7 +288,7 @@ open_options_window(int viewing_distance_value, bool use_classic_controls_value,
 void
 close_options_window(void);
 
-// About window functions (called by the plugin thread only).
+// About window functions.
 
 void
 open_about_window(void);
@@ -296,7 +296,7 @@ open_about_window(void);
 void
 close_about_window(void);
 
-// Help window functions (called by the plugin thread only).
+// Help window functions.
 
 void
 open_help_window(void);
@@ -304,13 +304,21 @@ open_help_window(void);
 void
 close_help_window(void);
 
-// Blockset manager window functions (called by the plugin thread only).
+// Blockset manager window functions.
 
 void
 open_blockset_manager_window(void);
 
 void
 close_blockset_manager_window(void);
+
+// Builder window functions.
+
+void
+open_builder_window();
+
+void
+close_builder_window();
 
 #ifdef STREAMING_MEDIA
 

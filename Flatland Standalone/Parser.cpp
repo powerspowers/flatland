@@ -179,6 +179,7 @@ static symbol_def symbol_table[] = {
 	{"ground",			TOKEN_GROUND},
 	{"head",			TOKEN_HEAD},
 	{"href",			TOKEN_HREF},
+	{"icon",			TOKEN_ICON},
 	{"id",				TOKEN_ID},
 	{"imagemap",		TOKEN_IMAGEMAP},
 	{"import",			TOKEN_IMPORT},

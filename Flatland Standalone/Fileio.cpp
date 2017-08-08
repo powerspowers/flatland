@@ -1732,11 +1732,13 @@ parse_block_tag(blockset *blockset_ptr)
 		parse_start_of_document(TOKEN_BLOCK, block_attr_list, BLOCK_ATTRIBUTES);
 
 		// The block name is only set if it wasn't already defined in the style 
-		// file.  The type and entrance attributes are optional and have default
-		// values.
+		// file.  The icon, type and entrance attributes are optional, with the
+		// latter two having default values.
 
 		if (strlen(new_block_def_ptr->name) == 0)
 			new_block_def_ptr->name = block_name;
+		if (parsed_attribute[BLOCK_ICON]) 
+			new_block_def_ptr->icon_texture_ptr = load_texture(blockset_ptr, block_icon, false);
 		if (parsed_attribute[BLOCK_TYPE])
 			new_block_def_ptr->type = block_type;
 		if (parsed_attribute[BLOCK_ENTRANCE])

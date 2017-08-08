@@ -1371,6 +1371,7 @@ struct block_def {
 	string name;					// Block name.
 	int type;						// Block type.
 	bool allow_entrance;			// TRUE if block permits an entrance.
+	texture *icon_texture_ptr;		// The icon texture (if any).
 	relinteger_triplet position;    // the relative position set by the POSITION param
 	bool animated;					// set if this block has frames
 	animation_def *animation;		// the structure holding all the animation frames

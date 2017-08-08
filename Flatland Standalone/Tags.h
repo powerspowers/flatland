@@ -109,14 +109,17 @@ static attr_def base_attr_list[BASE_ATTRIBUTES] = {
 
 // BLOCK tag (block file only).
 
-#define BLOCK_ATTRIBUTES	3
-#define BLOCK_TYPE			1
-#define BLOCK_ENTRANCE		2
+#define BLOCK_ATTRIBUTES	4
+#define BLOCK_ICON			1
+#define BLOCK_TYPE			2
+#define BLOCK_ENTRANCE		3
 static string block_name;
+static string block_icon;
 static int block_type;
 static bool block_entrance;
 static attr_def block_attr_list[BLOCK_ATTRIBUTES] = {
 	{TOKEN_NAME, VALUE_NAME, &block_name, true},
+	{TOKEN_ICON, VALUE_STRING, &block_icon, false},
 	{TOKEN__TYPE, VALUE_BLOCK_TYPE, &block_type, false},
 	{TOKEN_ENTRANCE, VALUE_BOOLEAN, &block_entrance, false}
 };

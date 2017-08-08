@@ -2675,6 +2675,7 @@ block_def::block_def()
 	custom = false;
 	type = STRUCTURAL_BLOCK;
 	allow_entrance = false;
+	icon_texture_ptr = NULL;
 	animated = false;
 	animation = NULL;
 	parts = 0;

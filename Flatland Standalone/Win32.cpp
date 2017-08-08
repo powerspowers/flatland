@@ -625,6 +625,10 @@ static HWND blockset_update_button_handle;
 static HWND blockset_delete_button_handle;
 static HWND update_period_spin_control_handle;
 
+// Builder window data.
+
+static HWND builder_window_handle;
+
 // Macro for converting a point size into pixel units
 
 #define	POINTS_TO_PIXELS(point_size) \
@@ -861,7 +865,6 @@ create_bitmap(int width, int height, int colours, RGBcolour *RGB_palette,
 	bitmap *bitmap_ptr;
 	HDC hdc;
 	MYBITMAPINFO bitmap_info;
-	DIBSECTION DIB_info;
 	int index;
 
 	// Create the bitmap object.
@@ -901,18 +904,103 @@ create_bitmap(int width, int height, int colours, RGBcolour *RGB_palette,
 		return(NULL);
 	}
 
-	// If the bitmap image was created, fill in the remainder of the bitmap
-	// structure.
+	// If the bitmap image was created, fill in the remainder of the bitmap structure.
 
-	GetObject(bitmap_ptr->handle, sizeof(DIBSECTION), &DIB_info);
 	bitmap_ptr->width = width;
 	bitmap_ptr->height = height;
-	bitmap_ptr->bytes_per_row = (width % 4) == 0 ? width : width + 4 - 
-		(width % 4);
+	bitmap_ptr->bytes_per_row = (width % 4) == 0 ? width : width + 4 - (width % 4);
 	bitmap_ptr->colours = colours;
 	bitmap_ptr->RGB_palette = RGB_palette;
 	bitmap_ptr->palette = palette;
 	bitmap_ptr->transparent_index = transparent_index;
+	return(bitmap_ptr);
+}
+
+//------------------------------------------------------------------------------
+// Create a bitmap and initialize it with the first pixmap of the given texture.
+// The bitmap will use 24-bit pixels regardless of the pixel depth of the
+// texture.
+//------------------------------------------------------------------------------
+
+static bitmap *
+create_bitmap_from_texture(texture *texture_ptr, int width, int height)
+{
+	HBITMAP bitmap_handle;
+	byte *bitmap_pixels;
+	bitmap *bitmap_ptr;
+	HDC hdc;
+	MYBITMAPINFO bitmap_info;
+
+	// Initialise the bitmap info structure.
+
+	bitmap_info.bmiHeader.biSize = sizeof(BITMAPINFOHEADER);
+	bitmap_info.bmiHeader.biWidth = width;
+	bitmap_info.bmiHeader.biHeight = -height;
+	bitmap_info.bmiHeader.biPlanes = 1;
+	bitmap_info.bmiHeader.biBitCount = texture_ptr->bytes_per_pixel * 8;
+	bitmap_info.bmiHeader.biSizeImage = 0;
+	bitmap_info.bmiHeader.biXPelsPerMeter = 0;
+	bitmap_info.bmiHeader.biYPelsPerMeter = 0;
+	bitmap_info.bmiHeader.biClrUsed = 0;
+	bitmap_info.bmiHeader.biClrImportant = 0;
+	bitmap_info.bmiHeader.biCompression = BI_RGB;
+	if (texture_ptr->bytes_per_pixel == 1) {
+		for (int index = 0; index < texture_ptr->colours; index++) {
+			bitmap_info.bmiColors[index].rgbRed = (byte)texture_ptr->RGB_palette[index].red;
+			bitmap_info.bmiColors[index].rgbGreen = (byte)texture_ptr->RGB_palette[index].green;
+			bitmap_info.bmiColors[index].rgbBlue = (byte)texture_ptr->RGB_palette[index].blue;
+			bitmap_info.bmiColors[index].rgbReserved = 0;
+		}
+	}
+
+	// Create the bitmap image as a DIB section.
+
+	hdc = GetDC(app_window_handle);
+	bitmap_handle = CreateDIBSection(hdc, (BITMAPINFO *)&bitmap_info, DIB_RGB_COLORS, (void **)&bitmap_pixels, NULL, 0);
+	ReleaseDC(app_window_handle, hdc);
+
+	// Create the bitmap object.
+
+	NEW(bitmap_ptr, bitmap);
+	if (bitmap_ptr == NULL)
+		return(NULL);
+
+	// Fill in the bitmap structure (the parts we care about anyhow).
+
+	bitmap_ptr->handle = bitmap_handle;
+	bitmap_ptr->pixels = bitmap_pixels;
+	bitmap_ptr->width = width;
+	bitmap_ptr->height = height;
+	int width_in_bytes = width * texture_ptr->bytes_per_pixel;
+	bitmap_ptr->bytes_per_row = (width_in_bytes % 4) == 0 ? width_in_bytes : width_in_bytes + 4 - (width_in_bytes % 4);
+
+	// Copy the pixel data from the first pixmap of the texture into the bitmap.
+
+	float width_scale = (float)texture_ptr->width / (float)width;
+	float height_scale = (float)texture_ptr->height / (float)height;
+	pixmap *pixmap_ptr = texture_ptr->pixmap_list;
+	for (int row = 0; row < height; row++) {
+		byte *pixmap_row_ptr = pixmap_ptr->image_ptr + (int)(row * height_scale) * texture_ptr->width * texture_ptr->bytes_per_pixel;
+		byte *bitmap_row_ptr = bitmap_ptr->pixels + row * bitmap_ptr->bytes_per_row;
+		switch (texture_ptr->bytes_per_pixel) {
+		case 1:
+			for (int col = 0; col < width; col++) {
+				*bitmap_row_ptr++ = pixmap_row_ptr[(int)(col * width_scale)];
+			}
+			break;
+		case 2:
+			for (int col = 0; col < width; col++) {
+				*(word *)bitmap_row_ptr = *((word *)pixmap_row_ptr + (int)(col * width_scale));
+				bitmap_row_ptr += 2;
+			}
+			break;
+		case 4:
+			for (int col = 0; col < width; col++) {
+				*(pixel *)bitmap_row_ptr = *((pixel *)pixmap_row_ptr + (int)(col * width_scale));
+				bitmap_row_ptr += 4;
+			}
+		}
+	}
 	return(bitmap_ptr);
 }
 
@@ -1013,12 +1101,11 @@ draw_text_on_pixmap(texture *texture_ptr, char *text, int text_alignment,
 	RGBcolour bg_colour, text_colour;
 	int text_width;
 
-	// Create a bitmap for drawing the text onto.
+	// Create an 8-bit bitmap for drawing the text onto.
 
 	if ((image_bitmap_ptr = create_bitmap(texture_ptr->width, 
 		texture_ptr->height, texture_ptr->colours, texture_ptr->RGB_palette, 
-		texture_ptr->display_palette_list, -1)) 
-		== NULL)
+		texture_ptr->display_palette_list, -1)) == NULL)
 		return(0);
 
 	// Set the rectangle representing the bitmap area.
@@ -1909,7 +1996,7 @@ get_save_file_name(char *title, char *filter, char *initial_dir_path)
 	*save_file_path = '\0';
 	memset(&save_file_name, 0, sizeof(OPENFILENAME));
 	save_file_name.lStructSize = sizeof(OPENFILENAME);
-	save_file_name.hwndOwner = main_window_handle;
+	save_file_name.hwndOwner = app_window_handle;
 	save_file_name.lpstrFilter = filter;
 	save_file_name.lpstrInitialDir = initial_dir_path;
 	save_file_name.lpstrFile = save_file_path;
@@ -1977,6 +2064,9 @@ LRESULT CALLBACK app_window_proc(HWND hWnd, UINT message, WPARAM wParam, LPARAM 
 				break;
 			case ID_FILE_VIEW3DMLSOURCE:
 				display_file_as_web_page(curr_spot_file_path);
+				break;
+			case ID_FILE_OPENBUILDER:
+				open_builder_window();
 				break;
 			case IDM_EXIT:
 				DestroyWindow(hWnd);
@@ -2070,7 +2160,7 @@ start_up_platform_API(void *instance_handle, int show_command, void (*quit_callb
 	string version = "Flatland ";
 	version += version_number_to_string(ROVER_VERSION_NUMBER);
 	app_window_handle = CreateWindow("FlatlandAppWindow", version, WS_OVERLAPPEDWINDOW,
-		CW_USEDEFAULT, 0, CW_USEDEFAULT, 0, nullptr, nullptr, app_instance_handle, nullptr);
+		CW_USEDEFAULT, CW_USEDEFAULT, 400, 400, nullptr, nullptr, app_instance_handle, nullptr);
 	if (!app_window_handle) {
 		return FALSE;
 	}
@@ -2159,6 +2249,7 @@ start_up_platform_API(void *instance_handle, int show_command, void (*quit_callb
 	about_window_handle = NULL;
 	help_window_handle = NULL;
 	blockset_manager_window_handle = NULL;
+	builder_window_handle = NULL;
 
 	// Show and update the app window.
 
@@ -2627,13 +2718,12 @@ run_event_loop()
 	MSG msg;
 
 	while (GetMessage(&msg, nullptr, 0, 0)) {
-		if (!TranslateAccelerator(msg.hwnd, hAccelTable, &msg)) {
+		if ((!builder_window_handle || !IsDialogMessage(builder_window_handle, &msg)) && !TranslateAccelerator(msg.hwnd, hAccelTable, &msg)) {
 			TranslateMessage(&msg);
 			DispatchMessage(&msg);
 		}
 	}
-
-	return (int) msg.wParam;
+	return (int)msg.wParam;
 }
 
 //==============================================================================
@@ -3517,7 +3607,7 @@ open_URL_dialog(string *URL_ptr)
 	// Bring up a dialog box that requests a spot URL.
 
 	if (DialogBox(app_instance_handle, MAKEINTRESOURCE(IDD_OPENSPOTURL),
-		main_window_handle, handle_open_URL_event)) {
+		app_window_handle, handle_open_URL_event)) {
 		char *trimmed_spot_URL = spot_URL;
 		while (*trimmed_spot_URL != 0 && *trimmed_spot_URL == ' ') {
 			trimmed_spot_URL++;
@@ -3579,7 +3669,7 @@ open_light_window(float brightness, void (*light_callback)(float brightness,
 	// Create the light window.
 
 	light_window_handle = CreateDialog(app_instance_handle,
-		MAKEINTRESOURCE(IDD_LIGHT), main_window_handle, 
+		MAKEINTRESOURCE(IDD_LIGHT), app_window_handle, 
 		handle_light_event);
 
 	// Get the handle to the slider control, and initialise it with the
@@ -3704,7 +3794,7 @@ open_options_window(int viewing_distance_value, bool use_classic_controls_value,
 
 	// Create the options window.
 
-	options_window_handle = CreateDialog(app_instance_handle, MAKEINTRESOURCE(IDD_OPTIONS), main_window_handle, handle_options_event);
+	options_window_handle = CreateDialog(app_instance_handle, MAKEINTRESOURCE(IDD_OPTIONS), app_window_handle, handle_options_event);
 
 	// Initialize the "classic controls" check box.
 
@@ -3847,7 +3937,7 @@ open_help_window(void)
 
 	help_window_handle = CreateDialog(app_instance_handle,
 		MAKEINTRESOURCE(use_classic_controls.get() ? IDD_HELP_CLASSIC_CONTROLS : IDD_HELP_NEW_CONTROLS),
-		main_window_handle, handle_help_event);
+		app_window_handle, handle_help_event);
 
 	// Show the help window.
 
@@ -3932,7 +4022,7 @@ open_about_window(void)
 	// Create the about window.
 
 	about_window_handle = CreateDialog(app_instance_handle,
-		MAKEINTRESOURCE(IDD_ABOUT), main_window_handle,
+		MAKEINTRESOURCE(IDD_ABOUT), app_window_handle,
 		handle_about_event);
 
 	// Show the about window.
@@ -4247,7 +4337,7 @@ open_blockset_manager_window(void)
 	// Create the blockset manager dialog box.
 
 	blockset_manager_window_handle = CreateDialog(app_instance_handle,
-		MAKEINTRESOURCE(IDD_BLOCKSET_MANAGER), main_window_handle,
+		MAKEINTRESOURCE(IDD_BLOCKSET_MANAGER), app_window_handle,
 		handle_blockset_manager_event);
 
 	// Initialise the blockset list view columns.
@@ -4298,6 +4388,84 @@ close_blockset_manager_window(void)
 	}
 }
 
+//==============================================================================
+// Builder window functions.
+//==============================================================================
+
+//------------------------------------------------------------------------------
+// Function to handle builder window events.
+//------------------------------------------------------------------------------
+
+static BOOL CALLBACK
+handle_builder_event(HWND window_handle, UINT message, WPARAM wParam, LPARAM lParam)
+{
+	//HWND control_handle;
+	//RECT rect;
+	//texture *texture_ptr;
+	//bitmap *bitmap_ptr;
+
+	switch (message) {
+	case WM_INITDIALOG:
+		//NEW(texture_ptr, texture);
+		//load_image("test.gif", "test.gif", texture_ptr);
+		//control_handle = GetDlgItem(window_handle, IDC_BLOCK_IMAGE_0);
+		//GetClientRect(control_handle, &rect);
+		//bitmap_ptr = create_bitmap_from_texture(texture_ptr, rect.right - rect.left, rect.bottom - rect.top);
+		//SendDlgItemMessage(window_handle, IDC_BLOCK_IMAGE_0, STM_SETIMAGE, IMAGE_BITMAP, (LPARAM)bitmap_ptr->handle);
+		return(TRUE);
+	case WM_DESTROY:
+		return(TRUE);
+	case WM_COMMAND:
+		switch (HIWORD(wParam)) {
+		case BN_CLICKED:
+			switch (LOWORD(wParam)) {
+			case IDOK:
+				close_builder_window();
+				break;
+			}
+		}
+		return(TRUE);
+	default:
+		return(FALSE);
+	}
+}
+
+//------------------------------------------------------------------------------
+// Open the builder window.
+//------------------------------------------------------------------------------
+
+void
+open_builder_window()
+{
+	// If the about window is already open, do nothing.
+
+	if (builder_window_handle != NULL)
+		return;
+
+	// Create the builder window.
+
+	builder_window_handle = CreateDialog(app_instance_handle,
+		MAKEINTRESOURCE(IDD_BUILDER), app_window_handle,
+		handle_builder_event);
+
+	// Show the about window.
+
+	ShowWindow(builder_window_handle, SW_NORMAL);
+}
+
+//------------------------------------------------------------------------------
+// Close the builder window.
+//------------------------------------------------------------------------------
+
+void
+close_builder_window()
+{
+	if (builder_window_handle) {
+		DestroyWindow(builder_window_handle);
+		builder_window_handle = NULL;
+	}
+}
+
 #ifdef STREAMING_MEDIA
 
 //==============================================================================
@@ -4345,7 +4513,7 @@ get_password(string *username_ptr, string *password_ptr)
 	// Bring up a dialog box that requests a username and password.
 
 	if (DialogBox(app_instance_handle, MAKEINTRESOURCE(IDD_PASSWORD), 
-		main_window_handle, handle_password_event)) {
+		app_window_handle, handle_password_event)) {
 		*username_ptr = username;
 		*password_ptr = password;
 		return(true);
