@@ -1119,6 +1119,24 @@ vector::rotate_y(float turn_angle)
 	dx = temp_dx;
 }
 
+//------------------------------------------------------------------------------
+// Bitmap class.
+//------------------------------------------------------------------------------
+
+// Default constructor initialises the bitmap handle.
+
+bitmap::bitmap()
+{
+	handle = NULL;
+}
+
+// Default destructor deletes the bitmap, if it exists.
+
+bitmap::~bitmap()
+{
+	destroy_bitmap_handle(handle);
+}
+
 //==============================================================================
 // Polygon rasterisation classes.
 //==============================================================================
@@ -2675,7 +2693,7 @@ block_def::block_def()
 	custom = false;
 	type = STRUCTURAL_BLOCK;
 	allow_entrance = false;
-	icon_texture_ptr = NULL;
+	icon_bitmap_ptr = NULL;
 	animated = false;
 	animation = NULL;
 	parts = 0;
@@ -2724,6 +2742,12 @@ block_def::~block_def()
 	trigger *next_trigger_ptr;
 	block *next_block_ptr;
 	int index;
+
+	// Destroy the icon bitmap, if present.
+
+	if (icon_bitmap_ptr) {
+		DEL(icon_bitmap_ptr, bitmap);
+	}
 
 	// Delete the BSP tree if this is not a custom block.
 

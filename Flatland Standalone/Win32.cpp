@@ -168,41 +168,6 @@ bool sound_on;
 //==============================================================================
 
 //------------------------------------------------------------------------------
-// Bitmap class.
-//------------------------------------------------------------------------------
-
-// Bitmap class definition.
-
-struct bitmap {
-	void *handle;						// Bitmap handle.
-	byte *pixels;						// Pointer to bitmap pixel data.
-	int width, height;					// Size of bitmap.
-	int bytes_per_row;					// Number of bytes per row.
-	int colours;						// Number of colours in palette.
-	RGBcolour *RGB_palette;				// Palette in RGB format.
-	pixel *palette;						// Palette in pixel format.
-	int transparent_index;				// Transparent pixel index.
-
-	bitmap();
-	~bitmap();
-};
-
-// Default constructor initialises the bitmap handle.
-
-bitmap::bitmap()
-{
-	handle = NULL;
-}
-
-// Default destructor deletes the bitmap, if it exists.
-
-bitmap::~bitmap()
-{
-	if (handle)
-		DeleteBitmap(handle);
-}
-
-//------------------------------------------------------------------------------
 // Cursor class.
 //------------------------------------------------------------------------------
 
@@ -918,45 +883,37 @@ create_bitmap(int width, int height, int colours, RGBcolour *RGB_palette,
 
 //------------------------------------------------------------------------------
 // Create a bitmap and initialize it with the first pixmap of the given texture.
-// The bitmap will use 24-bit pixels regardless of the pixel depth of the
+// The bitmap will use 32-bit pixels regardless of the pixel depth of the
 // texture.
 //------------------------------------------------------------------------------
 
-static bitmap *
-create_bitmap_from_texture(texture *texture_ptr, int width, int height)
+bitmap *
+create_bitmap_from_texture(texture *texture_ptr)
 {
 	HBITMAP bitmap_handle;
 	byte *bitmap_pixels;
 	bitmap *bitmap_ptr;
 	HDC hdc;
-	MYBITMAPINFO bitmap_info;
+	BITMAPINFO bitmap_info;
 
 	// Initialise the bitmap info structure.
 
 	bitmap_info.bmiHeader.biSize = sizeof(BITMAPINFOHEADER);
-	bitmap_info.bmiHeader.biWidth = width;
-	bitmap_info.bmiHeader.biHeight = -height;
+	bitmap_info.bmiHeader.biWidth = texture_ptr->width;
+	bitmap_info.bmiHeader.biHeight = -texture_ptr->height;
 	bitmap_info.bmiHeader.biPlanes = 1;
-	bitmap_info.bmiHeader.biBitCount = texture_ptr->bytes_per_pixel * 8;
+	bitmap_info.bmiHeader.biBitCount = 32;
 	bitmap_info.bmiHeader.biSizeImage = 0;
 	bitmap_info.bmiHeader.biXPelsPerMeter = 0;
 	bitmap_info.bmiHeader.biYPelsPerMeter = 0;
 	bitmap_info.bmiHeader.biClrUsed = 0;
 	bitmap_info.bmiHeader.biClrImportant = 0;
 	bitmap_info.bmiHeader.biCompression = BI_RGB;
-	if (texture_ptr->bytes_per_pixel == 1) {
-		for (int index = 0; index < texture_ptr->colours; index++) {
-			bitmap_info.bmiColors[index].rgbRed = (byte)texture_ptr->RGB_palette[index].red;
-			bitmap_info.bmiColors[index].rgbGreen = (byte)texture_ptr->RGB_palette[index].green;
-			bitmap_info.bmiColors[index].rgbBlue = (byte)texture_ptr->RGB_palette[index].blue;
-			bitmap_info.bmiColors[index].rgbReserved = 0;
-		}
-	}
 
 	// Create the bitmap image as a DIB section.
 
 	hdc = GetDC(app_window_handle);
-	bitmap_handle = CreateDIBSection(hdc, (BITMAPINFO *)&bitmap_info, DIB_RGB_COLORS, (void **)&bitmap_pixels, NULL, 0);
+	bitmap_handle = CreateDIBSection(hdc, &bitmap_info, DIB_RGB_COLORS, (void **)&bitmap_pixels, NULL, 0);
 	ReleaseDC(app_window_handle, hdc);
 
 	// Create the bitmap object.
@@ -969,39 +926,53 @@ create_bitmap_from_texture(texture *texture_ptr, int width, int height)
 
 	bitmap_ptr->handle = bitmap_handle;
 	bitmap_ptr->pixels = bitmap_pixels;
-	bitmap_ptr->width = width;
-	bitmap_ptr->height = height;
-	int width_in_bytes = width * texture_ptr->bytes_per_pixel;
-	bitmap_ptr->bytes_per_row = (width_in_bytes % 4) == 0 ? width_in_bytes : width_in_bytes + 4 - (width_in_bytes % 4);
+	bitmap_ptr->width = texture_ptr->width;
+	bitmap_ptr->height = texture_ptr->height;
+	bitmap_ptr->bytes_per_row = texture_ptr->width * 4;
 
-	// Copy the pixel data from the first pixmap of the texture into the bitmap.
+	// Copy the pixel data from the first pixmap of the texture into the bitmap.  Note we only support 8-bit or 32-bit pixel pixmaps.
 
-	float width_scale = (float)texture_ptr->width / (float)width;
-	float height_scale = (float)texture_ptr->height / (float)height;
 	pixmap *pixmap_ptr = texture_ptr->pixmap_list;
-	for (int row = 0; row < height; row++) {
-		byte *pixmap_row_ptr = pixmap_ptr->image_ptr + (int)(row * height_scale) * texture_ptr->width * texture_ptr->bytes_per_pixel;
-		byte *bitmap_row_ptr = bitmap_ptr->pixels + row * bitmap_ptr->bytes_per_row;
-		switch (texture_ptr->bytes_per_pixel) {
-		case 1:
-			for (int col = 0; col < width; col++) {
-				*bitmap_row_ptr++ = pixmap_row_ptr[(int)(col * width_scale)];
+	switch (texture_ptr->bytes_per_pixel) {
+	case 1:
+		{
+			byte *source_ptr = pixmap_ptr->image_ptr;
+			pixel *target_ptr = (pixel *)bitmap_pixels;
+			for (int row = 0; row < texture_ptr->height; row++) {
+				for (int col = 0; col < texture_ptr->width; col++) {
+					int pixel = *source_ptr++;
+					if (pixel == pixmap_ptr->transparent_index) {
+						*target_ptr++ = 0;
+					} else {
+						RGBcolour colour = texture_ptr->RGB_palette[pixel];
+						*target_ptr++ = 0xFF000000 | ((byte)colour.red << 16) | ((byte)colour.green << 8) | (byte)colour.blue;
+					}
+				}
 			}
-			break;
-		case 2:
-			for (int col = 0; col < width; col++) {
-				*(word *)bitmap_row_ptr = *((word *)pixmap_row_ptr + (int)(col * width_scale));
-				bitmap_row_ptr += 2;
-			}
-			break;
-		case 4:
-			for (int col = 0; col < width; col++) {
-				*(pixel *)bitmap_row_ptr = *((pixel *)pixmap_row_ptr + (int)(col * width_scale));
-				bitmap_row_ptr += 4;
+		}
+		break;
+	case 4:
+		{
+			pixel *source_ptr = (pixel *)pixmap_ptr->image_ptr;
+			pixel *target_ptr = (pixel *)bitmap_pixels;
+			for (int row = 0; row < texture_ptr->height; row++) {
+				for (int col = 0; col < texture_ptr->width; col++) {
+					*target_ptr++ = *source_ptr++;
+				}
 			}
 		}
 	}
 	return(bitmap_ptr);
+}
+
+//------------------------------------------------------------------------------
+// Destroy a bitmap handle.
+//------------------------------------------------------------------------------
+
+void
+destroy_bitmap_handle(void *bitmap_handle)
+{
+	DeleteBitmap(bitmap_handle);
 }
 
 //------------------------------------------------------------------------------
@@ -2160,7 +2131,7 @@ start_up_platform_API(void *instance_handle, int show_command, void (*quit_callb
 	string version = "Flatland ";
 	version += version_number_to_string(ROVER_VERSION_NUMBER);
 	app_window_handle = CreateWindow("FlatlandAppWindow", version, WS_OVERLAPPEDWINDOW,
-		CW_USEDEFAULT, CW_USEDEFAULT, 400, 400, nullptr, nullptr, app_instance_handle, nullptr);
+		CW_USEDEFAULT, CW_USEDEFAULT, CW_USEDEFAULT, CW_USEDEFAULT, nullptr, nullptr, app_instance_handle, nullptr);
 	if (!app_window_handle) {
 		return FALSE;
 	}
@@ -4396,22 +4367,39 @@ close_blockset_manager_window(void)
 // Function to handle builder window events.
 //------------------------------------------------------------------------------
 
+//static bitmap *bitmap_ptr;
+
 static BOOL CALLBACK
 handle_builder_event(HWND window_handle, UINT message, WPARAM wParam, LPARAM lParam)
 {
-	//HWND control_handle;
-	//RECT rect;
 	//texture *texture_ptr;
-	//bitmap *bitmap_ptr;
+	PAINTSTRUCT ps;
+	HDC hdcDest;
+	//HDC hdcSrc;
+	//HGDIOBJ oldBitmap;
+	//BLENDFUNCTION blend;
 
 	switch (message) {
 	case WM_INITDIALOG:
-		//NEW(texture_ptr, texture);
-		//load_image("test.gif", "test.gif", texture_ptr);
-		//control_handle = GetDlgItem(window_handle, IDC_BLOCK_IMAGE_0);
-		//GetClientRect(control_handle, &rect);
-		//bitmap_ptr = create_bitmap_from_texture(texture_ptr, rect.right - rect.left, rect.bottom - rect.top);
-		//SendDlgItemMessage(window_handle, IDC_BLOCK_IMAGE_0, STM_SETIMAGE, IMAGE_BITMAP, (LPARAM)bitmap_ptr->handle);
+		/*
+		NEW(texture_ptr, texture);
+		load_image("test.gif", "test.gif", texture_ptr);
+		bitmap_ptr = create_bitmap_from_texture(texture_ptr);
+		DEL(texture_ptr, texture);
+		*/
+		return(TRUE);
+	case WM_PAINT:
+		hdcDest = BeginPaint(window_handle, &ps);
+		//hdcSrc = CreateCompatibleDC(hdcDest);
+		//oldBitmap = SelectObject(hdcSrc, bitmap_ptr->handle);
+		//blend.BlendOp = AC_SRC_OVER;
+		//blend.BlendFlags = 0;
+		//blend.SourceConstantAlpha = 127;
+		//blend.AlphaFormat = 0;
+		//AlphaBlend(hdcDest, 0, 0, 128, 128, hdcSrc, 0, 0, bitmap_ptr->width, bitmap_ptr->height, blend);
+		//SelectObject(hdcDest, oldBitmap);
+		//DeleteDC(hdcSrc);
+		EndPaint(window_handle, &ps);
 		return(TRUE);
 	case WM_DESTROY:
 		return(TRUE);

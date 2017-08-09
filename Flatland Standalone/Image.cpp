@@ -966,7 +966,7 @@ jpeg_src(j_decompress_ptr cinfo)
 //------------------------------------------------------------------------------
 
 static void
-load_JPEG(void)
+load_JPEG(bool force_32_bit_pixels)
 {
 	struct jpeg_decompress_struct cinfo;
 	struct jpeg_error_mgr jerr;
@@ -980,7 +980,7 @@ load_JPEG(void)
 
 	pixmaps = 0;
 	transparent = false;
-	bytes_per_pixel = hardware_acceleration ? 4 : 2;
+	bytes_per_pixel = force_32_bit_pixels || hardware_acceleration ? 4 : 2;
 	texture_loops = false;
 
 	// Initialise the total time for animation.
@@ -1095,7 +1095,7 @@ void read_png_file(png_structp png_ptr, png_bytep data, png_size_t length)
 }
 
 void
-load_PNG()
+load_PNG(bool force_32_bit_pixels)
 {
 	RGBcolour colour;
 
@@ -1103,7 +1103,7 @@ load_PNG()
 
 	pixmaps = 0;
 	transparent = true;
-	bytes_per_pixel = hardware_acceleration ? 4 : 2;
+	bytes_per_pixel = force_32_bit_pixels || hardware_acceleration ? 4 : 2;
 	texture_loops = false;
 	total_time_ms = 1;
 	colours = 0;
@@ -1302,7 +1302,7 @@ scale_pixmap(pixmap *pixmap_ptr, int new_image_width, int new_image_height, floa
 //------------------------------------------------------------------------------
 
 bool
-load_image(const char *URL, const char *file_path, texture *texture_ptr)
+load_image(const char *URL, const char *file_path, texture *texture_ptr, bool force_32_bit_pixels)
 {
 	int index;
 
@@ -1335,10 +1335,10 @@ load_image(const char *URL, const char *file_path, texture *texture_ptr)
 		} else {
 			header_size += read_file(header + 6, 2);
 			if (!png_sig_cmp(header, 0, header_size)) {
-				load_PNG();
+				load_PNG(force_32_bit_pixels);
 			} else {
 				rewind_file();
-				load_JPEG();
+				load_JPEG(force_32_bit_pixels);
 			}
 		}
 		texture_ptr->bytes_per_pixel = bytes_per_pixel;

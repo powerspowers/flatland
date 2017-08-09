@@ -1737,8 +1737,11 @@ parse_block_tag(blockset *blockset_ptr)
 
 		if (strlen(new_block_def_ptr->name) == 0)
 			new_block_def_ptr->name = block_name;
-		if (parsed_attribute[BLOCK_ICON]) 
-			new_block_def_ptr->icon_texture_ptr = load_texture(blockset_ptr, block_icon, false);
+		if (parsed_attribute[BLOCK_ICON]) {
+			texture *texture_ptr = load_texture(blockset_ptr, block_icon, false, true);
+			new_block_def_ptr->icon_bitmap_ptr = create_bitmap_from_texture(texture_ptr);
+			DEL(texture_ptr, texture);
+		}
 		if (parsed_attribute[BLOCK_TYPE])
 			new_block_def_ptr->type = block_type;
 		if (parsed_attribute[BLOCK_ENTRANCE])

@@ -7,4 +7,4 @@
 // Externally visible functions.
 
 bool
-load_image(const char *URL, const char *file_path, texture *texture_ptr);
+load_image(const char *URL, const char *file_path, texture *texture_ptr, bool force_32_bit_pixels = false);

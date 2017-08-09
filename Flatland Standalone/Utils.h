@@ -24,7 +24,7 @@ block_def *
 get_block_def(const char *block_identifier);
 
 texture *
-load_texture(blockset *blockset_ptr, char *texture_URL, bool add_to_blockset);
+load_texture(blockset *blockset_ptr, char *texture_URL, bool add_to_blockset, bool force_32_bit_pixels = false);
 
 #ifdef STREAMING_MEDIA
 

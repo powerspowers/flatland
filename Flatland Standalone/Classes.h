@@ -664,6 +664,26 @@ struct load_tag {
 	load_tag *next_load_tag_ptr;
 };
 
+//------------------------------------------------------------------------------
+// Bitmap class.
+//------------------------------------------------------------------------------
+
+// Bitmap class definition.
+
+struct bitmap {
+	void *handle;						// Bitmap handle.
+	byte *pixels;						// Pointer to bitmap pixel data.
+	int width, height;					// Size of bitmap.
+	int bytes_per_row;					// Number of bytes per row.
+	int colours;						// Number of colours in palette.
+	RGBcolour *RGB_palette;				// Palette in RGB format.
+	pixel *palette;						// Palette in pixel format.
+	int transparent_index;				// Transparent pixel index.
+
+	bitmap();
+	~bitmap();
+};
+
 //==============================================================================
 // XML classes.
 //==============================================================================
@@ -1371,7 +1391,7 @@ struct block_def {
 	string name;					// Block name.
 	int type;						// Block type.
 	bool allow_entrance;			// TRUE if block permits an entrance.
-	texture *icon_texture_ptr;		// The icon texture (if any).
+	bitmap *icon_bitmap_ptr;		// The icon bitmap (if any).
 	relinteger_triplet position;    // the relative position set by the POSITION param
 	bool animated;					// set if this block has frames
 	animation_def *animation;		// the structure holding all the animation frames

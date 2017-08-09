@@ -158,7 +158,7 @@ find_texture(blockset *blockset_ptr, const char *texture_URL)
 //------------------------------------------------------------------------------
 
 texture *
-load_texture(blockset *blockset_ptr, char *texture_URL, bool add_to_blockset)
+load_texture(blockset *blockset_ptr, char *texture_URL, bool add_to_blockset, bool force_32_bit_pixels)
 {
 	string blockset_name, texture_name;
 	texture *texture_ptr;
@@ -225,7 +225,7 @@ load_texture(blockset *blockset_ptr, char *texture_URL, bool add_to_blockset)
 
 		new_texture_URL = "textures/";
 		new_texture_URL += texture_name;
-		if (!load_image(NULL, new_texture_URL, texture_ptr)) {
+		if (!load_image(NULL, new_texture_URL, texture_ptr, force_32_bit_pixels)) {
 			DEL(texture_ptr, texture);
 			close_zip_archive();
 			return(NULL);
@@ -270,7 +270,7 @@ load_texture(blockset *blockset_ptr, char *texture_URL, bool add_to_blockset)
 			texture_ptr->blockset_ptr = blockset_ptr;
 			new_texture_URL = "textures/";
 			new_texture_URL += texture_URL;
-			if (!load_image(NULL, new_texture_URL, texture_ptr)) {
+			if (!load_image(NULL, new_texture_URL, texture_ptr, force_32_bit_pixels)) {
 				DEL(texture_ptr, texture);
 				return(NULL);
 			}

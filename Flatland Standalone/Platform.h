@@ -329,6 +329,14 @@ get_password(string *username_ptr, string *password_ptr);
 
 #endif
 
+// Bitmap functions.
+
+bitmap *
+create_bitmap_from_texture(texture *texture_ptr);
+
+void
+destroy_bitmap_handle(void *bitmap_handle);
+
 // Label texture function.
 
 bool
