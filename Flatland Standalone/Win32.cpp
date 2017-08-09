@@ -4367,39 +4367,126 @@ close_blockset_manager_window(void)
 // Function to handle builder window events.
 //------------------------------------------------------------------------------
 
-//static bitmap *bitmap_ptr;
+#define MAX_COLUMNS 10
+#define MAX_ROWS	3
 
 static BOOL CALLBACK
 handle_builder_event(HWND window_handle, UINT message, WPARAM wParam, LPARAM lParam)
 {
-	//texture *texture_ptr;
-	PAINTSTRUCT ps;
-	HDC hdcDest;
-	//HDC hdcSrc;
-	//HGDIOBJ oldBitmap;
-	//BLENDFUNCTION blend;
+	static HWND scrollbar_handle;
+	static HWND block_icons_handle;
+	static blockset *blockset_ptr;
+	static BLENDFUNCTION opaque_blend = {AC_SRC_OVER, 0, 255, 0};
+	static BLENDFUNCTION transparent_blend = {AC_SRC_OVER, 0, 127, 0};
+	static int selected_index = 0;
 
 	switch (message) {
 	case WM_INITDIALOG:
-		/*
-		NEW(texture_ptr, texture);
-		load_image("test.gif", "test.gif", texture_ptr);
-		bitmap_ptr = create_bitmap_from_texture(texture_ptr);
-		DEL(texture_ptr, texture);
-		*/
+		{
+			// Count the number of block definitions in the "basic" blockset, and calculate how many rows are needed.
+
+			int block_defs = 0;
+			blockset_ptr = blockset_list_ptr->find_blockset_by_name("basic");
+			if (blockset_ptr) {
+				block_def *block_def_ptr = blockset_ptr->block_def_list;
+				while (block_def_ptr) {
+					block_defs++;
+					block_def_ptr = block_def_ptr->next_block_def_ptr;
+				}
+			}
+			int rows = (block_defs - 1) / MAX_COLUMNS + 1;
+
+			// Set up the scrollbar based on the number of rows of icons there are.
+
+			scrollbar_handle = GetDlgItem(window_handle, IDC_BLOCK_ICONS_SCROLLBAR);
+			SCROLLINFO scroll_info;
+			scroll_info.cbSize = sizeof(SCROLLINFO);
+			scroll_info.fMask = SIF_DISABLENOSCROLL | SIF_POS | SIF_RANGE;
+			scroll_info.nMin = 0;
+			scroll_info.nMax = rows - MAX_ROWS < 0 ? 0 : rows - MAX_ROWS;
+			scroll_info.nPos = 0;
+			SetScrollInfo(scrollbar_handle, SB_CTL, &scroll_info, FALSE);
+
+			// Remember the handle to the block icons static control.
+
+			block_icons_handle = GetDlgItem(window_handle, IDC_BLOCK_ICONS);
+		}
 		return(TRUE);
+
 	case WM_PAINT:
-		hdcDest = BeginPaint(window_handle, &ps);
-		//hdcSrc = CreateCompatibleDC(hdcDest);
-		//oldBitmap = SelectObject(hdcSrc, bitmap_ptr->handle);
-		//blend.BlendOp = AC_SRC_OVER;
-		//blend.BlendFlags = 0;
-		//blend.SourceConstantAlpha = 127;
-		//blend.AlphaFormat = 0;
-		//AlphaBlend(hdcDest, 0, 0, 128, 128, hdcSrc, 0, 0, bitmap_ptr->width, bitmap_ptr->height, blend);
-		//SelectObject(hdcDest, oldBitmap);
-		//DeleteDC(hdcSrc);
-		EndPaint(window_handle, &ps);
+		{
+			PAINTSTRUCT ps;
+
+			// Find the selected block definition.
+
+			block_def *block_def_ptr = blockset_ptr->block_def_list;
+			int index = 0;
+			while (block_def_ptr && index < selected_index) {
+				block_def_ptr = block_def_ptr->next_block_def_ptr;
+				index++;
+			}
+
+			// Draw the selected block definition's icon.
+
+			HDC dest_hdc = BeginPaint(window_handle, &ps);
+			if (block_def_ptr) {
+				bitmap *icon_bitmap_ptr = block_def_ptr->icon_bitmap_ptr;
+				if (icon_bitmap_ptr) {
+					HDC source_hdc = CreateCompatibleDC(dest_hdc);
+					SelectObject(source_hdc, icon_bitmap_ptr->handle);
+					StretchBlt(dest_hdc, 0, 0, 120, 120, source_hdc, 0, 0, icon_bitmap_ptr->width, icon_bitmap_ptr->height, SRCCOPY);
+					DeleteDC(source_hdc);
+				}
+			}
+			EndPaint(window_handle, &ps);
+		}
+		return(TRUE);
+
+	// Draw the block icons static control.
+
+	case WM_DRAWITEM:
+		if (blockset_ptr) {
+
+			// Skip over the block definitions to reach the first visible row.
+
+			block_def *block_def_ptr = blockset_ptr->block_def_list;
+			int curr_scrollbar_pos = GetScrollPos(scrollbar_handle,  SB_CTL);
+			int first_index = curr_scrollbar_pos * MAX_COLUMNS;
+			int index = 0;
+			while (block_def_ptr && index < first_index) {
+				block_def_ptr = block_def_ptr->next_block_def_ptr;
+				index++;
+			}
+
+			// Erase the control.
+
+			DRAWITEMSTRUCT *draw_item_ptr = (DRAWITEMSTRUCT *)lParam;
+			FillRect(draw_item_ptr->hDC, &draw_item_ptr->rcItem, (HBRUSH)(COLOR_WINDOW + 1));
+
+			// Draw up to one more than the maximum number of rows.
+
+			HDC source_hdc = CreateCompatibleDC(draw_item_ptr->hDC);
+			int x = 0;
+			int y = 0;
+			int count = (MAX_ROWS + 1) * MAX_COLUMNS;
+			index = 0;
+			while (block_def_ptr && index < count) {
+				bitmap *icon_bitmap_ptr = block_def_ptr->icon_bitmap_ptr;
+				if (icon_bitmap_ptr) {
+					SelectObject(source_hdc, icon_bitmap_ptr->handle);
+					AlphaBlend(draw_item_ptr->hDC, x, y, 60, 60, source_hdc, 0, 0, icon_bitmap_ptr->width, icon_bitmap_ptr->height, 
+						first_index + index == selected_index ? transparent_blend : opaque_blend);
+				}
+				x += 64;
+				if (x == 64 * MAX_COLUMNS) {
+					x = 0;
+					y += 64;
+				}
+				block_def_ptr = block_def_ptr->next_block_def_ptr;
+				index++;
+			}
+			DeleteDC(source_hdc);
+		}
 		return(TRUE);
 	case WM_DESTROY:
 		return(TRUE);
@@ -4411,6 +4498,29 @@ handle_builder_event(HWND window_handle, UINT message, WPARAM wParam, LPARAM lPa
 				close_builder_window();
 				break;
 			}
+		}
+		return(TRUE);
+	case WM_VSCROLL:
+		switch (LOWORD(wParam)) {
+		case SB_LINEDOWN:
+			SetScrollPos(scrollbar_handle, SB_CTL, GetScrollPos(scrollbar_handle, SB_CTL) + 1, TRUE);
+			InvalidateRect(block_icons_handle, NULL, TRUE);
+			break;
+		case SB_LINEUP:
+			SetScrollPos(scrollbar_handle, SB_CTL, GetScrollPos(scrollbar_handle, SB_CTL) - 1, TRUE);
+			InvalidateRect(block_icons_handle, NULL, TRUE);
+			break;
+		case SB_PAGEDOWN:
+			SetScrollPos(scrollbar_handle, SB_CTL, GetScrollPos(scrollbar_handle, SB_CTL) + MAX_ROWS, TRUE);
+			InvalidateRect(block_icons_handle, NULL, TRUE);
+			break;
+		case SB_PAGEUP:
+			SetScrollPos(scrollbar_handle, SB_CTL, GetScrollPos(scrollbar_handle, SB_CTL) - MAX_ROWS, TRUE);
+			InvalidateRect(block_icons_handle, NULL, TRUE);
+			break;
+		case SB_THUMBTRACK:
+			SetScrollPos(scrollbar_handle, SB_CTL, HIWORD(wParam), TRUE);
+			InvalidateRect(block_icons_handle, NULL, TRUE);
 		}
 		return(TRUE);
 	default:

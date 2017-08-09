@@ -3651,6 +3651,21 @@ blockset_list::find_blockset(char *URL)
 	return(false);
 }
 
+// Method to search for the blockset with the given name, and return a 
+// pointer to it if found.
+
+blockset *
+blockset_list::find_blockset_by_name(char *name)
+{
+	blockset *blockset_ptr = first_blockset_ptr;
+	while (blockset_ptr != NULL) {
+		if (!_stricmp(blockset_ptr->name, name))
+			break;
+		blockset_ptr = blockset_ptr->next_blockset_ptr;
+	}
+	return blockset_ptr;
+}
+
 // Method to find and remove the blockset that has the given URL, returning a
 // pointer to the blockset removed.
 

@@ -1522,6 +1522,7 @@ struct blockset_list {
 	~blockset_list();
 	void add_blockset(blockset *blockset_ptr);
 	bool find_blockset(char *URL);
+	blockset *find_blockset_by_name(char *name);
 	blockset *remove_blockset(char *URL);
 };
 

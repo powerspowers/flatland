@@ -185,17 +185,14 @@ load_texture(blockset *blockset_ptr, char *texture_URL, bool add_to_blockset, bo
 		// If the blockset name is missing, select the first blockset by
 		// default.  Otherwise search for the blockset with the given name.
 
-		blockset_ptr = blockset_list_ptr->first_blockset_ptr;
-		if (strlen(blockset_name) != 0) {
-			while (blockset_ptr != NULL) {
-				if (!_stricmp(blockset_name, blockset_ptr->name))
-					break;
-				blockset_ptr = blockset_ptr->next_blockset_ptr;
-			}
-			if (blockset_ptr == NULL) {
-				warning("There is no blockset with name \"%s\"", blockset_name);
-				return(NULL);
-			}
+		if (strlen(blockset_name) == 0) {
+			blockset_ptr = blockset_list_ptr->first_blockset_ptr;
+		} else {
+			blockset_ptr = blockset_list_ptr->find_blockset_by_name(blockset_name);
+		}
+		if (blockset_ptr == NULL) {
+			warning("There is no blockset with name \"%s\"", blockset_name);
+			return(NULL);
 		}
 
 		// If a texture with the given name is already in the blockset,
