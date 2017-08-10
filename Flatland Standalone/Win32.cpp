@@ -4363,133 +4363,219 @@ close_blockset_manager_window(void)
 // Builder window functions.
 //==============================================================================
 
+#define MAX_COLUMNS 10
+#define MAX_ROWS	3
+
+static HWND scrollbar_handle;
+static HWND block_icons_handle;
+static HWND selected_block_icon_handle;
+static HWND selected_block_name_handle;
+static HWND blocksets_combobox_handle;
+static BLENDFUNCTION opaque_blend = {AC_SRC_OVER, 0, 255, 0};
+static BLENDFUNCTION transparent_blend = {AC_SRC_OVER, 0, 127, 0};
+static string selected_blockset_name;
+static blockset *selected_blockset_ptr;
+static block_def *selected_block_def_ptr;
+static HFONT block_symbol_font_handle;
+static HBRUSH grey_brush_handle;
+
+static void
+update_builder_dialog()
+{
+	// Count the number of block definitions in the selected blockset, and select the first block
+	// definition if there is at least one 
+
+	int block_defs = 0;
+	selected_blockset_ptr = blockset_list_ptr->find_blockset_by_name(selected_blockset_name);
+	if (selected_blockset_ptr) {
+		selected_block_def_ptr = selected_blockset_ptr->block_def_list;
+		block_def *block_def_ptr = selected_block_def_ptr;
+		while (block_def_ptr) {
+			block_defs++;
+			block_def_ptr = block_def_ptr->next_block_def_ptr;
+		}
+	} else {
+		selected_block_def_ptr = NULL;
+	}
+
+	// Set up the scrollbar based on the number of rows of icons there are.
+
+	SCROLLINFO scroll_info;
+	scroll_info.cbSize = sizeof(SCROLLINFO);
+	scroll_info.fMask = SIF_DISABLENOSCROLL | SIF_POS | SIF_RANGE;
+	scroll_info.nMin = 0;
+	int rows = (block_defs - 1) / MAX_COLUMNS + 1;
+	scroll_info.nMax = rows - MAX_ROWS < 0 ? 0 : rows - MAX_ROWS;
+	scroll_info.nPos = 0;
+	SetScrollInfo(scrollbar_handle, SB_CTL, &scroll_info, FALSE);
+}
+
+static void
+draw_block_icon(block_def *block_def_ptr, int x, int y, int width, int height, HDC source_hdc, HDC target_hdc, bool selected)
+{
+	RECT rect = { x, y, x + width, y + height};
+
+	// Fill the background of the icon with the grey brush if selected.
+
+	if (selected) {
+		FillRect(target_hdc, &rect, grey_brush_handle);
+	}
+
+	// Now draw either the icon or the symbol of the block definition.  If the block is selected, use a transparent icon
+	// so that the grey background blends in.
+
+	bitmap *icon_bitmap_ptr = block_def_ptr->icon_bitmap_ptr;
+	if (icon_bitmap_ptr) {
+		SelectBitmap(source_hdc, icon_bitmap_ptr->handle);
+		AlphaBlend(target_hdc, x, y, width, height, source_hdc, 0, 0, icon_bitmap_ptr->width, icon_bitmap_ptr->height,
+			selected ? transparent_blend : opaque_blend);
+	} else {
+		string symbol = block_def_ptr->get_symbol();
+		DrawText(target_hdc, (char *)symbol, strlen(symbol), &rect, DT_SINGLELINE | DT_CENTER | DT_VCENTER);
+	}
+}
+
+static void
+draw_block_icons(DRAWITEMSTRUCT *draw_item_ptr)
+{
+	if (selected_blockset_ptr) {
+
+		// Skip over the block definitions to reach the first visible row.
+
+		block_def *block_def_ptr = selected_blockset_ptr->block_def_list;
+		int curr_scrollbar_pos = GetScrollPos(scrollbar_handle,  SB_CTL);
+		int first_block_index = curr_scrollbar_pos * MAX_COLUMNS;
+		int block_index = 0;
+		while (block_def_ptr && block_index < first_block_index) {
+			block_def_ptr = block_def_ptr->next_block_def_ptr;
+			block_index++;
+		}
+
+		// Clear the background of the control and select transparent background drawing.
+
+		FillRect(draw_item_ptr->hDC, &draw_item_ptr->rcItem, (HBRUSH)(COLOR_WINDOW + 1));
+		SetBkMode(draw_item_ptr->hDC, TRANSPARENT);
+
+		// Draw up to one more than the maximum number of rows of block icons.  For blocks without an icon, draw their symbol.
+
+		HDC source_hdc = CreateCompatibleDC(draw_item_ptr->hDC);
+		int x = 0;
+		int y = 0;
+		int block_count = (MAX_ROWS + 1) * MAX_COLUMNS;
+		block_index = 0;
+		while (block_def_ptr && block_index < block_count) {
+			draw_block_icon(block_def_ptr, x, y, 60, 60, source_hdc, draw_item_ptr->hDC, block_def_ptr == selected_block_def_ptr);
+			x += 64;
+			if (x == 64 * MAX_COLUMNS) {
+				x = 0;
+				y += 64;
+			}
+			block_def_ptr = block_def_ptr->next_block_def_ptr;
+			block_index++;
+		}
+		DeleteDC(source_hdc);
+	}
+}
+
+static void
+draw_selected_block_icon(DRAWITEMSTRUCT *draw_item_ptr)
+{
+	if (selected_block_def_ptr) {
+
+		// Clear the background of the control and select transparent background drawing.
+
+		FillRect(draw_item_ptr->hDC, &draw_item_ptr->rcItem, (HBRUSH)(COLOR_WINDOW + 1));
+		SetBkMode(draw_item_ptr->hDC, TRANSPARENT);
+
+		// Draw the selected block definition's icon.
+
+		HDC source_hdc = CreateCompatibleDC(draw_item_ptr->hDC);
+		draw_block_icon(selected_block_def_ptr, 0, 0, 120, 120, source_hdc, draw_item_ptr->hDC, false);
+		DeleteDC(source_hdc);
+
+		// Display the name of the selected block below the icon.
+
+		SendMessage(selected_block_name_handle, WM_SETTEXT, 0, (LPARAM)(char *)selected_block_def_ptr->name);
+	}
+}
+
 //------------------------------------------------------------------------------
 // Function to handle builder window events.
 //------------------------------------------------------------------------------
 
-#define MAX_COLUMNS 10
-#define MAX_ROWS	3
-
 static BOOL CALLBACK
 handle_builder_event(HWND window_handle, UINT message, WPARAM wParam, LPARAM lParam)
 {
-	static HWND scrollbar_handle;
-	static HWND block_icons_handle;
-	static blockset *blockset_ptr;
-	static BLENDFUNCTION opaque_blend = {AC_SRC_OVER, 0, 255, 0};
-	static BLENDFUNCTION transparent_blend = {AC_SRC_OVER, 0, 127, 0};
-	static int selected_index = 0;
-
 	switch (message) {
 	case WM_INITDIALOG:
 		{
-			// Count the number of block definitions in the "basic" blockset, and calculate how many rows are needed.
+			char name[256];
 
-			int block_defs = 0;
-			blockset_ptr = blockset_list_ptr->find_blockset_by_name("basic");
-			if (blockset_ptr) {
-				block_def *block_def_ptr = blockset_ptr->block_def_list;
-				while (block_def_ptr) {
-					block_defs++;
-					block_def_ptr = block_def_ptr->next_block_def_ptr;
-				}
-			}
-			int rows = (block_defs - 1) / MAX_COLUMNS + 1;
-
-			// Set up the scrollbar based on the number of rows of icons there are.
+			// Remember the handles to the various controls.
 
 			scrollbar_handle = GetDlgItem(window_handle, IDC_BLOCK_ICONS_SCROLLBAR);
-			SCROLLINFO scroll_info;
-			scroll_info.cbSize = sizeof(SCROLLINFO);
-			scroll_info.fMask = SIF_DISABLENOSCROLL | SIF_POS | SIF_RANGE;
-			scroll_info.nMin = 0;
-			scroll_info.nMax = rows - MAX_ROWS < 0 ? 0 : rows - MAX_ROWS;
-			scroll_info.nPos = 0;
-			SetScrollInfo(scrollbar_handle, SB_CTL, &scroll_info, FALSE);
-
-			// Remember the handle to the block icons static control.
-
 			block_icons_handle = GetDlgItem(window_handle, IDC_BLOCK_ICONS);
-		}
-		return(TRUE);
+			selected_block_icon_handle = GetDlgItem(window_handle, IDC_SELECTED_BLOCK_ICON);
+			selected_block_name_handle = GetDlgItem(window_handle, IDC_SELECTED_BLOCK_NAME);
+			blocksets_combobox_handle = GetDlgItem(window_handle, IDC_BLOCKSETS_COMBOBOX);
 
-	case WM_PAINT:
-		{
-			PAINTSTRUCT ps;
+			// Set up the font used by the block icons and selected block icon static control.
 
-			// Find the selected block definition.
+			HDC dc_handle = GetDC(block_icons_handle);
+			block_symbol_font_handle = CreateFont(-POINTS_TO_PIXELS(20), 0, 0, 0, FW_BOLD,
+				FALSE, FALSE, FALSE, DEFAULT_CHARSET, OUT_TT_PRECIS,
+				CLIP_DEFAULT_PRECIS, PROOF_QUALITY, DEFAULT_PITCH | FF_DONTCARE,
+				"MS Sans Serif");
+			SendMessage(block_icons_handle, WM_SETFONT, (WPARAM)block_symbol_font_handle, 0);
+			SendMessage(selected_block_icon_handle, WM_SETFONT, (WPARAM)block_symbol_font_handle, 0);
+			ReleaseDC(block_icons_handle, dc_handle);
 
-			block_def *block_def_ptr = blockset_ptr->block_def_list;
-			int index = 0;
-			while (block_def_ptr && index < selected_index) {
-				block_def_ptr = block_def_ptr->next_block_def_ptr;
-				index++;
+			// Create a grey brush.
+
+			grey_brush_handle = CreateSolidBrush(RGB(127, 127, 127));
+
+			// Initialize the combo box with the names of all blocksets.
+			
+			blockset *blockset_ptr = blockset_list_ptr->first_blockset_ptr;
+			while (blockset_ptr) {
+				SendMessage(blocksets_combobox_handle, CB_ADDSTRING, 0, (LPARAM)(char *)blockset_ptr->name);
+				blockset_ptr = blockset_ptr->next_blockset_ptr;
 			}
 
-			// Draw the selected block definition's icon.
+			// Select the first entry, and remember its name.
 
-			HDC dest_hdc = BeginPaint(window_handle, &ps);
-			if (block_def_ptr) {
-				bitmap *icon_bitmap_ptr = block_def_ptr->icon_bitmap_ptr;
-				if (icon_bitmap_ptr) {
-					HDC source_hdc = CreateCompatibleDC(dest_hdc);
-					SelectObject(source_hdc, icon_bitmap_ptr->handle);
-					StretchBlt(dest_hdc, 0, 0, 120, 120, source_hdc, 0, 0, icon_bitmap_ptr->width, icon_bitmap_ptr->height, SRCCOPY);
-					DeleteDC(source_hdc);
-				}
-			}
-			EndPaint(window_handle, &ps);
+			SendMessage(blocksets_combobox_handle, CB_SETMINVISIBLE, 10, 0);
+			SendMessage(blocksets_combobox_handle, CB_SETCURSEL, 0, 0);
+			SendMessage(blocksets_combobox_handle, WM_GETTEXT, 256, (LPARAM)name);
+			selected_blockset_name = name;
+
+			// Update the dialog box.
+
+			update_builder_dialog();
 		}
 		return(TRUE);
 
 	// Draw the block icons static control.
 
 	case WM_DRAWITEM:
-		if (blockset_ptr) {
-
-			// Skip over the block definitions to reach the first visible row.
-
-			block_def *block_def_ptr = blockset_ptr->block_def_list;
-			int curr_scrollbar_pos = GetScrollPos(scrollbar_handle,  SB_CTL);
-			int first_index = curr_scrollbar_pos * MAX_COLUMNS;
-			int index = 0;
-			while (block_def_ptr && index < first_index) {
-				block_def_ptr = block_def_ptr->next_block_def_ptr;
-				index++;
-			}
-
-			// Erase the control.
-
+		{
 			DRAWITEMSTRUCT *draw_item_ptr = (DRAWITEMSTRUCT *)lParam;
-			FillRect(draw_item_ptr->hDC, &draw_item_ptr->rcItem, (HBRUSH)(COLOR_WINDOW + 1));
-
-			// Draw up to one more than the maximum number of rows.
-
-			HDC source_hdc = CreateCompatibleDC(draw_item_ptr->hDC);
-			int x = 0;
-			int y = 0;
-			int count = (MAX_ROWS + 1) * MAX_COLUMNS;
-			index = 0;
-			while (block_def_ptr && index < count) {
-				bitmap *icon_bitmap_ptr = block_def_ptr->icon_bitmap_ptr;
-				if (icon_bitmap_ptr) {
-					SelectObject(source_hdc, icon_bitmap_ptr->handle);
-					AlphaBlend(draw_item_ptr->hDC, x, y, 60, 60, source_hdc, 0, 0, icon_bitmap_ptr->width, icon_bitmap_ptr->height, 
-						first_index + index == selected_index ? transparent_blend : opaque_blend);
-				}
-				x += 64;
-				if (x == 64 * MAX_COLUMNS) {
-					x = 0;
-					y += 64;
-				}
-				block_def_ptr = block_def_ptr->next_block_def_ptr;
-				index++;
+			switch (draw_item_ptr->CtlID) {
+			case IDC_BLOCK_ICONS:
+				draw_block_icons(draw_item_ptr);
+				break;
+			case IDC_SELECTED_BLOCK_ICON:
+				draw_selected_block_icon(draw_item_ptr);
+				break;
 			}
-			DeleteDC(source_hdc);
 		}
 		return(TRUE);
+
 	case WM_DESTROY:
+		DeleteFont(block_symbol_font_handle);
+		DeleteBrush(grey_brush_handle);
 		return(TRUE);
+
 	case WM_COMMAND:
 		switch (HIWORD(wParam)) {
 		case BN_CLICKED:
@@ -4498,8 +4584,19 @@ handle_builder_event(HWND window_handle, UINT message, WPARAM wParam, LPARAM lPa
 				close_builder_window();
 				break;
 			}
+			break;
+		case CBN_SELCHANGE:
+			{
+				char name[256];
+				SendMessage(blocksets_combobox_handle, WM_GETTEXT, 256, (LPARAM)name);
+				selected_blockset_name = name;
+				update_builder_dialog();
+				InvalidateRect(window_handle, NULL, TRUE);
+			}
+			break;
 		}
 		return(TRUE);
+
 	case WM_VSCROLL:
 		switch (LOWORD(wParam)) {
 		case SB_LINEDOWN:
@@ -4523,6 +4620,7 @@ handle_builder_event(HWND window_handle, UINT message, WPARAM wParam, LPARAM lPa
 			InvalidateRect(block_icons_handle, NULL, TRUE);
 		}
 		return(TRUE);
+
 	default:
 		return(FALSE);
 	}
