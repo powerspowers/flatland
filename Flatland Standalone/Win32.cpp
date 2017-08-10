@@ -4376,8 +4376,16 @@ static BLENDFUNCTION transparent_blend = {AC_SRC_OVER, 0, 127, 0};
 static string selected_blockset_name;
 static blockset *selected_blockset_ptr;
 static block_def *selected_block_def_ptr;
+static block_def *first_block_def_ptr;
 static HFONT block_symbol_font_handle;
 static HBRUSH grey_brush_handle;
+
+//------------------------------------------------------------------------------
+// Update the builder dialog by counting how many block definitions in the
+// currently selected blockset there are, selecting the first block definition
+// from the blockset, and updating the scrollbar for the block icons static
+// control.
+//------------------------------------------------------------------------------
 
 static void
 update_builder_dialog()
@@ -4397,6 +4405,7 @@ update_builder_dialog()
 	} else {
 		selected_block_def_ptr = NULL;
 	}
+	first_block_def_ptr = NULL;
 
 	// Set up the scrollbar based on the number of rows of icons there are.
 
@@ -4409,6 +4418,13 @@ update_builder_dialog()
 	scroll_info.nPos = 0;
 	SetScrollInfo(scrollbar_handle, SB_CTL, &scroll_info, FALSE);
 }
+
+//------------------------------------------------------------------------------
+// Draw a block icon from the source device context into the target device 
+// context at the given position and size.  It will be drawn semi-transparent
+// if selected, with a grey background behind it.  If no icon exists, the
+// block symbol will be drawn centered on the background instead.
+//------------------------------------------------------------------------------
 
 static void
 draw_block_icon(block_def *block_def_ptr, int x, int y, int width, int height, HDC source_hdc, HDC target_hdc, bool selected)
@@ -4435,12 +4451,16 @@ draw_block_icon(block_def *block_def_ptr, int x, int y, int width, int height, H
 	}
 }
 
+//------------------------------------------------------------------------------
+// Draw the visible block icons in the block icons static control.
+//------------------------------------------------------------------------------
+
 static void
 draw_block_icons(DRAWITEMSTRUCT *draw_item_ptr)
 {
 	if (selected_blockset_ptr) {
 
-		// Skip over the block definitions to reach the first visible row.
+		// Skip over the block definitions to reach the first visible row, remembering the first block definition that is visible.
 
 		block_def *block_def_ptr = selected_blockset_ptr->block_def_list;
 		int curr_scrollbar_pos = GetScrollPos(scrollbar_handle,  SB_CTL);
@@ -4450,6 +4470,7 @@ draw_block_icons(DRAWITEMSTRUCT *draw_item_ptr)
 			block_def_ptr = block_def_ptr->next_block_def_ptr;
 			block_index++;
 		}
+		first_block_def_ptr = block_def_ptr;
 
 		// Clear the background of the control and select transparent background drawing.
 
@@ -4477,9 +4498,15 @@ draw_block_icons(DRAWITEMSTRUCT *draw_item_ptr)
 	}
 }
 
+//------------------------------------------------------------------------------
+// Draw the selected block icon its the static control.
+//------------------------------------------------------------------------------
+
 static void
 draw_selected_block_icon(DRAWITEMSTRUCT *draw_item_ptr)
 {
+	// If a block is selected...
+
 	if (selected_block_def_ptr) {
 
 		// Clear the background of the control and select transparent background drawing.
@@ -4497,6 +4524,37 @@ draw_selected_block_icon(DRAWITEMSTRUCT *draw_item_ptr)
 
 		SendMessage(selected_block_name_handle, WM_SETTEXT, 0, (LPARAM)(char *)selected_block_def_ptr->name);
 	}
+
+	// If a block is not selected, display no name below the icon.
+
+	else {
+		SendMessage(selected_block_name_handle, WM_SETTEXT, 0, (LPARAM)"");
+	}
+}
+
+static void
+select_block_icon()
+{
+	POINT cursor_pos;
+
+	// Get the cursor position within the block icons static control, and calculate which block index that represents.
+
+	GetCursorPos(&cursor_pos);
+	ScreenToClient(block_icons_handle, &cursor_pos);
+	int selected_block_index = cursor_pos.y / 64 * MAX_COLUMNS + cursor_pos.x / 64;
+
+	// Locate the selected block definition by starting from the first block definition and counting to the block index.
+
+	selected_block_def_ptr = first_block_def_ptr;
+	int block_index = 0;
+	while (selected_block_def_ptr && block_index < selected_block_index) {
+		selected_block_def_ptr = selected_block_def_ptr->next_block_def_ptr;
+		block_index++;
+	}
+
+	// Force the builder dialog to redraw.
+
+	InvalidateRect(builder_window_handle, NULL, TRUE);
 }
 
 //------------------------------------------------------------------------------
@@ -4582,6 +4640,9 @@ handle_builder_event(HWND window_handle, UINT message, WPARAM wParam, LPARAM lPa
 			switch (LOWORD(wParam)) {
 			case IDOK:
 				close_builder_window();
+				break;
+			case IDC_BLOCK_ICONS:
+				select_block_icon();
 				break;
 			}
 			break;
