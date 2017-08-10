@@ -125,6 +125,13 @@ static bool found_selection;
 static float curr_orb_x, curr_orb_y;
 static float curr_orb_width, curr_orb_height;
 
+// Closest square to the camera whose center point is also within the frustum.
+
+static int closest_square_column;
+static int closest_square_row;
+static int closest_square_level;
+static float closest_square_distance;
+
 //------------------------------------------------------------------------------
 // Initialise the renderer.
 //------------------------------------------------------------------------------
@@ -1651,6 +1658,33 @@ render_polygons_in_block(BSP_node *BSP_node_ptr)
 }
 
 //------------------------------------------------------------------------------
+// Determine if a vertex is inside the frustum.
+//------------------------------------------------------------------------------
+
+static bool
+vertex_inside_frustum(vertex *vertex_ptr)
+{
+	vertex tvertex;
+
+	// Transform the vertex into view space.
+
+	transform_vertex(vertex_ptr, &tvertex);
+
+	// Determine which side of each frustum plane the transformed vertex is
+	// on, which tells us whether it's inside or outside the frustum.
+
+	for (int plane_index = 0; plane_index < FRUSTUM_PLANES; plane_index++) {
+		vector *normal_vector_ptr = &frustum_normal_vector_list[plane_index];
+		float plane_offset = frustum_plane_offset_list[plane_index];
+		if (FGT(normal_vector_ptr->dx * tvertex.x + normal_vector_ptr->dy * tvertex.y + 
+			normal_vector_ptr->dz * tvertex.z + plane_offset, 0.0f)) {
+			return false;
+		}
+	}
+	return true;
+}
+
+//------------------------------------------------------------------------------
 // Determine if the block at the given translation is outside, inside or
 // intersecting the frustum.
 //------------------------------------------------------------------------------
@@ -1725,7 +1759,7 @@ compare_block_against_frustum(block *block_ptr)
 	// completely.  Otherwise the block is inside or intersects the frustum.
  
 	planes = 0;
-	for(int plane_index = 0; plane_index < FRUSTUM_PLANES; plane_index++) {
+	for (int plane_index = 0; plane_index < FRUSTUM_PLANES; plane_index++) {
 		normal_vector_ptr = &frustum_normal_vector_list[plane_index];
 		plane_offset = frustum_plane_offset_list[plane_index];
 		corners = 0;
@@ -1745,10 +1779,10 @@ compare_block_against_frustum(block *block_ptr)
 			planes++;
 	}
 
-	// If the block was inside of all 6 planes, then it's inside the frustum,
+	// If the block was inside of all planes, then it's inside the frustum,
 	// otherwise it intersects.
 
-	return(planes == 6 ? INSIDE_FRUSTUM : INTERSECTS_FRUSTUM);
+	return(planes == FRUSTUM_PLANES ? INSIDE_FRUSTUM : INTERSECTS_FRUSTUM);
 }
 
 //------------------------------------------------------------------------------
@@ -2043,12 +2077,36 @@ render_block_on_square(int column, int row, int level)
 	square *square_ptr;
 	block *block_ptr;
 
-	// Get a pointer to the square and it's block.  If the location is invalid
-	// or there is no block on this square, there is nothing to render.
+	// Get a pointer to the square.  If the location is invalid, there is nothing to render.
 
-	if ((square_ptr = world_ptr->get_square_ptr(column, row, level)) == NULL ||
-		(block_ptr = square_ptr->block_ptr) == NULL)
+	if ((square_ptr = world_ptr->get_square_ptr(column, row, level)) == NULL) {
 		return;
+	}
+
+	// If build mode is active, the center point of this square is within the frustum, and the distance 
+	// from the camera to that center point is the closest so far, remember it.  We ignore the square
+	// that the camera is in.
+
+	if (build_mode.get() && !(column == camera_column && row == camera_row && level == camera_level)) {
+		vertex square_center;
+		square_center.set_map_position(column, row, level);
+		if (vertex_inside_frustum(&square_center)) {
+			vector distance_vector = square_center - camera_position;
+			float distance = distance_vector.length();
+			if (closest_square_distance < 0.0f || distance < closest_square_distance) {
+				closest_square_distance = distance;
+				closest_square_column = column;
+				closest_square_row = row;
+				closest_square_level = level;
+			}
+		}
+	}
+
+	// Get a pointer to the square's block.  If there isn't one, there is nothing to render.
+
+	if ((block_ptr = square_ptr->block_ptr) == NULL) {
+		return;
+	}
 
 	// Now render the block, which is not movable.
 
@@ -2064,6 +2122,15 @@ render_blocks_on_map(int min_column, int min_row, int min_level,
 					 int max_column, int max_row, int max_level)
 {
 	int column, row, level;
+
+	// If build mode is active, initialize the closest square location.
+
+	if (build_mode.get()) {
+		closest_square_column = -1;
+		closest_square_row = -1;
+		closest_square_level = -1;
+		closest_square_distance = -1.0f;
+	}
 
 	// Get the map position the camera is in.
 
@@ -3384,10 +3451,10 @@ render_frame(void)
 	render_colour_polygons_or_spans();
 	render_transparent_polygons_or_spans();
 
-	// If build mode is active, render the selected square as a wireframe cube.
+	// If build mode is active, render the closest square as a wireframe cube.
 
-	if (build_mode.get()) {
-		render_wireframe_square(0, 0, 0);
+	if (build_mode.get() && closest_square_distance >= 0.0f) {
+		render_wireframe_square(closest_square_column, closest_square_row, closest_square_level);
 	}
 
 	// If hardware acceleration is enabled, render the visible popup list in
