@@ -1752,6 +1752,93 @@ compare_block_against_frustum(block *block_ptr)
 }
 
 //------------------------------------------------------------------------------
+// Render a square as a wireframe cube.
+//------------------------------------------------------------------------------
+
+static void
+render_wireframe_square(int column, int row, int level)
+{
+	float min_x, min_y, min_z, max_x, max_y, max_z;
+	vertex bbox[8], tbbox[8], vertices[24];
+
+	// Calculate this square's bounding box.
+
+	min_x = column * UNITS_PER_BLOCK;
+	min_y = level * UNITS_PER_BLOCK;
+	min_z = (world_ptr->rows - row - 1) * UNITS_PER_BLOCK;
+	max_x = min_x + UNITS_PER_BLOCK;
+	max_y = min_y + UNITS_PER_BLOCK;
+	max_z = min_z + UNITS_PER_BLOCK;
+
+	// Create the corner vertices of the bounding box, and transform them.
+
+	bbox[0].x = min_x;
+	bbox[0].y = min_y;
+	bbox[0].z = min_z;
+	transform_vertex(&bbox[0], &tbbox[0]);
+
+	bbox[1].x = max_x;
+	bbox[1].y = min_y;
+	bbox[1].z = min_z;
+	transform_vertex(&bbox[1], &tbbox[1]);
+
+	bbox[2].x = max_x;
+	bbox[2].y = max_y;
+	bbox[2].z = min_z;
+	transform_vertex(&bbox[2], &tbbox[2]);
+
+	bbox[3].x = min_x;
+	bbox[3].y = max_y;
+	bbox[3].z = min_z;
+	transform_vertex(&bbox[3], &tbbox[3]);
+
+	bbox[4].x = min_x;
+	bbox[4].y = min_y;
+	bbox[4].z = max_z;
+	transform_vertex(&bbox[4], &tbbox[4]);
+
+	bbox[5].x = max_x;
+	bbox[5].y = min_y;
+	bbox[5].z = max_z;
+	transform_vertex(&bbox[5], &tbbox[5]);
+
+	bbox[6].x = max_x;
+	bbox[6].y = max_y;
+	bbox[6].z = max_z;
+	transform_vertex(&bbox[6], &tbbox[6]);
+
+	bbox[7].x = min_x;
+	bbox[7].y = max_y;
+	bbox[7].z = max_z;
+	transform_vertex(&bbox[7], &tbbox[7]);
+
+	// Now create the 24 vertices used to draw each line of the cube.
+
+	vertices[0] = tbbox[0]; vertices[1] = tbbox[1];
+	vertices[2] = tbbox[1]; vertices[3] = tbbox[2];
+	vertices[4] = tbbox[2]; vertices[5] = tbbox[3];
+	vertices[6] = tbbox[3]; vertices[7] = tbbox[0];
+
+	vertices[8] = tbbox[4]; vertices[9] = tbbox[5];
+	vertices[10] = tbbox[5]; vertices[11] = tbbox[6];
+	vertices[12] = tbbox[6]; vertices[13] = tbbox[7];
+	vertices[14] = tbbox[7]; vertices[15] = tbbox[4];
+
+	vertices[16] = tbbox[0]; vertices[17] = tbbox[4];
+	vertices[18] = tbbox[1]; vertices[19] = tbbox[5];
+	vertices[20] = tbbox[2]; vertices[21] = tbbox[6];
+	vertices[22] = tbbox[3]; vertices[23] = tbbox[7];
+
+	// Draw the lines.
+
+	if (hardware_acceleration) {
+		RGBcolour white;
+		white.set_RGB(1.0f, 1.0f, 1.0f, 1.0f);
+		hardware_render_lines(vertices, 24, white);
+	}
+}
+
+//------------------------------------------------------------------------------
 // Render a block on the given square (which may be NULL if the block is
 // movable).
 //------------------------------------------------------------------------------
@@ -3296,6 +3383,12 @@ render_frame(void)
 
 	render_colour_polygons_or_spans();
 	render_transparent_polygons_or_spans();
+
+	// If build mode is active, render the selected square as a wireframe cube.
+
+	if (build_mode.get()) {
+		render_wireframe_square(0, 0, 0);
+	}
 
 	// If hardware acceleration is enabled, render the visible popup list in
 	// back to front order.

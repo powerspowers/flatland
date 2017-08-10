@@ -4705,9 +4705,13 @@ open_builder_window()
 		MAKEINTRESOURCE(IDD_BUILDER), app_window_handle,
 		handle_builder_event);
 
-	// Show the about window.
+	// Show the builder window.
 
 	ShowWindow(builder_window_handle, SW_NORMAL);
+
+	// Enable build mode.
+
+	build_mode.set(true);
 }
 
 //------------------------------------------------------------------------------
@@ -4717,10 +4721,16 @@ open_builder_window()
 void
 close_builder_window()
 {
+	// Destroy the builder window.
+
 	if (builder_window_handle) {
 		DestroyWindow(builder_window_handle);
 		builder_window_handle = NULL;
 	}
+
+	// Disable build mode.
+
+	build_mode.set(false);
 }
 
 #ifdef STREAMING_MEDIA
@@ -7380,6 +7390,49 @@ hardware_render_polygon(tpolygon *tpolygon_ptr)
 	d3d_device_context_ptr->OMSetBlendState(d3d_blend_state_ptr, NULL, 0xFFFFFFFF);
 	d3d_device_context_ptr->RSSetState(d3d_rasterizer_state_ptr);
 	d3d_device_context_ptr->Draw(tpolygon_ptr->tvertices, 0);
+}
+
+//------------------------------------------------------------------------------
+// Render a list of 3D lines onto the Direct3D viewport.
+//------------------------------------------------------------------------------
+
+void
+hardware_render_lines(vertex *vertex_list, int vertices, RGBcolour colour)
+{
+	D3D11_MAPPED_SUBRESOURCE d3d_mapped_subresource;
+	hardware_vertex *vertex_buffer_ptr;
+	vertex *vertex_ptr;
+
+	// Use the colour shaders.
+
+	d3d_device_context_ptr->VSSetShader(d3d_colour_vertex_shader_ptr, NULL, 0);
+	d3d_device_context_ptr->PSSetShader(d3d_colour_pixel_shader_ptr, NULL, 0);
+
+	// Fill the vertex buffer with the transformed vertices.
+
+	if (FAILED(d3d_device_context_ptr->Map(d3d_vertex_buffer_ptr, 0, D3D11_MAP_WRITE_DISCARD, 0, &d3d_mapped_subresource))) {
+		diagnose("Failed to map vertex buffer");
+		return;
+	}
+	vertex_buffer_ptr = (hardware_vertex *)d3d_mapped_subresource.pData;
+	vertex_ptr = vertex_list;
+	for (int vertex_index = 0; vertex_index < vertices; vertex_index++) {
+		add_vertex_to_buffer(vertex_buffer_ptr, vertex_ptr->x, vertex_ptr->y, vertex_ptr->z, 0.0f, 0.0f, &colour, 1.0f);
+		vertex_ptr++;
+	}
+	d3d_device_context_ptr->Unmap(d3d_vertex_buffer_ptr, 0);
+
+	// Set up the context for the draw, then render the lines.  We turn off the depth buffer during the draw.
+
+	d3d_device_context_ptr->IASetInputLayout(d3d_vertex_layout_ptr);
+	d3d_device_context_ptr->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_LINELIST);
+	d3d_device_context_ptr->VSSetConstantBuffers(0, 2, d3d_constant_buffer_list);
+	d3d_device_context_ptr->PSSetConstantBuffers(0, 1, d3d_constant_buffer_list);
+	d3d_device_context_ptr->PSSetSamplers(0, 1, &d3d_sampler_state_ptr);
+	d3d_device_context_ptr->OMSetDepthStencilState(d3d_2D_depth_stencil_state_ptr, 1);
+	d3d_device_context_ptr->OMSetBlendState(d3d_blend_state_ptr, NULL, 0xFFFFFFFF);
+	d3d_device_context_ptr->RSSetState(d3d_rasterizer_state_ptr);
+	d3d_device_context_ptr->Draw(vertices, 0);
 }
 
 //==============================================================================

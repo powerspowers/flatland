@@ -110,6 +110,7 @@ semaphore<float> master_brightness;
 semaphore<bool> use_classic_controls;
 semaphore<int> visible_block_radius;
 semaphore<bool> fly_mode;
+semaphore<bool> build_mode;
 
 // Saved spot file path.
 
@@ -846,7 +847,7 @@ mouse_event_callback(int x, int y, int button_code)
 	close_light_window();
 
 	// If mouse look mode is enabled, compute a player turn and look delta that is
-	// proportional to the distance the mouse has travelled since the last mouse
+	// proportional to the distance the mouse has travelled since the last mouse 
 	// event (x and y are relative values in this case).  Then replace x and y with
 	// the absolute mouse position.
 
@@ -1319,6 +1320,7 @@ run_app(void *instance_handle, int show_command, char *spot_file_path)
 	downloaded_URL.create_semaphore();
 	downloaded_file_path.create_semaphore();
 	fly_mode.create_semaphore();
+	build_mode.create_semaphore();
 
 	// Load the configuration file.
 
@@ -1341,6 +1343,7 @@ run_app(void *instance_handle, int show_command, char *spot_file_path)
 	curr_mouse_x.set(-1);
 	curr_mouse_y.set(-1);
 	fly_mode.set(false);
+	build_mode.set(false);
 
 	// Initialise other variables.
 
@@ -1453,6 +1456,7 @@ shut_down_app()
 	downloaded_URL.destroy_semaphore();
 	downloaded_file_path.destroy_semaphore();
 	fly_mode.destroy_semaphore();
+	build_mode.destroy_semaphore();
 
 	// Destroy the events sent by the player thread.
 

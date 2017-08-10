@@ -433,6 +433,9 @@ hardware_render_2D_polygon(pixmap *pixmap_ptr, RGBcolour colour, float brightnes
 void
 hardware_render_polygon(tpolygon *tpolygon_ptr);
 
+void
+hardware_render_lines(vertex *vertex_list, int vertices, RGBcolour colour);
+
 // Pixmap drawing function (called by the player thread only).
 
 void
