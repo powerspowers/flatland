@@ -312,6 +312,14 @@ extern float frustum_plane_offset_list[FRUSTUM_PLANES];
 extern bool global_fog_enabled;
 extern fog global_fog;
 
+// Closest square to the camera whose center point is also within the frustum.
+// Used in build mode only.
+
+extern int closest_square_column;
+extern int closest_square_row;
+extern int closest_square_level;
+extern float closest_square_distance;
+
 //------------------------------------------------------------------------------
 // Externally visible functions.
 //------------------------------------------------------------------------------

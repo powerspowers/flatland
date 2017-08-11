@@ -125,13 +125,6 @@ static bool found_selection;
 static float curr_orb_x, curr_orb_y;
 static float curr_orb_width, curr_orb_height;
 
-// Closest square to the camera whose center point is also within the frustum.
-
-static int closest_square_column;
-static int closest_square_row;
-static int closest_square_level;
-static float closest_square_distance;
-
 //------------------------------------------------------------------------------
 // Initialise the renderer.
 //------------------------------------------------------------------------------
@@ -2094,7 +2087,7 @@ render_block_on_square(int column, int row, int level)
 		if (vertex_inside_frustum(&square_center)) {
 			vector distance_vector = square_center - camera_position;
 			float distance = distance_vector.length();
-			if (closest_square_distance < 0.0f || distance < closest_square_distance) {
+			if ((closest_square_distance < 0.0f || distance < closest_square_distance) && distance > UNITS_PER_BLOCK * 3.0f) {
 				closest_square_distance = distance;
 				closest_square_column = column;
 				closest_square_row = row;

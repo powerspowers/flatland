@@ -79,6 +79,9 @@ compute_active_polygons(block *block_ptr, int column, int row, int level,
 void
 reset_active_polygons(int column, int row, int level);
 
+bool
+square_has_entrance(square *square_ptr);
+
 void
 add_clock_action(action *action_ptr);
 

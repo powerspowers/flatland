@@ -2743,9 +2743,9 @@ block_def::~block_def()
 	block *next_block_ptr;
 	int index;
 
-	// Destroy the icon bitmap, if present.
+	// Destroy the icon bitmap, if present and this is not a custom block.
 
-	if (icon_bitmap_ptr) {
+	if (!custom && icon_bitmap_ptr) {
 		DEL(icon_bitmap_ptr, bitmap);
 	}
 
@@ -2901,7 +2901,8 @@ block_def::dup_block_def(block_def *block_def_ptr)
 	popup *old_popup_ptr, *new_popup_ptr;
 
 	// Set the custom flag to true, but copy the name, type, entrance flag,
-	// BSP tree pointer and solid flag, since they won't be changing.
+	// BSP tree pointer, solid flag, icon bitmap and position, since they
+	// won't be changing.
 
 	custom = true;
 	name = block_def_ptr->name;
@@ -2909,6 +2910,7 @@ block_def::dup_block_def(block_def *block_def_ptr)
 	allow_entrance = block_def_ptr->allow_entrance;
 	BSP_tree = block_def_ptr->BSP_tree;
 	solid = block_def_ptr->solid;
+	icon_bitmap_ptr = block_def_ptr->icon_bitmap_ptr;
 	position = block_def_ptr->position;
 
 	// Copy the sprite angle, rotational speed, and alignment.

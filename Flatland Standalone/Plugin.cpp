@@ -77,7 +77,8 @@ event URL_was_opened;
 event URL_was_downloaded;
 event window_mode_change_requested;
 event window_resize_requested;
-event mouse_clicked;
+event left_mouse_clicked;
+event right_mouse_clicked;
 event player_window_shutdown_requested;
 event player_window_init_requested;
 event downloader_thread_termination_requested;
@@ -901,7 +902,7 @@ mouse_event_callback(int x, int y, int button_code)
 		// If inside the 3D window, either enable mouse look mode if not using classic controls
 		// and no mouse selection is active and mouse look mode is currently disabled, 
 		// or enable cursor-based movement if using classic controls and no mouse selection is active,
-		// or send a mouse clicked event if build mode is active or a mouse selection is active.
+		// or send a left mouse clicked event if build mode is active or a mouse selection is active.
 
 		if (inside_3D_window) {
 			if (!use_classic_controls.get() && !selection_active_flag && !mouse_look_mode.get()) {
@@ -909,7 +910,7 @@ mouse_event_callback(int x, int y, int button_code)
 			} else if (use_classic_controls.get() && !selection_active_flag) {
 				movement_enabled = true;
 			} else if (build_mode.get() || selection_active_flag) {
-				mouse_clicked.send_event(true);
+				left_mouse_clicked.send_event(true);
 			}
 		}
 		break;
@@ -922,10 +923,13 @@ mouse_event_callback(int x, int y, int button_code)
 
 		curr_button_status = RIGHT_BUTTON_DOWN;
 
-		// If using classic controls, enable mouse look mode.
+		// If using classic controls, enable mouse look mode if build mode is not enabled, otherwise send a
+		// right mouse clicked event if build mode is enabled.
 
-		if (use_classic_controls.get()) {
+		if (use_classic_controls.get() && !build_mode.get()) {
 			enable_mouse_look_mode();
+		} else if (build_mode.get()) {
+			right_mouse_clicked.send_event(true);
 		}
 		break;
 
@@ -1302,7 +1306,8 @@ run_app(void *instance_handle, int show_command, char *spot_file_path)
 	URL_was_downloaded.create_event();
 	window_mode_change_requested.create_event();
 	window_resize_requested.create_event();
-	mouse_clicked.create_event();
+	left_mouse_clicked.create_event();
+	right_mouse_clicked.create_event();
 	player_window_shutdown_requested.create_event();
 	player_window_init_requested.create_event();
 	downloader_thread_termination_requested.create_event();
@@ -1502,7 +1507,8 @@ shut_down_app()
 	URL_was_downloaded.destroy_event();
 	window_mode_change_requested.destroy_event();
 	window_resize_requested.destroy_event();
-	mouse_clicked.destroy_event();
+	left_mouse_clicked.destroy_event();
+	right_mouse_clicked.destroy_event();
 	player_window_shutdown_requested.destroy_event();
 	player_window_init_requested.destroy_event();
 	downloader_thread_termination_requested.destroy_event();

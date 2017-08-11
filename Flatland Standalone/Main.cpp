@@ -329,6 +329,14 @@ float frustum_plane_offset_list[FRUSTUM_PLANES];
 bool global_fog_enabled;
 fog global_fog;
 
+// Closest square to the camera whose center point is also within the frustum.
+// Used in build mode only.
+
+int closest_square_column;
+int closest_square_row;
+int closest_square_level;
+float closest_square_distance;
+
 //------------------------------------------------------------------------------
 // Local variable definitions.
 //------------------------------------------------------------------------------
@@ -358,9 +366,10 @@ static int col_meshes;
 
 static bool player_viewpoint_set;
 
-// Flag indicating if a mouse clicked event has been recieved.
+// Flag indicating if a left and right mouse clicked event has been recieved.
 
-static bool mouse_was_clicked;
+static bool left_mouse_was_clicked;
+static bool right_mouse_was_clicked;
 
 // Flag indicating if the player was teleported in last frame.
 
@@ -787,7 +796,8 @@ start_up_spot(void)
 	// Clear all selection states.
 
 	selection_active.set(false);
-	mouse_clicked.reset_event();
+	left_mouse_clicked.reset_event();
+	right_mouse_clicked.reset_event();
 	curr_link_URL = NULL;
 	curr_selected_block_ptr = NULL;
 	curr_selected_exit_ptr = NULL;
@@ -1238,14 +1248,14 @@ handle_exit(const char *exit_URL, const char *exit_target, bool is_spot_URL, boo
 			}
 
 			// Download the new 3DML file.  If the download failed, reset the
-			// mouse clicked event in case a link was selected while the URL
+			// left mouse clicked event in case a link was selected while the URL
 			// was downloading, then return with a success status to allow the
 			// display of the current spot to continue.
 
 			if (!download_URL(spot_URL, NULL, true)) {
 				fatal_error("Unable to download 3DML document", 
 					"Unable to download 3DML document from %s", spot_URL);
-				mouse_clicked.reset_event();
+				left_mouse_clicked.reset_event();
 				return(true);
 			}
 
@@ -1778,10 +1788,10 @@ process_curr_selected_square(void)
 			trigger_flags |= ROLL_ON;
 	}
 
-	// If the mouse has been clicked while NOT in build mode, and the currently selected block or 
+	// If the left mouse has been clicked while NOT in build mode, and the currently selected block or 
 	// square has a "click on" trigger, add this to the trigger flags.
 
-	if (mouse_was_clicked && !build_mode.get() &&
+	if (left_mouse_was_clicked && !build_mode.get() &&
 		((curr_selected_block_ptr != NULL && 
 		  (curr_selected_block_ptr->trigger_flags & CLICK_ON)) ||
 		 (curr_selected_square_ptr != NULL &&
@@ -1859,7 +1869,7 @@ process_curr_selected_area(void)
 	// If the mouse has been clicked while NOT in build mode, and the currently selected area has
 	// a "click on" trigger, add this to the trigger flags.
 
-	if (mouse_was_clicked && !build_mode.get() && curr_selected_area_ptr != NULL &&
+	if (left_mouse_was_clicked && !build_mode.get() && curr_selected_area_ptr != NULL &&
 		(curr_selected_area_ptr->trigger_flags & CLICK_ON))
 		trigger_flags |= CLICK_ON;
 
@@ -3041,14 +3051,32 @@ render_next_frame(void)
 		}
 	}
 
-	// Check for a mouse selection and a mouse clicked event.
+	// Check for a mouse selection and a left and right mouse clicked event.
 
 	check_for_mouse_selection();
-	mouse_was_clicked = mouse_clicked.event_sent();
+	left_mouse_was_clicked = left_mouse_clicked.event_sent();
+	right_mouse_was_clicked = right_mouse_clicked.event_sent();
 
 	// Determine the location the player is standing on.
 
 	player_viewpoint.position.get_map_position(&player_column, &player_row, &player_level);
+
+	// If we are in build mode and the left mouse button was clicked, replace the block on the currently selected square
+	// with the currently selected block definition.  If the right mouse button was clicked, remove the block on the 
+	// currently selected square.
+
+	if (build_mode.get() && closest_square_distance >= 0.0f) {
+		square *square_ptr = world_ptr->get_square_ptr(closest_square_column, closest_square_row, closest_square_level);
+		block_def *block_def_ptr = selected_block_def_ptr.get();
+		if (left_mouse_was_clicked && block_def_ptr) {
+			if (!square_has_entrance(square_ptr) || block_def_ptr->allow_entrance) {
+				remove_fixed_block(square_ptr);
+				add_fixed_block(block_def_ptr, square_ptr, true);
+			}
+		} else if (right_mouse_was_clicked) {
+			remove_fixed_block(square_ptr);
+		}
+	}
 
 	// Process the currently and previously selected squares, followed by
 	// the currently and previously selected areas, followed by the list of
@@ -3098,7 +3126,7 @@ render_next_frame(void)
 
 	// If the mouse was clicked while NOT in build mode, and an exit was selected, handle it.
 
-	if (mouse_was_clicked && !build_mode.get() && curr_selected_exit_ptr != NULL) {
+	if (left_mouse_was_clicked && !build_mode.get() && curr_selected_exit_ptr != NULL) {
 		return(handle_exit(curr_selected_exit_ptr->URL, curr_selected_exit_ptr->target, curr_selected_exit_ptr->is_spot_URL, false));
 	}
 

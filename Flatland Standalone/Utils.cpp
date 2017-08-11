@@ -1532,7 +1532,7 @@ reset_active_polygons(int column, int row, int level)
 // Determine whether the given square has an entrance.
 //------------------------------------------------------------------------------
 
-static bool
+bool
 square_has_entrance(square *square_ptr)
 {
 	entrance *entrance_ptr;
@@ -2311,13 +2311,10 @@ init_spot(void)
 					// on a square with an entrance.
 
 					if (block_def_ptr != NULL) {
-						if (!block_def_ptr->allow_entrance &&
-							square_has_entrance(square_ptr))
-							warning("Block \"%s\" cannot be placed on an "
-								"entrance square", block_def_ptr->name);
+						if (!block_def_ptr->allow_entrance && square_has_entrance(square_ptr))
+							warning("Block \"%s\" cannot be placed on an entrance square", block_def_ptr->name);
 						else if (block_def_ptr->movable) {
-							translation.set_map_translation(column, row,
-								level);
+							translation.set_map_translation(column, row, level);
 							add_movable_block(block_def_ptr, translation);
 						} else
 							add_fixed_block(block_def_ptr, square_ptr, false);
