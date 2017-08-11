@@ -2085,9 +2085,10 @@ render_block_on_square(int column, int row, int level)
 
 	// If build mode is active, the center point of this square is within the frustum, and the distance 
 	// from the camera to that center point is the closest so far, remember it.  We ignore the square
-	// that the camera is in.
+	// that the camera is in, as well as level 0 if there is a ground level, and the topmost level.
 
-	if (build_mode.get() && !(column == camera_column && row == camera_row && level == camera_level)) {
+	if (build_mode.get() && (!world_ptr->ground_level_exists || level > 0) && level < world_ptr->levels - 1 &&
+		!(column == camera_column && row == camera_row && level == camera_level)) {
 		vertex square_center;
 		square_center.set_map_position(column, row, level);
 		if (vertex_inside_frustum(&square_center)) {

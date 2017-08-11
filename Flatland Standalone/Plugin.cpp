@@ -111,6 +111,7 @@ semaphore<bool> use_classic_controls;
 semaphore<int> visible_block_radius;
 semaphore<bool> fly_mode;
 semaphore<bool> build_mode;
+semaphore<block_def *> selected_block_def_ptr;
 
 // Saved spot file path.
 
@@ -187,6 +188,7 @@ static void fast_mode(bool key_down);
 static void jump(bool key_down);
 static void exit_mouse_look_mode(bool key_down);
 static void toggle_fly_mode(bool key_down);
+static void toggle_build_mode(bool key_down);
 
 // Key code to function table.
 
@@ -203,6 +205,7 @@ static key_code_to_func classic_key_func_table[] = {
 	{NUMPAD_SUBTRACT_KEY, 0, go_slower},
 	{SPACE_BAR_KEY, 0, jump},
 	{'F', 0, toggle_fly_mode},
+	{'B', 0, toggle_build_mode},
 	{0, 0, NULL}
 };
 static key_code_to_func new_key_func_table[] = {
@@ -213,6 +216,7 @@ static key_code_to_func new_key_func_table[] = {
 	{ESC_KEY, 0, exit_mouse_look_mode},
 	{SPACE_BAR_KEY, 0, jump},
 	{'F', 0, toggle_fly_mode},
+	{'B', 0, toggle_build_mode},
 	{0, 0, NULL}
 };
 
@@ -434,7 +438,7 @@ set_mouse_cursor(void)
 
 	// Otherwise set the cursor according to what the mouse is pointing at.
 
-	if (inside_3D_window && selection_active_flag)
+	if (inside_3D_window && selection_active_flag && !build_mode.get())
 		set_hand_cursor();
 	else if (mouse_look_mode.get())
 		set_crosshair_cursor();
@@ -698,6 +702,27 @@ toggle_fly_mode(bool key_down)
 	}
 }
 
+//------------------------------------------------------------------------------
+// Toggle build mode.
+//------------------------------------------------------------------------------
+
+static void
+toggle_build_mode(bool key_down)
+{
+	if (key_down) {
+		if (build_mode.get()) {
+			close_builder_window();
+		} else {
+
+			// NOTE: If we open a dialog box while the mouse is captured,
+			// the dialog box doesn't get its initial WM_PAINT message.
+
+			disable_mouse_look_mode();
+			open_builder_window();
+		}
+	}
+}
+
 //==============================================================================
 // Callback functions.
 //==============================================================================
@@ -873,14 +898,18 @@ mouse_event_callback(int x, int y, int button_code)
 
 		curr_button_status = LEFT_BUTTON_DOWN;
 
-		// If inside the 3D window and there is no selection active, then either enable movement based on which cursor is active
-		// (if using classic controls), or enable mouse look mode.
+		// If inside the 3D window, either enable mouse look mode if not using classic controls
+		// and no mouse selection is active and mouse look mode is currently disabled, 
+		// or enable cursor-based movement if using classic controls and no mouse selection is active,
+		// or send a mouse clicked event if build mode is active or a mouse selection is active.
 
-		if (inside_3D_window && !selection_active_flag) {
-			if (use_classic_controls.get()) {
-				movement_enabled = true;
-			} else {
+		if (inside_3D_window) {
+			if (!use_classic_controls.get() && !selection_active_flag && !mouse_look_mode.get()) {
 				enable_mouse_look_mode();
+			} else if (use_classic_controls.get() && !selection_active_flag) {
+				movement_enabled = true;
+			} else if (build_mode.get() || selection_active_flag) {
+				mouse_clicked.send_event(true);
 			}
 		}
 		break;
@@ -908,12 +937,7 @@ mouse_event_callback(int x, int y, int button_code)
 
 		curr_button_status = MOUSE_MOVE_ONLY;
 
-		// Send an event to the player thread if an active link has been selected.
-		
-		if (inside_3D_window && selection_active_flag && !movement_enabled)
-			mouse_clicked.send_event(true);
-
-		// Disable movement based on which cursor is active, and reset the motion deltas.
+		// Disable cursor-based movement, and reset the motion deltas.
 		
 		movement_enabled = false;
 		curr_move_delta.set(0.0f);
@@ -1321,6 +1345,7 @@ run_app(void *instance_handle, int show_command, char *spot_file_path)
 	downloaded_file_path.create_semaphore();
 	fly_mode.create_semaphore();
 	build_mode.create_semaphore();
+	selected_block_def_ptr.create_semaphore();
 
 	// Load the configuration file.
 
@@ -1344,6 +1369,7 @@ run_app(void *instance_handle, int show_command, char *spot_file_path)
 	curr_mouse_y.set(-1);
 	fly_mode.set(false);
 	build_mode.set(false);
+	selected_block_def_ptr.set(NULL);
 
 	// Initialise other variables.
 
@@ -1457,6 +1483,7 @@ shut_down_app()
 	downloaded_file_path.destroy_semaphore();
 	fly_mode.destroy_semaphore();
 	build_mode.destroy_semaphore();
+	selected_block_def_ptr.destroy_semaphore();
 
 	// Destroy the events sent by the player thread.
 

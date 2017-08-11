@@ -112,6 +112,7 @@ extern semaphore<bool> use_classic_controls;
 extern semaphore<int> visible_block_radius;
 extern semaphore<bool> fly_mode;
 extern semaphore<bool> build_mode;
+extern semaphore<block_def *> selected_block_def_ptr;
 
 // Saved spot file path.
 

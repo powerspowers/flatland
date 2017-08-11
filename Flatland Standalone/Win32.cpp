@@ -2036,9 +2036,6 @@ LRESULT CALLBACK app_window_proc(HWND hWnd, UINT message, WPARAM wParam, LPARAM 
 			case ID_FILE_VIEW3DMLSOURCE:
 				display_file_as_web_page(curr_spot_file_path);
 				break;
-			case ID_FILE_OPENBUILDER:
-				open_builder_window();
-				break;
 			case IDM_EXIT:
 				DestroyWindow(hWnd);
 				break;
@@ -4375,7 +4372,6 @@ static BLENDFUNCTION opaque_blend = {AC_SRC_OVER, 0, 255, 0};
 static BLENDFUNCTION transparent_blend = {AC_SRC_OVER, 0, 127, 0};
 static string selected_blockset_name;
 static blockset *selected_blockset_ptr;
-static block_def *selected_block_def_ptr;
 static block_def *first_block_def_ptr;
 static HFONT block_symbol_font_handle;
 static HBRUSH grey_brush_handle;
@@ -4396,14 +4392,14 @@ update_builder_dialog()
 	int block_defs = 0;
 	selected_blockset_ptr = blockset_list_ptr->find_blockset_by_name(selected_blockset_name);
 	if (selected_blockset_ptr) {
-		selected_block_def_ptr = selected_blockset_ptr->block_def_list;
-		block_def *block_def_ptr = selected_block_def_ptr;
+		block_def *block_def_ptr = selected_blockset_ptr->block_def_list;
+		selected_block_def_ptr.set(block_def_ptr);
 		while (block_def_ptr) {
 			block_defs++;
 			block_def_ptr = block_def_ptr->next_block_def_ptr;
 		}
 	} else {
-		selected_block_def_ptr = NULL;
+		selected_block_def_ptr.set(NULL);
 	}
 	first_block_def_ptr = NULL;
 
@@ -4485,7 +4481,7 @@ draw_block_icons(DRAWITEMSTRUCT *draw_item_ptr)
 		int block_count = (MAX_ROWS + 1) * MAX_COLUMNS;
 		block_index = 0;
 		while (block_def_ptr && block_index < block_count) {
-			draw_block_icon(block_def_ptr, x, y, 60, 60, source_hdc, draw_item_ptr->hDC, block_def_ptr == selected_block_def_ptr);
+			draw_block_icon(block_def_ptr, x, y, 60, 60, source_hdc, draw_item_ptr->hDC, block_def_ptr == selected_block_def_ptr.get());
 			x += 64;
 			if (x == 64 * MAX_COLUMNS) {
 				x = 0;
@@ -4507,7 +4503,8 @@ draw_selected_block_icon(DRAWITEMSTRUCT *draw_item_ptr)
 {
 	// If a block is selected...
 
-	if (selected_block_def_ptr) {
+	block_def *block_def_ptr = selected_block_def_ptr.get();
+	if (block_def_ptr) {
 
 		// Clear the background of the control and select transparent background drawing.
 
@@ -4517,12 +4514,12 @@ draw_selected_block_icon(DRAWITEMSTRUCT *draw_item_ptr)
 		// Draw the selected block definition's icon.
 
 		HDC source_hdc = CreateCompatibleDC(draw_item_ptr->hDC);
-		draw_block_icon(selected_block_def_ptr, 0, 0, 120, 120, source_hdc, draw_item_ptr->hDC, false);
+		draw_block_icon(block_def_ptr, 0, 0, 120, 120, source_hdc, draw_item_ptr->hDC, false);
 		DeleteDC(source_hdc);
 
 		// Display the name of the selected block below the icon.
 
-		SendMessage(selected_block_name_handle, WM_SETTEXT, 0, (LPARAM)(char *)selected_block_def_ptr->name);
+		SendMessage(selected_block_name_handle, WM_SETTEXT, 0, (LPARAM)(char *)block_def_ptr->name);
 	}
 
 	// If a block is not selected, display no name below the icon.
@@ -4531,6 +4528,10 @@ draw_selected_block_icon(DRAWITEMSTRUCT *draw_item_ptr)
 		SendMessage(selected_block_name_handle, WM_SETTEXT, 0, (LPARAM)"");
 	}
 }
+
+//------------------------------------------------------------------------------
+// Select a block icon.
+//------------------------------------------------------------------------------
 
 static void
 select_block_icon()
@@ -4545,12 +4546,13 @@ select_block_icon()
 
 	// Locate the selected block definition by starting from the first block definition and counting to the block index.
 
-	selected_block_def_ptr = first_block_def_ptr;
+	block_def *block_def_ptr = first_block_def_ptr;
 	int block_index = 0;
-	while (selected_block_def_ptr && block_index < selected_block_index) {
-		selected_block_def_ptr = selected_block_def_ptr->next_block_def_ptr;
+	while (block_def_ptr && block_index < selected_block_index) {
+		block_def_ptr = block_def_ptr->next_block_def_ptr;
 		block_index++;
 	}
+	selected_block_def_ptr.set(block_def_ptr);
 
 	// Force the builder dialog to redraw.
 
@@ -7858,8 +7860,10 @@ set_crosshair_cursor(void)
 void
 enable_mouse_look_mode(void)
 {
-	SetCapture(app_window_handle);
-	mouse_look_mode.set(true);
+	if (!mouse_look_mode.get()) {
+		SetCapture(app_window_handle);
+		mouse_look_mode.set(true);
+	}
 }
 
 //------------------------------------------------------------------------------
@@ -7869,8 +7873,10 @@ enable_mouse_look_mode(void)
 void
 disable_mouse_look_mode(void)
 {
-	ReleaseCapture();
-	mouse_look_mode.set(false);
+	if (mouse_look_mode.get()) {
+		ReleaseCapture();
+		mouse_look_mode.set(false);
+	}
 }
 
 //------------------------------------------------------------------------------

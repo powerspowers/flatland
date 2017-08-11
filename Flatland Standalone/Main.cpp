@@ -1778,10 +1778,10 @@ process_curr_selected_square(void)
 			trigger_flags |= ROLL_ON;
 	}
 
-	// If the mouse has been clicked, and the currently selected block or 
+	// If the mouse has been clicked while NOT in build mode, and the currently selected block or 
 	// square has a "click on" trigger, add this to the trigger flags.
 
-	if (mouse_was_clicked && 
+	if (mouse_was_clicked && !build_mode.get() &&
 		((curr_selected_block_ptr != NULL && 
 		  (curr_selected_block_ptr->trigger_flags & CLICK_ON)) ||
 		 (curr_selected_square_ptr != NULL &&
@@ -1856,10 +1856,10 @@ process_curr_selected_area(void)
 		(curr_selected_area_ptr->trigger_flags & ROLL_ON))
 		trigger_flags |= ROLL_ON;
 
-	// If the mouse has been clicked, and the currently selected area has
+	// If the mouse has been clicked while NOT in build mode, and the currently selected area has
 	// a "click on" trigger, add this to the trigger flags.
 
-	if (mouse_was_clicked && curr_selected_area_ptr != NULL &&
+	if (mouse_was_clicked && !build_mode.get() && curr_selected_area_ptr != NULL &&
 		(curr_selected_area_ptr->trigger_flags & CLICK_ON))
 		trigger_flags |= CLICK_ON;
 
@@ -3096,9 +3096,9 @@ render_next_frame(void)
 	}
 #endif
 
-	// If the mouse was clicked, and an exit was selected, handle it.
+	// If the mouse was clicked while NOT in build mode, and an exit was selected, handle it.
 
-	if (mouse_was_clicked && curr_selected_exit_ptr != NULL) {
+	if (mouse_was_clicked && !build_mode.get() && curr_selected_exit_ptr != NULL) {
 		return(handle_exit(curr_selected_exit_ptr->URL, curr_selected_exit_ptr->target, curr_selected_exit_ptr->is_spot_URL, false));
 	}
 
