@@ -1783,13 +1783,15 @@ compare_block_against_frustum(block *block_ptr)
 //------------------------------------------------------------------------------
 
 static void
-render_wireframe_square(int column, int row, int level)
+render_wireframe_square(square *square_ptr)
 {
+	int column, row, level;
 	float min_x, min_y, min_z, max_x, max_y, max_z;
 	vertex bbox[8], tbbox[8], vertices[24];
 
 	// Calculate this square's bounding box.
 
+	world_ptr->get_square_location(square_ptr, &column, &row, &level);
 	min_x = column * UNITS_PER_BLOCK;
 	min_y = level * UNITS_PER_BLOCK;
 	min_z = (world_ptr->rows - row - 1) * UNITS_PER_BLOCK;
@@ -2070,35 +2072,11 @@ render_block_on_square(int column, int row, int level)
 	square *square_ptr;
 	block *block_ptr;
 
-	// Get a pointer to the square.  If the location is invalid, there is nothing to render.
+	// Get a pointer to the square and its block.  If the location is invalid,
+	// or there is no block on the squarem, there is nothing to render.
 
-	if ((square_ptr = world_ptr->get_square_ptr(column, row, level)) == NULL) {
-		return;
-	}
-
-	// If build mode is active, the center point of this square is within the frustum, and the distance 
-	// from the camera to that center point is the closest so far, remember it.  We ignore the square
-	// that the camera is in, as well as level 0 if there is a ground level, and the topmost level.
-
-	if (build_mode.get() && (!world_ptr->ground_level_exists || level > 0) && level < world_ptr->levels - 1 &&
-		!(column == camera_column && row == camera_row && level == camera_level)) {
-		vertex square_center;
-		square_center.set_map_position(column, row, level);
-		if (vertex_inside_frustum(&square_center)) {
-			vector distance_vector = square_center - camera_position;
-			float distance = distance_vector.length();
-			if ((closest_square_distance < 0.0f || distance < closest_square_distance) && distance > UNITS_PER_BLOCK * 3.0f) {
-				closest_square_distance = distance;
-				closest_square_column = column;
-				closest_square_row = row;
-				closest_square_level = level;
-			}
-		}
-	}
-
-	// Get a pointer to the square's block.  If there isn't one, there is nothing to render.
-
-	if ((block_ptr = square_ptr->block_ptr) == NULL) {
+	if ((square_ptr = world_ptr->get_square_ptr(column, row, level)) == NULL ||
+		(block_ptr = square_ptr->block_ptr) == NULL) {
 		return;
 	}
 
@@ -2116,15 +2094,6 @@ render_blocks_on_map(int min_column, int min_row, int min_level,
 					 int max_column, int max_row, int max_level)
 {
 	int column, row, level;
-
-	// If build mode is active, initialize the closest square location.
-
-	if (build_mode.get()) {
-		closest_square_column = -1;
-		closest_square_row = -1;
-		closest_square_level = -1;
-		closest_square_distance = -1.0f;
-	}
 
 	// Get the map position the camera is in.
 
@@ -3445,10 +3414,10 @@ render_frame(void)
 	render_colour_polygons_or_spans();
 	render_transparent_polygons_or_spans();
 
-	// If build mode is active, render the closest square as a wireframe cube.
+	// If build mode is active, render the builder square as a wireframe cube.
 
-	if (build_mode.get() && closest_square_distance >= 0.0f) {
-		render_wireframe_square(closest_square_column, closest_square_row, closest_square_level);
+	if (build_mode.get() && builder_square_ptr) {
+		render_wireframe_square(builder_square_ptr);
 	}
 
 	// If hardware acceleration is enabled, render the visible popup list in

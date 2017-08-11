@@ -329,13 +329,9 @@ float frustum_plane_offset_list[FRUSTUM_PLANES];
 bool global_fog_enabled;
 fog global_fog;
 
-// Closest square to the camera whose center point is also within the frustum.
-// Used in build mode only.
+// Square to be manipulated by build mode.
 
-int closest_square_column;
-int closest_square_row;
-int closest_square_level;
-float closest_square_distance;
+square *builder_square_ptr;
 
 //------------------------------------------------------------------------------
 // Local variable definitions.
@@ -3022,10 +3018,28 @@ render_next_frame(void)
 	if (sound_on)
 		update_all_sounds();
 
-	// Render the frame and display the frame buffer.  The player viewpoint
-	// needs to be at eye height for the duration of the render.
+	// Move the player viewpoint to eye height, then create a vertex that is the end point
+	// of a vector extending from the eye point along the direction of sight, and determine
+	// which square it lands in, which becomes the builder square if its on the map.
 
 	player_viewpoint.position.y += player_dimensions.y;
+	vertex builder_vertex(0.0f, 0.0f, UNITS_PER_BLOCK * 2.0f);
+	builder_vertex.rotate_x(player_viewpoint.look_angle);
+	builder_vertex.rotate_y(player_viewpoint.turn_angle);
+	builder_vertex += player_viewpoint.position;
+	builder_vertex.get_map_position(&column, &row, &level);
+	if (column >= 0 && column < world_ptr->columns && 
+		row >= 0 && row < world_ptr->rows &&
+		level >= (world_ptr->ground_level_exists? 1 : 0) && level < world_ptr->levels - 1) {
+		builder_square_ptr = world_ptr->get_square_ptr(column, row, level);
+	} else {
+		builder_square_ptr = NULL;
+	}
+
+	// Render the frame and display the frame buffer.  The player viewpoint
+	// needs to be at eye height for the duration of the render, so move it
+	// back to floor level after the render is complete.
+
 	render_frame();
 	player_viewpoint.position.y -= player_dimensions.y;
 	display_frame_buffer();
@@ -3061,20 +3075,19 @@ render_next_frame(void)
 
 	player_viewpoint.position.get_map_position(&player_column, &player_row, &player_level);
 
-	// If we are in build mode and the left mouse button was clicked, replace the block on the currently selected square
-	// with the currently selected block definition.  If the right mouse button was clicked, remove the block on the 
-	// currently selected square.
+	// If we are in build mode and the left mouse button was clicked, replace the block on the builder square
+	// with the currently selected block definition.  If the right mouse button was clicked, remove the block
+	// on the builder square.
 
-	if (build_mode.get() && closest_square_distance >= 0.0f) {
-		square *square_ptr = world_ptr->get_square_ptr(closest_square_column, closest_square_row, closest_square_level);
+	if (build_mode.get() && builder_square_ptr) {
 		block_def *block_def_ptr = selected_block_def_ptr.get();
 		if (left_mouse_was_clicked && block_def_ptr) {
-			if (!square_has_entrance(square_ptr) || block_def_ptr->allow_entrance) {
-				remove_fixed_block(square_ptr);
-				add_fixed_block(block_def_ptr, square_ptr, true);
+			if (!square_has_entrance(builder_square_ptr) || block_def_ptr->allow_entrance) {
+				remove_fixed_block(builder_square_ptr);
+				add_fixed_block(block_def_ptr, builder_square_ptr, true);
 			}
 		} else if (right_mouse_was_clicked) {
-			remove_fixed_block(square_ptr);
+			remove_fixed_block(builder_square_ptr);
 		}
 	}
 
