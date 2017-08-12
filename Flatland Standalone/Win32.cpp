@@ -4367,26 +4367,15 @@ static HWND scrollbar_handle;
 static HWND block_icons_handle;
 static HWND selected_block_icon_handle;
 static HWND selected_block_name_handle;
+static HWND selected_block_symbol_handle;
 static HWND blocksets_combobox_handle;
 static BLENDFUNCTION opaque_blend = {AC_SRC_OVER, 0, 255, 0};
 static BLENDFUNCTION transparent_blend = {AC_SRC_OVER, 0, 127, 0};
 static string selected_blockset_name;
-static blockset *selected_blockset_ptr;
+
 static block_def *first_block_def_ptr;
 static HFONT block_symbol_font_handle;
 static HBRUSH grey_brush_handle;
-
-//------------------------------------------------------------------------------
-// Determine whether a block definition has been overridden by looking it up in
-// the block symbol table.
-//------------------------------------------------------------------------------
-
-static bool
-block_def_is_overridden(block_def *block_def_ptr)
-{
-	word symbol = world_ptr->map_style == SINGLE_MAP ? block_def_ptr->single_symbol : block_def_ptr->double_symbol;
-	return block_symbol_table[symbol] != block_def_ptr;
-}
 
 //------------------------------------------------------------------------------
 // Update the builder dialog by counting how many block definitions in the
@@ -4398,29 +4387,29 @@ block_def_is_overridden(block_def *block_def_ptr)
 static void
 update_builder_dialog()
 {
+	blockset *blockset_ptr;
+
 	// Get a pointer to the currently selected blockset, which may be the custom blockset.
 
 	if (!strcmp(selected_blockset_name, "--- custom ---")) {
-		selected_blockset_ptr = custom_blockset_ptr;
+		blockset_ptr = custom_blockset_ptr;
 	} else {
-		selected_blockset_ptr = blockset_list_ptr->find_blockset_by_name(selected_blockset_name);
+		blockset_ptr = blockset_list_ptr->find_blockset_by_name(selected_blockset_name);
 	}
 
-	// Count the number of block definitions in the selected blockset, skipping over any that have
-	// been overridden by custom block definitions, and select the first block definition if there is
-	// at least one.
+	// Count the number of block definitions in the selected blockset, and select the first block
+	// definition if there is at least one.
 
 	int block_defs = 0;
 	selected_block_def_ptr.set(NULL);
-	if (selected_blockset_ptr) {
-		block_def *block_def_ptr = selected_blockset_ptr->block_def_list;
+	selected_blockset_ptr.set(blockset_ptr);
+	if (blockset_ptr) {
+		block_def *block_def_ptr = blockset_ptr->block_def_list;
 		while (block_def_ptr) {
-			if (!block_def_is_overridden(block_def_ptr)) {
-				if (block_defs == 0) {
-					selected_block_def_ptr.set(block_def_ptr);
-				}
-				block_defs++;
+			if (block_defs == 0) {
+				selected_block_def_ptr.set(block_def_ptr);
 			}
+			block_defs++;
 			block_def_ptr = block_def_ptr->next_block_def_ptr;
 		}
 	}
@@ -4476,22 +4465,18 @@ draw_block_icon(block_def *block_def_ptr, int x, int y, int width, int height, H
 static void
 draw_block_icons(DRAWITEMSTRUCT *draw_item_ptr)
 {
-	if (selected_blockset_ptr) {
+	blockset *blockset_ptr = selected_blockset_ptr.get();
+	if (blockset_ptr) {
 
-		// Skip over the block definitions (including those overridden by custom block definitions)
-		// to reach the first visible row, remembering the first block definition that is visible.
+		// Skip over block definitions to reach the first visible row, remembering the
+		// first block definition that is visible.
 
-		block_def *block_def_ptr = selected_blockset_ptr->block_def_list;
+		block_def *block_def_ptr = blockset_ptr->block_def_list;
 		int curr_scrollbar_pos = GetScrollPos(scrollbar_handle,  SB_CTL);
 		int first_block_index = curr_scrollbar_pos * MAX_COLUMNS;
 		int block_index = 0;
-		while (block_def_ptr) {
-			if (!block_def_is_overridden(block_def_ptr)) {
-				if (block_index == first_block_index) {
-					break;
-				}
-				block_index++;
-			}
+		while (block_def_ptr && block_index < first_block_index) {
+			block_index++;
 			block_def_ptr = block_def_ptr->next_block_def_ptr;
 		}
 		first_block_def_ptr = block_def_ptr;
@@ -4501,8 +4486,7 @@ draw_block_icons(DRAWITEMSTRUCT *draw_item_ptr)
 		FillRect(draw_item_ptr->hDC, &draw_item_ptr->rcItem, (HBRUSH)(COLOR_WINDOW + 1));
 		SetBkMode(draw_item_ptr->hDC, TRANSPARENT);
 
-		// Draw up to one more than the maximum number of rows of block icons, skipping over block definitions that have been overridden
-		// by custom block definitions.  For blocks without an icon, draw their symbol.
+		// Draw up to one more than the maximum number of rows of block icons.  For blocks without an icon, draw their symbol.
 
 		HDC source_hdc = CreateCompatibleDC(draw_item_ptr->hDC);
 		int x = 0;
@@ -4510,15 +4494,13 @@ draw_block_icons(DRAWITEMSTRUCT *draw_item_ptr)
 		int block_count = (MAX_ROWS + 1) * MAX_COLUMNS;
 		block_index = 0;
 		while (block_def_ptr && block_index < block_count) {
-			if (!block_def_is_overridden(block_def_ptr)) {
-				draw_block_icon(block_def_ptr, x, y, 60, 60, source_hdc, draw_item_ptr->hDC, block_def_ptr == selected_block_def_ptr.get());
-				x += 64;
-				if (x == 64 * MAX_COLUMNS) {
-					x = 0;
-					y += 64;
-				}
-				block_index++;
+			draw_block_icon(block_def_ptr, x, y, 60, 60, source_hdc, draw_item_ptr->hDC, block_def_ptr == selected_block_def_ptr.get());
+			x += 64;
+			if (x == 64 * MAX_COLUMNS) {
+				x = 0;
+				y += 64;
 			}
+			block_index++;
 			block_def_ptr = block_def_ptr->next_block_def_ptr;
 		}
 		DeleteDC(source_hdc);
@@ -4548,15 +4530,17 @@ draw_selected_block_icon(DRAWITEMSTRUCT *draw_item_ptr)
 		draw_block_icon(block_def_ptr, 0, 0, 120, 120, source_hdc, draw_item_ptr->hDC, false);
 		DeleteDC(source_hdc);
 
-		// Display the name of the selected block, and its symbol.
+		// Display the name of the selected block, and its symbol, below the icon.
 
 		SendMessage(selected_block_name_handle, WM_SETTEXT, 0, (LPARAM)(char *)block_def_ptr->name);
+		SendMessage(selected_block_symbol_handle, WM_SETTEXT, 0, (LPARAM)(char *)block_def_ptr->get_symbol());
 	}
 
-	// If a block is not selected, display no name below the icon.
+	// If a block is not selected, display no name or symbol below the icon.
 
 	else {
 		SendMessage(selected_block_name_handle, WM_SETTEXT, 0, (LPARAM)"");
+		SendMessage(selected_block_symbol_handle, WM_SETTEXT, 0, (LPARAM)"");
 	}
 }
 
@@ -4575,18 +4559,12 @@ select_block_icon()
 	ScreenToClient(block_icons_handle, &cursor_pos);
 	int selected_block_index = cursor_pos.y / 64 * MAX_COLUMNS + cursor_pos.x / 64;
 
-	// Locate the selected block definition by starting from the first block definition and counting to the block index,
-	// skipping over any block definitions that have been overridden by custom block definitions.
+	// Locate the selected block definition by starting from the first block definition and counting to the block index.
 
 	block_def *block_def_ptr = first_block_def_ptr;
 	int block_index = 0;
-	while (block_def_ptr) {
-		if (!block_def_is_overridden(block_def_ptr)) {
-			if (block_index == selected_block_index) {
-				break;
-			}
-			block_index++;
-		}
+	while (block_def_ptr && block_index < selected_block_index) {
+		block_index++;
 		block_def_ptr = block_def_ptr->next_block_def_ptr;	
 	}
 	selected_block_def_ptr.set(block_def_ptr);
@@ -4614,6 +4592,7 @@ handle_builder_event(HWND window_handle, UINT message, WPARAM wParam, LPARAM lPa
 			block_icons_handle = GetDlgItem(window_handle, IDC_BLOCK_ICONS);
 			selected_block_icon_handle = GetDlgItem(window_handle, IDC_SELECTED_BLOCK_ICON);
 			selected_block_name_handle = GetDlgItem(window_handle, IDC_SELECTED_BLOCK_NAME);
+			selected_block_symbol_handle = GetDlgItem(window_handle, IDC_SELECTED_BLOCK_SYMBOL);
 			blocksets_combobox_handle = GetDlgItem(window_handle, IDC_BLOCKSETS_COMBOBOX);
 
 			// Set up the font used by the block icons and selected block icon static control.

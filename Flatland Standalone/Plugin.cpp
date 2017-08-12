@@ -113,6 +113,7 @@ semaphore<int> visible_block_radius;
 semaphore<bool> fly_mode;
 semaphore<bool> build_mode;
 semaphore<block_def *> selected_block_def_ptr;
+semaphore<blockset *> selected_blockset_ptr;
 
 // Saved spot file path.
 
@@ -1351,6 +1352,7 @@ run_app(void *instance_handle, int show_command, char *spot_file_path)
 	fly_mode.create_semaphore();
 	build_mode.create_semaphore();
 	selected_block_def_ptr.create_semaphore();
+	selected_blockset_ptr.create_semaphore();
 
 	// Load the configuration file.
 
@@ -1375,6 +1377,7 @@ run_app(void *instance_handle, int show_command, char *spot_file_path)
 	fly_mode.set(false);
 	build_mode.set(false);
 	selected_block_def_ptr.set(NULL);
+	selected_blockset_ptr.set(NULL);
 
 	// Initialise other variables.
 
@@ -1489,6 +1492,7 @@ shut_down_app()
 	fly_mode.destroy_semaphore();
 	build_mode.destroy_semaphore();
 	selected_block_def_ptr.destroy_semaphore();
+	selected_blockset_ptr.destroy_semaphore();
 
 	// Destroy the events sent by the player thread.
 

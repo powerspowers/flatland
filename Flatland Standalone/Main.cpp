@@ -3075,18 +3075,40 @@ render_next_frame(void)
 
 	player_viewpoint.position.get_map_position(&player_column, &player_row, &player_level);
 
-	// If we are in build mode and the left mouse button was clicked, replace the block on the builder square
-	// with the currently selected block definition.  If the right mouse button was clicked, remove the block
-	// on the builder square.
+	// If we are in build mode and a builder square is selected...
 
 	if (build_mode.get() && builder_square_ptr) {
-		block_def *block_def_ptr = selected_block_def_ptr.get();
-		if (left_mouse_was_clicked && block_def_ptr) {
-			if (!square_has_entrance(builder_square_ptr) || block_def_ptr->allow_entrance) {
+		block_def *block_def_ptr;
+
+		// If the left mouse button was clicked and a block definition has been selected in the builder window...
+
+		if (left_mouse_was_clicked && (block_def_ptr = selected_block_def_ptr.get()) != NULL) {
+
+			// If the selected block definition is hidden by another block definition in the block symbol table, and there
+			// is no exact custom duplicate available, then create one with an unused symbol assigned to it.  A create tag
+			// for this exact custom duplicate also needs to be added to the spot entity list.
+
+			word symbol = world_ptr->map_style == SINGLE_MAP ? block_def_ptr->single_symbol : block_def_ptr->double_symbol;
+			if (block_symbol_table[symbol] != block_def_ptr) {
+				if (block_def_ptr->custom_dup_block_def_ptr == NULL) {
+					block_def_ptr = create_custom_dup_block_def(block_def_ptr);
+				} else {
+					block_def_ptr = block_def_ptr->custom_dup_block_def_ptr;
+				}
+			}
+
+			// Replace the block on the builder square with the currently selected block definition, provided the square
+			// doesn't have an entrance or the selected block definition allows an entrance.
+
+			if (block_def_ptr && (!square_has_entrance(builder_square_ptr) || block_def_ptr->allow_entrance)) {
 				remove_fixed_block(builder_square_ptr);
 				add_fixed_block(block_def_ptr, builder_square_ptr, true);
 			}
-		} else if (right_mouse_was_clicked) {
+		} 
+		
+		// If the right mouse button was clicked, remove the block on the builder square.
+
+		else if (right_mouse_was_clicked) {
 			remove_fixed_block(builder_square_ptr);
 		}
 	}

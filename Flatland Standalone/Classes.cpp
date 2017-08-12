@@ -2691,6 +2691,7 @@ BSP_node::~BSP_node()
 block_def::block_def()
 {
 	custom = false;
+	custom_dup_block_def_ptr = NULL;
 	type = STRUCTURAL_BLOCK;
 	allow_entrance = false;
 	icon_bitmap_ptr = NULL;

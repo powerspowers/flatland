@@ -3987,12 +3987,22 @@ parse_create_tag(void)
 	else
 		create_tag_list = structural_create_tag_list;
 
-	// Parse all create tags.
+	// Parse all create tags.  If there were none (meaning it is an exact duplicate
+	// of the source block definition), have the source block definition point to the
+	// custom block definition, if it doesn't already point to one.  This is used
+	// in build mode if the source block definition ends up being hidden and we need
+	// to use the custom block definition in its place.
 
+	bool found_nested_tag = false;
 	start_parsing_nested_tags();
-	while (parse_next_nested_tag(TOKEN_CREATE, create_tag_list, false, &tag_token))
+	while (parse_next_nested_tag(TOKEN_CREATE, create_tag_list, false, &tag_token)) {
+		found_nested_tag = true;
 		parse_next_create_tag(tag_token, create_tag_list, custom_block_def_ptr, true);
+	}
 	stop_parsing_nested_tags();
+	if (!found_nested_tag && block_def_ptr->custom_dup_block_def_ptr == NULL) {
+		block_def_ptr->custom_dup_block_def_ptr = custom_block_def_ptr;
+	}
 }
 
 //==============================================================================

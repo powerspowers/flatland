@@ -1163,6 +1163,95 @@ create_new_block(block_def *block_def_ptr, square *square_ptr,
 }
 
 //------------------------------------------------------------------------------
+// Create a custom block definition that duplicates an existing block definition
+// exactly, but assign it an unused symbol.
+//------------------------------------------------------------------------------
+
+block_def *
+create_custom_dup_block_def(block_def *block_def_ptr)
+{
+	bool found_unused_symbol;
+	char single_symbol;
+	word double_symbol;
+	string unused_symbol;
+	block_def *custom_block_def_ptr;
+
+	// Pick the first unused block symbol.  If there isn't one, we can't create a new block definition.
+	
+	found_unused_symbol = false;
+	switch (world_ptr->map_style) {
+	case SINGLE_MAP:
+		for (single_symbol = FIRST_BLOCK_SYMBOL; single_symbol <= LAST_BLOCK_SYMBOL; single_symbol++) {
+			if (single_symbol == '.' || single_symbol == '<' || single_symbol == '&' || single_symbol == '"') {
+				continue;
+			}
+			if (block_symbol_table[single_symbol] == NULL) {
+				found_unused_symbol = true;
+				unused_symbol = single_symbol;
+				break;
+			}
+		}
+		break;
+	case DOUBLE_MAP:
+		for (char first_char = FIRST_BLOCK_SYMBOL; first_char <= LAST_BLOCK_SYMBOL; first_char++) {
+			if (first_char == '<' || first_char == '&' || first_char == '"') {
+				continue;
+			}
+			for (char second_char = FIRST_BLOCK_SYMBOL; second_char <= LAST_BLOCK_SYMBOL; second_char++) {
+				if (second_char == '.' || second_char == '<' || second_char == '&' || second_char == '"') {
+					continue;
+				}
+				double_symbol = first_char == '.' ? second_char : (first_char << 7) | second_char;
+				if (block_symbol_table[double_symbol] == NULL) {
+					found_unused_symbol = true;
+					unused_symbol = first_char;
+					unused_symbol += second_char;
+					break;
+				}
+			}
+		}
+	}
+	if (!found_unused_symbol) {
+		return NULL;
+	}
+
+	// Allocate a new custom block definition structure, duplicate the block definition,
+	// and assign it the new symbol.  The custom block definition is also added to the
+	// block symbol table.
+
+	NEW(custom_block_def_ptr, block_def);
+	if (custom_block_def_ptr == NULL) {
+		memory_warning("custom block definition");
+		return NULL;
+	}
+	custom_block_def_ptr->dup_block_def(block_def_ptr);
+	if (world_ptr->map_style == SINGLE_MAP) {
+		custom_block_def_ptr->single_symbol = single_symbol;
+		block_symbol_table[single_symbol] = custom_block_def_ptr;
+	} else {
+		custom_block_def_ptr->double_symbol = double_symbol;
+		block_symbol_table[double_symbol] = custom_block_def_ptr;
+	}
+	custom_blockset_ptr->add_block_def(custom_block_def_ptr);
+
+	// Store a pointer to the custom duplicate block definition in the existing
+	// block definition.
+
+	block_def_ptr->custom_dup_block_def_ptr = custom_block_def_ptr;
+
+	// Add a create tag for the custom block definition to the spot entity list.
+
+	entity *body_tag_entity_ptr = find_tag_entity("body", spot_entity_list);
+	string block = selected_blockset_ptr.get()->name;
+	block += ':';
+	block += block_def_ptr->name;
+	entity *create_tag_entity_ptr = create_tag_entity("create", body_tag_entity_ptr->line_no, 
+		"symbol", (char *)unused_symbol, "block", block, NULL);
+	prepend_tag_entity(create_tag_entity_ptr, body_tag_entity_ptr->nested_entity_list);
+	return custom_block_def_ptr;
+}
+
+//------------------------------------------------------------------------------
 // Set the delay for a "timer" trigger.
 //------------------------------------------------------------------------------
 

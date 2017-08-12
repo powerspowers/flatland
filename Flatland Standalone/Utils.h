@@ -120,8 +120,10 @@ bool
 create_player_block(void);
 
 block *
-create_new_block(block_def *block_def_ptr, square *square_ptr, 
-				 vertex translation);
+create_new_block(block_def *block_def_ptr, square *square_ptr, vertex translation);
+
+block_def *
+create_custom_dup_block_def(block_def *block_def_ptr);
 
 void
 create_sprite_polygon(block_def *block_def_ptr, part *part_ptr);

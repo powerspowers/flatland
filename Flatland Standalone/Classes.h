@@ -77,12 +77,11 @@ typedef int fixed;
 #define UNITS_PER_HALF_BLOCK		1.6f
 #define	TEXELS_PER_UNIT				80.0f
 
-// First and last block symbol characters, the number of block symbols available,
-// the NULL block symbol, and the ground block symbol.
+// First and last block symbol characters, the NULL block symbol, and the
+// ground block symbol.
 
 #define FIRST_BLOCK_SYMBOL		'!'
-#define LAST_BLOCK_SYMBOL		'~'
-#define BLOCK_SYMBOLS			(LAST_BLOCK_SYMBOL - FIRST_BLOCK_SYMBOL + 1)			
+#define LAST_BLOCK_SYMBOL		'~'	
 #define NULL_BLOCK_SYMBOL		'.'
 #define GROUND_BLOCK_SYMBOL		' '
 
@@ -1381,53 +1380,54 @@ struct animation_def {
 // Block definition class.
 //------------------------------------------------------------------------------
 
-struct block;						// Forward declaration.
+struct block;								// Forward declaration.
 
 struct block_def {
-	bool custom;					// TRUE if custom block.
-	string source_block;			// The name or symbol of the source block.
-	char single_symbol;				// Single-character symbol.
-	word double_symbol;				// Double-character symbol.
-	string name;					// Block name.
-	int type;						// Block type.
-	bool allow_entrance;			// TRUE if block permits an entrance.
-	bitmap *icon_bitmap_ptr;		// The icon bitmap (if any).
-	relinteger_triplet position;    // the relative position set by the POSITION param
-	bool animated;					// set if this block has frames
-	animation_def *animation;		// the structure holding all the animation frames
-	int parts;						// Size of part list.
-	part *part_list;				// List of all parts in block.
-	int vertices;					// Size of vertex list.
-	vertex *vertex_list;			// List of all vertices in block.
-	int polygons;					// Size of polygon definition list. 
-	polygon_def *polygon_def_list;	// List of all polygon definitions in block.
-	light *light_list;				// List of lights (if any).
-	light *last_light_ptr;			// Pointer to last light in list (if any).
-	sound *sound_list;				// List of sounds (if any).
-	sound *last_sound_ptr;			// Pointer to last sound in list (if any).
-	int popup_trigger_flags;		// Popup trigger flags.
-	popup *popup_list;				// List of popups (if any).
-	popup *last_popup_ptr;			// Pointer to last popup in list (if any).
-	entrance *entrance_ptr;			// Pointer to entrance (if any).
-	bool custom_exit;				// TRUE if custom block definition has an exit.
-	hyperlink *exit_ptr;			// Pointer to exit (if any).
-	int trigger_flags;				// Trigger flags.
-	trigger *trigger_list;			// List of triggers (if any).
-	trigger *last_trigger_ptr;		// Pointer to last trigger in list (if any).
-	block *free_block_list;			// List of free blocks (if any).
-	block *used_block_list;			// List of used blocks (if any).
-	int root_polygon_ref;			// Root polygon reference in BSP tree.
-	BSP_node *BSP_tree;				// Pointer to BSP tree (if any).
-	orientation block_orientation;	// Orientation of structural block.
-	vertex block_origin;			// Origin of structural block.
-	float sprite_angle;				// Angle of sprite (if applicable).
-	float degrees_per_ms;			// Rotational speed (if applicable).
-	int sprite_alignment;			// Sprite alignment (if applicable).
-	size sprite_size;				// Sprite size (if applicable).
-	bool solid;						// TRUE if block is solid.
-	bool movable;					// TRUE is block is movable.
-	string script;					// A script providing SimKin definitions.
-	block_def *next_block_def_ptr;	// Pointer to next block def. in list.
+	bool custom;							// TRUE if custom block definition.
+	block_def *custom_dup_block_def_ptr;	// Pointer to an exact custom duplicate of this block definition (if any).
+	string source_block;					// The name or symbol of the source block.
+	char single_symbol;						// Single-character symbol.
+	word double_symbol;						// Double-character symbol.
+	string name;							// Block name.
+	int type;								// Block type.
+	bool allow_entrance;					// TRUE if block permits an entrance.
+	bitmap *icon_bitmap_ptr;				// The icon bitmap (if any).
+	relinteger_triplet position;			// The relative position set by the POSITION param.
+	bool animated;							// Set if this block has frames.
+	animation_def *animation;				// The structure holding all the animation frames.
+	int parts;								// Size of part list.
+	part *part_list;						// List of all parts in block.
+	int vertices;							// Size of vertex list.
+	vertex *vertex_list;					// List of all vertices in block.
+	int polygons;							// Size of polygon definition list. 
+	polygon_def *polygon_def_list;			// List of all polygon definitions in block.
+	light *light_list;						// List of lights (if any).
+	light *last_light_ptr;					// Pointer to last light in list (if any).
+	sound *sound_list;						// List of sounds (if any).
+	sound *last_sound_ptr;					// Pointer to last sound in list (if any).
+	int popup_trigger_flags;				// Popup trigger flags.
+	popup *popup_list;						// List of popups (if any).
+	popup *last_popup_ptr;					// Pointer to last popup in list (if any).
+	entrance *entrance_ptr;					// Pointer to entrance (if any).
+	bool custom_exit;						// TRUE if custom block definition has an exit.
+	hyperlink *exit_ptr;					// Pointer to exit (if any).
+	int trigger_flags;						// Trigger flags.
+	trigger *trigger_list;					// List of triggers (if any).
+	trigger *last_trigger_ptr;				// Pointer to last trigger in list (if any).
+	block *free_block_list;					// List of free blocks (if any).
+	block *used_block_list;					// List of used blocks (if any).
+	int root_polygon_ref;					// Root polygon reference in BSP tree.
+	BSP_node *BSP_tree;						// Pointer to BSP tree (if any).
+	orientation block_orientation;			// Orientation of structural block.
+	vertex block_origin;					// Origin of structural block.
+	float sprite_angle;						// Angle of sprite (if applicable).
+	float degrees_per_ms;					// Rotational speed (if applicable).
+	int sprite_alignment;					// Sprite alignment (if applicable).
+	size sprite_size;						// Sprite size (if applicable).
+	bool solid;								// TRUE if block is solid.
+	bool movable;							// TRUE is block is movable.
+	string script;							// A script providing SimKin definitions.
+	block_def *next_block_def_ptr;			// Pointer to next block definition in list.
 
 	block_def();
 	~block_def();
