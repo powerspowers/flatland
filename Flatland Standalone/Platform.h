@@ -411,10 +411,16 @@ mouse_intersects_with_polygon(float mouse_x, float mouse_y, vector *camera_direc
 // Hardware rendering functions (called by the player thread only).
 
 void
+hardware_select_main_render_target();
+
+void
+hardware_select_builder_render_target();
+
+void
 hardware_set_projection_transform(float viewport_width, float viewport_height, float near_z, float far_z);
 
 void
-hardware_update_fog_settings(bool enabled, fog *fog_ptr);
+hardware_update_fog_settings(bool enabled, fog *fog_ptr, float max_radius);
 
 void *
 hardware_create_texture(int image_size_index);

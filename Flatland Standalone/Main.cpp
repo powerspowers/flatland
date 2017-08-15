@@ -956,7 +956,7 @@ start_up_spot(void)
 	// If hardware acceleration is enabled, then update the fog settings for the first time.
 
 	if (hardware_acceleration) {
-		hardware_update_fog_settings(global_fog_enabled, &global_fog);
+		hardware_update_fog_settings(global_fog_enabled, &global_fog, visible_radius);
 	}
 
 #if STREAMING_MEDIA
@@ -2848,6 +2848,50 @@ compute_frustum_plane_equations(void)
 }
 
 //------------------------------------------------------------------------------
+// Set the viewport variables.
+//------------------------------------------------------------------------------
+
+static void
+set_viewport(int width, int height)
+{
+	float half_horz_field_of_view, half_vert_field_of_view;
+
+	// Compute half the horizontal and vertical fields of view.
+
+	half_horz_field_of_view = horz_field_of_view * 0.5f;
+	half_vert_field_of_view = vert_field_of_view * 0.5f;
+
+	// Compute the viewport dimensions.
+
+	half_viewport_width = tanf(RAD(half_horz_field_of_view));
+	half_viewport_height = tanf(RAD(half_vert_field_of_view));
+	viewport_width = half_viewport_width * 2.0f;
+	viewport_height = half_viewport_height * 2.0f;
+
+	// Compute the horizontal and vertical scaling factors.
+
+	horz_scaling_factor = 1.0f / half_viewport_width;
+	vert_scaling_factor = 1.0f / half_viewport_height;
+
+	// Compute the number of pixels per world unit at z = 1, and the number of
+	// pixels per degree, in both the horizontal and vertical direction.
+
+	horz_pixels_per_degree = width / horz_field_of_view;
+	vert_pixels_per_degree = height / vert_field_of_view;
+
+	// Set the clipping planes and plane equations of the frustum, and if
+	// hardware acceleration is enabled set the projection transform and global fog.
+
+	set_clipping_plane(NEAR_CLIPPING_PLANE, 1.0f);
+	set_clipping_plane(FAR_CLIPPING_PLANE, visible_radius);
+	compute_frustum_plane_equations();
+	if (hardware_acceleration) {
+		hardware_set_projection_transform(viewport_width, viewport_height, 1.0f, visible_radius);
+		hardware_update_fog_settings(global_fog_enabled, &global_fog, visible_radius);
+	}
+}
+
+//------------------------------------------------------------------------------
 // Render next frame.
 //------------------------------------------------------------------------------
 
@@ -2935,18 +2979,10 @@ render_next_frame(void)
 		curr_key_event.key_code = 0;
 	lower_semaphore(key_event_semaphore);
 
-	// If the visible radius has changed, compute the vertices of the frustum
-	// in view space, and generate the plane equations from these.  Also set
-	// the projection transform and update fog settings, if hardware acceleration is enabled.
+	// If the visible radius has changed, reset the viewport.
 
 	if (visible_radius != old_visible_radius) {
-		set_clipping_plane(NEAR_CLIPPING_PLANE, 1.0f);
-		set_clipping_plane(FAR_CLIPPING_PLANE, visible_radius);
-		compute_frustum_plane_equations();
-		if (hardware_acceleration) {
-			hardware_set_projection_transform(viewport_width, viewport_height, 1.0f, visible_radius);
-			hardware_update_fog_settings(global_fog_enabled, &global_fog);
-		}
+		set_viewport(window_width, window_height);
 	}
 
 	// Update the player's last position and current turn angle.
@@ -3481,48 +3517,6 @@ shut_down_player(void)
 }
 
 //------------------------------------------------------------------------------
-// Set the viewport variables.
-//------------------------------------------------------------------------------
-
-static void
-set_viewport(void)
-{
-	float half_horz_field_of_view, half_vert_field_of_view;
-
-	// Compute half the horizontal and vertical fields of view.
-
-	half_horz_field_of_view = horz_field_of_view * 0.5f;
-	half_vert_field_of_view = vert_field_of_view * 0.5f;
-
-	// Compute the viewport dimensions.
-
-	half_viewport_width = (float)tan(RAD(half_horz_field_of_view));
-	half_viewport_height = (float)tan(RAD(half_vert_field_of_view));
-	viewport_width = half_viewport_width * 2.0f;
-	viewport_height = half_viewport_height * 2.0f;
-
-	// Compute the horizontal and vertical scaling factors.
-
-	horz_scaling_factor = 1.0f / half_viewport_width;
-	vert_scaling_factor = 1.0f / half_viewport_height;
-
-	// Compute the number of pixels per world unit at z = 1, and the number of
-	// pixels per degree, in both the horizontal and vertical direction.
-
-	horz_pixels_per_degree = window_width / horz_field_of_view;
-	vert_pixels_per_degree = window_height / vert_field_of_view;
-
-	// Set the clipping planes and plane equations of the frustum, and if
-	// hardware acceleration is enabled set the projection transform.
-
-	set_clipping_plane(NEAR_CLIPPING_PLANE, 1.0f);
-	set_clipping_plane(FAR_CLIPPING_PLANE, visible_radius);
-	compute_frustum_plane_equations();
-	if (hardware_acceleration)
-		hardware_set_projection_transform(viewport_width, viewport_height, 1.0f, visible_radius);
-}
-
-//------------------------------------------------------------------------------
 // Player window initialisation.
 //------------------------------------------------------------------------------
 
@@ -3557,10 +3551,10 @@ init_player_window(void)
 		vert_field_of_view = DEFAULT_FIELD_OF_VIEW;
 	}
 
-	// Set the viewport based upon the horizontal and vertical fields of
-	// view.
+	// Set the viewport based upon the window size and the
+	// horizontal and vertical fields of view.
 
-	set_viewport();
+	set_viewport(window_width, window_height);
 
 	// If hardware acceleration is not enabled, create the span buffer.
 
@@ -3649,7 +3643,7 @@ handle_window_resize(void)
 
 	if (init_player_window()) {
 		if (hardware_acceleration) {
-			hardware_update_fog_settings(global_fog_enabled, &global_fog);
+			hardware_update_fog_settings(global_fog_enabled, &global_fog, visible_radius);
 		}
 		player_window_initialised.send_event(true);
 		return(true);

@@ -241,9 +241,25 @@ icon::~icon()
 // Hardware texture class.
 
 struct hardware_texture {
-	int image_size_index;
+	int image_dimensions;
 	ID3D11Texture2D *d3d_texture_ptr;
 	ID3D11ShaderResourceView *d3d_shader_resource_view_ptr;
+
+	hardware_texture()
+	{
+		d3d_texture_ptr = NULL;
+		d3d_shader_resource_view_ptr = NULL;
+	}
+
+	~hardware_texture()
+	{
+		if (d3d_shader_resource_view_ptr) {
+			d3d_shader_resource_view_ptr->Release();
+		}
+		if (d3d_texture_ptr) {
+			d3d_texture_ptr->Release();
+		}
+	}
 };
 
 // Hardware vertex class.
@@ -484,9 +500,16 @@ static LPDIRECTDRAWCLIPPER ddraw_clipper_ptr;
 static IDXGISwapChain *d3d_swap_chain_ptr;
 static ID3D11Device *d3d_device_ptr;
 static ID3D11DeviceContext *d3d_device_context_ptr;
-static ID3D11RenderTargetView *d3d_render_target_view_ptr;
-static ID3D11Texture2D *d3d_depth_stencil_texture_ptr;
-static ID3D11DepthStencilView *d3d_depth_stencil_view_ptr;
+static bool main_render_target_selected;
+static ID3D11RenderTargetView *d3d_main_render_target_view_ptr;		// Render target view for main window.
+static ID3D11Texture2D *d3d_main_depth_stencil_texture_ptr;			// Depth/stencil texture for main window.
+static ID3D11DepthStencilView *d3d_main_depth_stencil_view_ptr;		// Depth/stencil view for main window.
+static D3D11_VIEWPORT d3d_main_viewport;							// Viewport for main window.
+static ID3D11Texture2D *d3d_builder_render_target_texture_ptr;		// Render target texture used to create builder icons.
+static ID3D11RenderTargetView *d3d_builder_render_target_view_ptr;	// Render target view used to create builder icons.
+static ID3D11Texture2D *d3d_builder_depth_stencil_texture_ptr;		// Depth/stencil texture used to create builder icons.
+static ID3D11DepthStencilView *d3d_builder_depth_stencil_view_ptr;	// Depth/stencil view used to create builder icons.
+static D3D11_VIEWPORT d3d_builder_viewport;							// Viewport used to create builder icons.
 static ID3D11DepthStencilState *d3d_3D_depth_stencil_state_ptr;
 static ID3D11DepthStencilState *d3d_2D_depth_stencil_state_ptr;
 static ID3D11VertexShader *d3d_colour_vertex_shader_ptr;
@@ -500,7 +523,9 @@ static ID3D11BlendState *d3d_blend_state_ptr;
 static ID3D11RasterizerState *d3d_rasterizer_state_ptr;
 static ID3D11SamplerState *d3d_sampler_state_ptr;
 static ID3D11Buffer *d3d_constant_buffer_list[2];
-static XMMATRIX d3d_projection_matrix;
+
+// Frame buffer used by the software renderer.
+
 static byte *framebuffer_ptr;
 static int framebuffer_width;
 
@@ -593,6 +618,11 @@ static HWND update_period_spin_control_handle;
 // Builder window data.
 
 static HWND builder_window_handle;
+
+// Builder icon size.
+
+#define BUILDER_ICON_WIDTH	128
+#define BUILDER_ICON_HEIGHT	128
 
 // Macro for converting a point size into pixel units
 
@@ -2247,6 +2277,73 @@ shut_down_platform_API(void)
 }
 
 //------------------------------------------------------------------------------
+// Create a Direct3D texture.
+//------------------------------------------------------------------------------
+
+static ID3D11Texture2D *
+create_d3d_texture(int width, int height, DXGI_FORMAT format, D3D11_USAGE usage, UINT bind_flags, UINT cpu_access_flags)
+{
+	ID3D11Texture2D *d3d_texture_ptr;
+
+	// Create the depth stencil texture.
+
+	D3D11_TEXTURE2D_DESC texture_desc;
+	ZeroMemory(&texture_desc, sizeof(texture_desc));
+	texture_desc.Width = width;
+	texture_desc.Height = height;
+	texture_desc.MipLevels = 1;
+	texture_desc.ArraySize = 1;
+	texture_desc.Format = format;
+	texture_desc.SampleDesc.Count = 1;
+	texture_desc.SampleDesc.Quality = 0;
+	texture_desc.Usage = usage;
+	texture_desc.BindFlags = bind_flags;
+	texture_desc.CPUAccessFlags = cpu_access_flags;
+	texture_desc.MiscFlags = 0;
+	if (FAILED(d3d_device_ptr->CreateTexture2D(&texture_desc, NULL, &d3d_texture_ptr))) {
+		return NULL;
+	}
+	return d3d_texture_ptr;
+}
+
+//------------------------------------------------------------------------------
+// Create a Direct3D depth stencil view for a texture.
+//------------------------------------------------------------------------------
+
+static ID3D11DepthStencilView *
+create_depth_stencil_view(ID3D11Texture2D *d3d_texture_ptr, DXGI_FORMAT format)
+{
+	ID3D11DepthStencilView *d3d_depth_stencil_view_ptr;
+
+	// Create the depth stencil view.
+
+	D3D11_DEPTH_STENCIL_VIEW_DESC depth_stencil_view_desc;
+	ZeroMemory(&depth_stencil_view_desc, sizeof(depth_stencil_view_desc));
+	depth_stencil_view_desc.Format = format;
+	depth_stencil_view_desc.ViewDimension = D3D11_DSV_DIMENSION_TEXTURE2D;
+	depth_stencil_view_desc.Texture2D.MipSlice = 0;
+	if (FAILED(d3d_device_ptr->CreateDepthStencilView(d3d_texture_ptr, &depth_stencil_view_desc, &d3d_depth_stencil_view_ptr))) {
+		return NULL;
+	}
+	return d3d_depth_stencil_view_ptr;
+}
+
+//------------------------------------------------------------------------------
+// Initialise a Direct3D viewport.
+//------------------------------------------------------------------------------
+
+static void
+init_d3d_viewport(D3D11_VIEWPORT *d3d_viewport_ptr, int width, int height)
+{
+	d3d_viewport_ptr->Width = (FLOAT)width;
+	d3d_viewport_ptr->Height = (FLOAT)height;
+	d3d_viewport_ptr->MinDepth = 0.0f;
+	d3d_viewport_ptr->MaxDepth = 1.0f;
+	d3d_viewport_ptr->TopLeftX = 0;
+	d3d_viewport_ptr->TopLeftY = 0;
+}
+
+//------------------------------------------------------------------------------
 // Start up the hardware accelerated renderer.
 //------------------------------------------------------------------------------
 
@@ -2295,45 +2392,46 @@ start_up_hardware_renderer(void)
 		return false;
 	}
 
-	// Create a render target view.
+	// Create the main render target view.
 
-	if (FAILED(d3d_device_ptr->CreateRenderTargetView(back_buffer_ptr, NULL, &d3d_render_target_view_ptr))) {
+	if (FAILED(d3d_device_ptr->CreateRenderTargetView(back_buffer_ptr, NULL, &d3d_main_render_target_view_ptr))) {
 		return false;
 	}
 
-	// Create a depth stencil texture.
+	// Create the main depth stencil texture and view.
 
-	D3D11_TEXTURE2D_DESC depth_stencil_texture_desc;
-	ZeroMemory( &depth_stencil_texture_desc, sizeof(depth_stencil_texture_desc) );
-	depth_stencil_texture_desc.Width = window_width;
-	depth_stencil_texture_desc.Height = window_height;
-	depth_stencil_texture_desc.MipLevels = 1;
-	depth_stencil_texture_desc.ArraySize = 1;
-	depth_stencil_texture_desc.Format = DXGI_FORMAT_D24_UNORM_S8_UINT;
-	depth_stencil_texture_desc.SampleDesc.Count = 1;
-	depth_stencil_texture_desc.SampleDesc.Quality = 0;
-	depth_stencil_texture_desc.Usage = D3D11_USAGE_DEFAULT;
-	depth_stencil_texture_desc.BindFlags = D3D11_BIND_DEPTH_STENCIL;
-	depth_stencil_texture_desc.CPUAccessFlags = 0;
-	depth_stencil_texture_desc.MiscFlags = 0;
-	if (FAILED(d3d_device_ptr->CreateTexture2D(&depth_stencil_texture_desc, NULL, &d3d_depth_stencil_texture_ptr))) {
+	d3d_main_depth_stencil_texture_ptr = create_d3d_texture(window_width, window_height, DXGI_FORMAT_D24_UNORM_S8_UINT, D3D11_USAGE_DEFAULT, 
+		D3D11_BIND_DEPTH_STENCIL, 0);
+	if (d3d_main_depth_stencil_texture_ptr == NULL) {
+		return false;
+	}
+	d3d_main_depth_stencil_view_ptr = create_depth_stencil_view(d3d_main_depth_stencil_texture_ptr, DXGI_FORMAT_D24_UNORM_S8_UINT);
+	if (d3d_main_depth_stencil_view_ptr == NULL) {
 		return false;
 	}
 
-	// Create the depth stencil view.
+	// Create the builder render target texture and view.
 
-	D3D11_DEPTH_STENCIL_VIEW_DESC depth_stencil_view_desc;
-	ZeroMemory(&depth_stencil_view_desc, sizeof(depth_stencil_view_desc));
-	depth_stencil_view_desc.Format = depth_stencil_texture_desc.Format;
-	depth_stencil_view_desc.ViewDimension = D3D11_DSV_DIMENSION_TEXTURE2D;
-	depth_stencil_view_desc.Texture2D.MipSlice = 0;
-	if (FAILED(d3d_device_ptr->CreateDepthStencilView(d3d_depth_stencil_texture_ptr, &depth_stencil_view_desc, &d3d_depth_stencil_view_ptr))) {
+	d3d_builder_render_target_texture_ptr = create_d3d_texture(BUILDER_ICON_WIDTH, BUILDER_ICON_HEIGHT, DXGI_FORMAT_R8G8B8A8_UNORM, D3D11_USAGE_DEFAULT, 
+		D3D11_BIND_RENDER_TARGET | D3D11_BIND_SHADER_RESOURCE, 0);
+	if (d3d_builder_render_target_texture_ptr == NULL) {
+		return false;
+	}
+	if (FAILED(d3d_device_ptr->CreateRenderTargetView(d3d_builder_render_target_texture_ptr, NULL, &d3d_builder_render_target_view_ptr))) {
 		return false;
 	}
 
-	// Set the render target and depth stencil view.
+	// Create the builder depth/stencil texture and view.
 
-	d3d_device_context_ptr->OMSetRenderTargets(1, &d3d_render_target_view_ptr, d3d_depth_stencil_view_ptr);
+	d3d_builder_depth_stencil_texture_ptr = create_d3d_texture(BUILDER_ICON_WIDTH, BUILDER_ICON_HEIGHT, DXGI_FORMAT_D24_UNORM_S8_UINT, D3D11_USAGE_DEFAULT, 
+		D3D11_BIND_DEPTH_STENCIL, 0);
+	if (d3d_builder_depth_stencil_texture_ptr == NULL) {
+		return false;
+	}
+	d3d_builder_depth_stencil_view_ptr = create_depth_stencil_view(d3d_builder_depth_stencil_texture_ptr, DXGI_FORMAT_D24_UNORM_S8_UINT);
+	if (d3d_builder_depth_stencil_view_ptr == NULL) {
+		return false;
+	}
 
 	// Create the 3D depth stencil state.
 
@@ -2354,16 +2452,10 @@ start_up_hardware_renderer(void)
 		return false;
 	}
 
-	// Set up the viewport.
+	// Set up the main and builder viewports.
 
-	D3D11_VIEWPORT viewport;
-	viewport.Width = (FLOAT)window_width;
-	viewport.Height = (FLOAT)window_height;
-	viewport.MinDepth = 0.0f;
-	viewport.MaxDepth = 1.0f;
-	viewport.TopLeftX = 0;
-	viewport.TopLeftY = 0;
-	d3d_device_context_ptr->RSSetViewports(1, &viewport);
+	init_d3d_viewport(&d3d_main_viewport, window_width, window_height);
+	init_d3d_viewport(&d3d_builder_viewport, BUILDER_ICON_WIDTH, BUILDER_ICON_HEIGHT);
 
 	// Create the vertex buffer.
 
@@ -2515,6 +2607,10 @@ start_up_hardware_renderer(void)
 		return false;
 	}
 
+	// Select the main render target.
+
+	hardware_select_main_render_target();
+
 	// Set the colour component masks.
 
 	red_comp_mask = 0xff0000;
@@ -2588,17 +2684,33 @@ shut_down_hardware_renderer(void)
 		d3d_3D_depth_stencil_state_ptr->Release();
 		d3d_3D_depth_stencil_state_ptr = NULL;
 	}
-	if (d3d_depth_stencil_view_ptr) {
-		d3d_depth_stencil_view_ptr->Release();
-		d3d_depth_stencil_view_ptr = NULL;
+	if (d3d_builder_depth_stencil_view_ptr) {
+		d3d_builder_depth_stencil_view_ptr->Release();
+		d3d_builder_depth_stencil_view_ptr = NULL;
 	}
-	if (d3d_depth_stencil_texture_ptr) {
-		d3d_depth_stencil_texture_ptr->Release();
-		d3d_depth_stencil_texture_ptr = NULL;
+	if (d3d_builder_depth_stencil_texture_ptr) {
+		d3d_builder_depth_stencil_texture_ptr->Release();
+		d3d_builder_depth_stencil_texture_ptr = NULL;
 	}
-	if (d3d_render_target_view_ptr) {
-		d3d_render_target_view_ptr->Release();
-		d3d_render_target_view_ptr = NULL;
+	if (d3d_builder_render_target_view_ptr) {
+		d3d_builder_render_target_view_ptr->Release();
+		d3d_builder_render_target_view_ptr = NULL;
+	}
+	if (d3d_builder_render_target_texture_ptr) {
+		d3d_builder_render_target_texture_ptr->Release();
+		d3d_builder_render_target_texture_ptr = NULL;
+	}
+	if (d3d_main_depth_stencil_view_ptr) {
+		d3d_main_depth_stencil_view_ptr->Release();
+		d3d_main_depth_stencil_view_ptr = NULL;
+	}
+	if (d3d_main_depth_stencil_texture_ptr) {
+		d3d_main_depth_stencil_texture_ptr->Release();
+		d3d_main_depth_stencil_texture_ptr = NULL;
+	}
+	if (d3d_main_render_target_view_ptr) {
+		d3d_main_render_target_view_ptr->Release();
+		d3d_main_render_target_view_ptr = NULL;
 	}
 	if (d3d_swap_chain_ptr) {
 		d3d_swap_chain_ptr->Release();
@@ -2954,9 +3066,13 @@ create_main_window(void (*key_callback)(byte key_code, bool key_down),
 	d3d_device_ptr = NULL;
 	d3d_swap_chain_ptr = NULL;
 	d3d_device_context_ptr = NULL;
-	d3d_render_target_view_ptr = NULL;
-	d3d_depth_stencil_texture_ptr = NULL;
-	d3d_depth_stencil_view_ptr = NULL;
+	d3d_main_render_target_view_ptr = NULL;
+	d3d_main_depth_stencil_texture_ptr = NULL;
+	d3d_main_depth_stencil_view_ptr = NULL;
+	d3d_builder_render_target_texture_ptr = NULL;
+	d3d_builder_render_target_view_ptr = NULL;
+	d3d_builder_depth_stencil_texture_ptr = NULL;
+	d3d_builder_depth_stencil_view_ptr = NULL;
 	d3d_3D_depth_stencil_state_ptr = NULL;
 	d3d_2D_depth_stencil_state_ptr = NULL;
 	d3d_colour_vertex_shader_ptr = NULL;
@@ -5072,10 +5188,15 @@ display_frame_buffer(void)
 void
 clear_frame_buffer(void)
 {
-	// Clear the back buffer and the depth stencil.
+	// Clear the currently selcted render target and depth stencil.
 
-	d3d_device_context_ptr->ClearRenderTargetView(d3d_render_target_view_ptr, Colors::Black);
-	d3d_device_context_ptr->ClearDepthStencilView(d3d_depth_stencil_view_ptr, D3D11_CLEAR_DEPTH, 1.0f, 0);
+	if (main_render_target_selected) {
+		d3d_device_context_ptr->ClearRenderTargetView(d3d_main_render_target_view_ptr, Colors::Black);
+		d3d_device_context_ptr->ClearDepthStencilView(d3d_main_depth_stencil_view_ptr, D3D11_CLEAR_DEPTH, 1.0f, 0);
+	} else {
+		d3d_device_context_ptr->ClearRenderTargetView(d3d_builder_render_target_view_ptr, Colors::Black);
+		d3d_device_context_ptr->ClearDepthStencilView(d3d_builder_depth_stencil_view_ptr, D3D11_CLEAR_DEPTH, 1.0f, 0);
+	}
 }
 
 //------------------------------------------------------------------------------
@@ -6946,13 +7067,53 @@ mouse_intersects_with_polygon(float mouse_x, float mouse_y, vector *camera_direc
 //==============================================================================
 
 //------------------------------------------------------------------------------
+// Select the main render target.
+//------------------------------------------------------------------------------
+
+void
+hardware_select_main_render_target()
+{
+	// Set a flag indicating the main render target is selected.
+
+	main_render_target_selected = true;
+
+	// Set the main render target and depth stencil view.
+
+	d3d_device_context_ptr->OMSetRenderTargets(1, &d3d_main_render_target_view_ptr, d3d_main_depth_stencil_view_ptr);
+
+	// Set the main viewport.
+
+	d3d_device_context_ptr->RSSetViewports(1, &d3d_main_viewport);
+}
+
+//------------------------------------------------------------------------------
+// Select the builder render target.
+//------------------------------------------------------------------------------
+
+void
+hardware_select_builder_render_target()
+{
+	// Set a flag indicating the main render target is not selected.
+
+	main_render_target_selected = false;
+
+	// Set the builder render target and depth stencil view.
+
+	d3d_device_context_ptr->OMSetRenderTargets(1, &d3d_builder_render_target_view_ptr, d3d_builder_depth_stencil_view_ptr);
+
+	// Set the builder viewport.
+
+	d3d_device_context_ptr->RSSetViewports(1, &d3d_builder_viewport);
+}
+
+//------------------------------------------------------------------------------
 // Set the perspective transform.
 //------------------------------------------------------------------------------
 
 void
 hardware_set_projection_transform(float viewport_width, float viewport_height, float near_z, float far_z)
 {
-	d3d_projection_matrix = XMMatrixPerspectiveLH(viewport_width, viewport_height, near_z, far_z);
+	XMMATRIX d3d_projection_matrix = XMMatrixPerspectiveLH(viewport_width, viewport_height, near_z, far_z);
 	hardware_matrix_constant_buffer constant_buffer;
 	constant_buffer.projection = XMMatrixTranspose(d3d_projection_matrix);
 	d3d_device_context_ptr->UpdateSubresource(d3d_constant_buffer_list[1], 0, nullptr, &constant_buffer, 0, 0);
@@ -6963,83 +7124,65 @@ hardware_set_projection_transform(float viewport_width, float viewport_height, f
 //------------------------------------------------------------------------------
 
 void
-hardware_update_fog_settings(bool enabled, fog *fog_ptr)
+hardware_update_fog_settings(bool enabled, fog *fog_ptr, float max_radius)
 {
 	hardware_fog_constant_buffer constant_buffer;
 	constant_buffer.fog_style = enabled ? fog_ptr->style + 1 : 0;
 	constant_buffer.fog_start = fog_ptr->start_radius == 0.0f ? 1.0f : fog_ptr->start_radius;
-	constant_buffer.fog_end = fog_ptr->end_radius == 0.0f ? visible_radius : fog_ptr->end_radius;
+	constant_buffer.fog_end = fog_ptr->end_radius == 0.0f ? max_radius : fog_ptr->end_radius;
 	constant_buffer.fog_density = fog_ptr->density;
 	constant_buffer.fog_colour = XMFLOAT4(fog_ptr->colour.red, fog_ptr->colour.green, fog_ptr->colour.blue, 1.0f);
 	d3d_device_context_ptr->UpdateSubresource(d3d_constant_buffer_list[0], 0, nullptr, &constant_buffer, 0, 0);
 }
 
 //------------------------------------------------------------------------------
-// Create a Direct3D texture.
+// Create a hardware texture and return an opaque pointer to it.
 //------------------------------------------------------------------------------
 
 void *
 hardware_create_texture(int image_size_index)
 {
-	int image_dimensions;
-	ID3D11Texture2D *d3d_texture_ptr;
-	ID3D11ShaderResourceView *d3d_shader_resource_view_ptr;
 	hardware_texture *hardware_texture_ptr;
+
+	// Create the hardware texture object.
+
+	if ((hardware_texture_ptr = new hardware_texture) == NULL) {
+		return NULL;
+	}
+	hardware_texture_ptr->image_dimensions = image_dimensions_list[image_size_index];
 
 	// Create the Direct3D texture object.
 
-	image_dimensions = image_dimensions_list[image_size_index];
-	D3D11_TEXTURE2D_DESC desc;
-	ZeroMemory(&desc, sizeof(desc));
-	desc.Width = image_dimensions;
-	desc.Height = image_dimensions;
-	desc.MipLevels = desc.ArraySize = 1;
-	desc.Format = DXGI_FORMAT_B8G8R8A8_UNORM;
-	desc.SampleDesc.Count = 1;
-	desc.Usage = D3D11_USAGE_DYNAMIC;
-	desc.BindFlags = D3D11_BIND_SHADER_RESOURCE;
-	desc.CPUAccessFlags = D3D11_CPU_ACCESS_WRITE;
-	desc.MiscFlags = 0;
-	HRESULT result = d3d_device_ptr->CreateTexture2D(&desc, NULL, &d3d_texture_ptr);
-	if (FAILED(result))
-		return(NULL);
+	hardware_texture_ptr->d3d_texture_ptr = create_d3d_texture(hardware_texture_ptr->image_dimensions, hardware_texture_ptr->image_dimensions,
+		DXGI_FORMAT_B8G8R8A8_UNORM, D3D11_USAGE_DYNAMIC, D3D11_BIND_SHADER_RESOURCE, D3D11_CPU_ACCESS_WRITE);
+	if (hardware_texture_ptr->d3d_texture_ptr == NULL) {
+		delete hardware_texture_ptr;
+		return NULL;
+	}
 
 	// Create the shader resource view object.
 
-	result = d3d_device_ptr->CreateShaderResourceView(d3d_texture_ptr, NULL, &d3d_shader_resource_view_ptr);
-	if (FAILED(result))
-		return(NULL);
-
-	// Create the hardware texture object, initialise it, and return a pointer
-	// to it.
-
-	if ((hardware_texture_ptr = new hardware_texture) == NULL) {
-		d3d_texture_ptr->Release();
-		return(NULL);
+	if (FAILED(d3d_device_ptr->CreateShaderResourceView(hardware_texture_ptr->d3d_texture_ptr, NULL, &hardware_texture_ptr->d3d_shader_resource_view_ptr))) {
+		delete hardware_texture_ptr;
+		return NULL;
 	}
-	hardware_texture_ptr->image_size_index = image_size_index;
-	hardware_texture_ptr->d3d_texture_ptr = d3d_texture_ptr;
-	hardware_texture_ptr->d3d_shader_resource_view_ptr = d3d_shader_resource_view_ptr;
-	return(hardware_texture_ptr);
+	return hardware_texture_ptr;
 }
 
 //------------------------------------------------------------------------------
-// Destroy an existing Direct3D texture.
+// Destroy an existing hardware texture.
 //------------------------------------------------------------------------------
 
 void
 hardware_destroy_texture(void *hardware_texture_ptr)
 {
 	if (hardware_texture_ptr != NULL) {
-		hardware_texture *cast_hardware_texture_ptr = (hardware_texture *)hardware_texture_ptr;
-		cast_hardware_texture_ptr->d3d_shader_resource_view_ptr->Release();
-		cast_hardware_texture_ptr->d3d_texture_ptr->Release();
-		delete cast_hardware_texture_ptr;
+		delete (hardware_texture *)hardware_texture_ptr;
 	}
 }
 
 //------------------------------------------------------------------------------
-// Set the image of a Direct3D texture.
+// Set the image of a hardware texture.
 //------------------------------------------------------------------------------
 
 void
@@ -7050,27 +7193,19 @@ hardware_set_texture(cache_entry *cache_entry_ptr)
 	D3D11_MAPPED_SUBRESOURCE d3d_mapped_subresource;
 	byte *surface_ptr;
 	int row_pitch, row_gap;
-	int image_size_index, image_dimensions;
+	int image_dimensions;
 	pixmap *pixmap_ptr;
 	byte *image_ptr, *end_image_ptr, *new_image_ptr;
 	pixel *palette_ptr;
 	int transparent_index;
 	pixel transparency_mask32;
 	int image_width, image_height;
-	int lit_image_dimensions;
 	int column_index;
 
-	// Get a pointer to the hardware texture object.
+	// Get the image dimensions and texture object.
 
 	hardware_texture_ptr =  (hardware_texture *)cache_entry_ptr->hardware_texture_ptr;
-
-	// Get the image size index and dimensions.
-
-	image_size_index = hardware_texture_ptr->image_size_index;
-	image_dimensions = image_dimensions_list[image_size_index];
-
-	// Get the pointer to the Direct3D texture object.
-
+	image_dimensions = hardware_texture_ptr->image_dimensions;
 	d3d_texture_ptr = hardware_texture_ptr->d3d_texture_ptr;
 
 	// Lock the texture surface.
@@ -7102,10 +7237,9 @@ hardware_set_texture(cache_entry *cache_entry_ptr)
 	}
 	transparency_mask32 = texture_pixel_format.alpha_comp_mask;
 
-	// Get the start address of the lit image and it's dimensions.
+	// Get the start address of the lit image.
 
 	new_image_ptr = surface_ptr;
-	lit_image_dimensions = image_dimensions;
 
 	// If the pixmap is a 32-bit image, simply copy it to the new image buffer.
 
@@ -7118,7 +7252,7 @@ hardware_set_texture(cache_entry *cache_entry_ptr)
 
 			mov ebx, image_ptr
 			mov edx, new_image_ptr
-			mov edi, lit_image_dimensions
+			mov edi, image_dimensions
 
 		next_row:
 
@@ -7126,7 +7260,7 @@ hardware_set_texture(cache_entry *cache_entry_ptr)
 			// ESI: holds number of columns left to copy.
 
 			mov ecx, 0
-			mov esi, lit_image_dimensions
+			mov esi, image_dimensions
 
 		next_column:
 
@@ -7189,13 +7323,13 @@ hardware_set_texture(cache_entry *cache_entry_ptr)
 
 			mov ebx, image_ptr
 			mov edx, new_image_ptr
-			mov edi, lit_image_dimensions
+			mov edi, image_dimensions
 
 		next_row2:
 
 			// ESI: holds number of columns left to copy.
 
-			mov esi, lit_image_dimensions
+			mov esi, image_dimensions
 
 			// Clear old image offset.
 
