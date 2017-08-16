@@ -2739,11 +2739,11 @@ render_textured_polygons(texture *texture_ptr)
 }
 
 //------------------------------------------------------------------------------
-// Render the spans that use the given texture to a 16-bit frame buffer.
+// Render the spans that use the given texture to the frame buffer.
 //------------------------------------------------------------------------------
 
 static void
-render_textured_spans16(texture *texture_ptr)
+render_textured_spans(texture *texture_ptr)
 {
 	int pixmap_no;
 	pixmap *pixmap_ptr;
@@ -2763,79 +2763,9 @@ render_textured_spans16(texture *texture_ptr)
 			span_ptr = pixmap_ptr->span_lists[index];
 			while (span_ptr != NULL) {
 				if (span_ptr->is_popup)
-					render_popup_span16(span_ptr);
+					render_popup_span(span_ptr);
 				else
-					render_transparent_span16(span_ptr);
-				span_ptr = del_span(span_ptr);
-			}
-			pixmap_ptr->span_lists[index] = NULL;
-		}
-	}
-}
-
-//------------------------------------------------------------------------------
-// Render the spans that use the given texture to a 24-bit frame buffer.
-//------------------------------------------------------------------------------
-
-static void
-render_textured_spans24(texture *texture_ptr)
-{
-	int pixmap_no;
-	pixmap *pixmap_ptr;
-	int index;
-	span *span_ptr;
-
-	// Step through each pixmap in this texture...
-
-	for (pixmap_no = 0; pixmap_no < texture_ptr->pixmaps; pixmap_no++) {
-		pixmap_ptr = &texture_ptr->pixmap_list[pixmap_no];
-
-		// Step through each span list in this pixmap, and render them as 
-		// linear or opaque depending on whether it belongs to a popup or
-		// not.
-
-		for (index = 0; index < BRIGHTNESS_LEVELS; index++) {
-			span_ptr = pixmap_ptr->span_lists[index];
-			while (span_ptr != NULL) {
-				if (span_ptr->is_popup)
-					render_popup_span24(span_ptr);
-				else
-					render_transparent_span24(span_ptr);
-				span_ptr = del_span(span_ptr);
-			}
-			pixmap_ptr->span_lists[index] = NULL;
-		}
-	}
-}
-
-//------------------------------------------------------------------------------
-// Render the spans that use the given texture to a 32-bit frame buffer.
-//------------------------------------------------------------------------------
-
-static void
-render_textured_spans32(texture *texture_ptr)
-{
-	int pixmap_no;
-	pixmap *pixmap_ptr;
-	int index;
-	span *span_ptr;
-
-	// Step through each pixmap in this texture...
-
-	for (pixmap_no = 0; pixmap_no < texture_ptr->pixmaps; pixmap_no++) {
-		pixmap_ptr = &texture_ptr->pixmap_list[pixmap_no];
-
-		// Step through each span list in this pixmap, and render them as 
-		// linear or opaque depending on whether it belongs to a popup or
-		// not.
-
-		for (index = 0; index < BRIGHTNESS_LEVELS; index++) {
-			span_ptr = pixmap_ptr->span_lists[index];
-			while (span_ptr != NULL) {
-				if (span_ptr->is_popup)
-					render_popup_span32(span_ptr);
-				else
-					render_transparent_span32(span_ptr);
+					render_transparent_span(span_ptr);
 				span_ptr = del_span(span_ptr);
 			}
 			pixmap_ptr->span_lists[index] = NULL;
@@ -2888,104 +2818,37 @@ render_textured_polygons_or_spans(void)
 
 	} 
 	
-	// Handle software rendering to a 16-bit frame buffer...
-
-	else if (display_depth <= 16) {
-		blockset_ptr = blockset_list_ptr->first_blockset_ptr;
-		while (blockset_ptr != NULL) {
-			texture_ptr = blockset_ptr->first_texture_ptr;
-			while (texture_ptr != NULL) {
-				render_textured_spans16(texture_ptr);
-				texture_ptr = texture_ptr->next_texture_ptr;
-			}
-			blockset_ptr = blockset_ptr->next_blockset_ptr;
-		}
-		texture_ptr = custom_blockset_ptr->first_texture_ptr;
-		while (texture_ptr != NULL) {
-			render_textured_spans16(texture_ptr);
-			texture_ptr = texture_ptr->next_texture_ptr;
-		}
-
-#ifdef STREAMING_MEDIA
-
-		if (unscaled_video_texture_ptr != NULL)
-			render_textured_spans16(unscaled_video_texture_ptr);
-		scaled_video_texture_ptr = scaled_video_texture_list;
-		while (scaled_video_texture_ptr != NULL) {
-			render_textured_spans16(scaled_video_texture_ptr->texture_ptr);
-			scaled_video_texture_ptr = 
-				scaled_video_texture_ptr->next_video_texture_ptr;
-		}
-
-#endif
-
-	} 
-	
-	// Handle software rendering to a 24-bit frame buffer...
-
-	else if (display_depth == 24) {
-		blockset_ptr = blockset_list_ptr->first_blockset_ptr;
-		while (blockset_ptr != NULL) {
-			texture_ptr = blockset_ptr->first_texture_ptr;
-			while (texture_ptr != NULL) {
-				render_textured_spans24(texture_ptr);
-				texture_ptr = texture_ptr->next_texture_ptr;
-			}
-			blockset_ptr = blockset_ptr->next_blockset_ptr;
-		}
-		texture_ptr = custom_blockset_ptr->first_texture_ptr;
-		while (texture_ptr != NULL) {
-			render_textured_spans24(texture_ptr);
-			texture_ptr = texture_ptr->next_texture_ptr;
-		}
-
-#ifdef STREAMING_MEDIA
-
-		if (unscaled_video_texture_ptr != NULL)
-			render_textured_spans24(unscaled_video_texture_ptr);
-		scaled_video_texture_ptr = scaled_video_texture_list;
-		while (scaled_video_texture_ptr != NULL) {
-			render_textured_spans24(scaled_video_texture_ptr->texture_ptr);
-			scaled_video_texture_ptr = 
-				scaled_video_texture_ptr->next_video_texture_ptr;
-		}
-
-#endif
-
-	}  
-	
-	// Handle software rendering to a 32-bit frame buffer...
+	// Handle software rendering to the frame buffer...
 
 	else {
 		blockset_ptr = blockset_list_ptr->first_blockset_ptr;
 		while (blockset_ptr != NULL) {
 			texture_ptr = blockset_ptr->first_texture_ptr;
 			while (texture_ptr != NULL) {
-				render_textured_spans32(texture_ptr);
+				render_textured_spans(texture_ptr);
 				texture_ptr = texture_ptr->next_texture_ptr;
 			}
 			blockset_ptr = blockset_ptr->next_blockset_ptr;
 		}
 		texture_ptr = custom_blockset_ptr->first_texture_ptr;
 		while (texture_ptr != NULL) {
-			render_textured_spans32(texture_ptr);
+			render_textured_spans(texture_ptr);
 			texture_ptr = texture_ptr->next_texture_ptr;
 		}
 
 #ifdef STREAMING_MEDIA
 
 		if (unscaled_video_texture_ptr != NULL)
-			render_textured_spans32(unscaled_video_texture_ptr);
+			render_textured_spans(unscaled_video_texture_ptr);
 		scaled_video_texture_ptr = scaled_video_texture_list;
 		while (scaled_video_texture_ptr != NULL) {
-			render_textured_spans32(scaled_video_texture_ptr->texture_ptr);
+			render_textured_spans(scaled_video_texture_ptr->texture_ptr);
 			scaled_video_texture_ptr = 
 				scaled_video_texture_ptr->next_video_texture_ptr;
 		}
 
 #endif
-
-	}
+	} 
 }
 
 //------------------------------------------------------------------------------
@@ -3007,25 +2870,12 @@ render_colour_polygons_or_spans(void)
 		colour_tpolygon_list = NULL;
 	}
 
-	// If not using OpenGL or hardware acceleration, render the solid colour
-	// spans in software.
+	// If not using OpenGL or hardware acceleration, render the solid colour spans in software.
 
-	else if (display_depth <= 16) {
+	else {
 		span *span_ptr = colour_span_list;
 		while (span_ptr != NULL) {
-			render_colour_span16(span_ptr);
-			span_ptr = del_span(span_ptr);
-		}
-	} else if (display_depth == 24) {
-		span *span_ptr = colour_span_list;
-		while (span_ptr != NULL) {
-			render_colour_span24(span_ptr);
-			span_ptr = del_span(span_ptr);
-		}
-	} else {
-		span *span_ptr = colour_span_list;
-		while (span_ptr != NULL) {
-			render_colour_span32(span_ptr);
+			render_colour_span(span_ptr);
 			span_ptr = del_span(span_ptr);
 		}
 	}
@@ -3059,39 +2909,15 @@ render_transparent_polygons_or_spans(void)
 	// Spans that have a texture of unlimited size are only used by popups, and
 	// are rendered as linear texture-mapped spans.
 
-	else if (display_depth <= 16) {
+	else {
 		for (row = 0; row < window_height; row++) {
 			span_row_ptr = (*span_buffer_ptr)[row];
 			span_ptr = span_row_ptr->transparent_span_list;
 			while (span_ptr != NULL) {
 				if (span_ptr->is_popup)
-					render_popup_span16(span_ptr);
+					render_popup_span(span_ptr);
 				else
-					render_transparent_span16(span_ptr);
-				span_ptr = del_span(span_ptr);
-			}
-		}
-	} else if (display_depth == 24) {
-		for (row = 0; row < window_height; row++) {
-			span_row_ptr = (*span_buffer_ptr)[row];
-			span_ptr = span_row_ptr->transparent_span_list;
-			while (span_ptr != NULL) {
-				if (span_ptr->is_popup)
-					render_popup_span24(span_ptr);
-				else
-					render_transparent_span24(span_ptr);
-				span_ptr = del_span(span_ptr);
-			}
-		}
-	} else {
-		for (row = 0; row < window_height; row++) {
-			span_row_ptr = (*span_buffer_ptr)[row];
-			span_ptr = span_row_ptr->transparent_span_list;
-			while (span_ptr != NULL) {
-				if (span_ptr->is_popup)
-					render_popup_span32(span_ptr);
-				else
-					render_transparent_span32(span_ptr);
+					render_transparent_span(span_ptr);
 				span_ptr = del_span(span_ptr);
 			}
 		}

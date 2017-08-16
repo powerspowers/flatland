@@ -388,31 +388,13 @@ void
 create_lit_image(cache_entry *cache_entry_ptr, int image_dimensions);
 
 void
-render_colour_span16(span *span_ptr);
+render_colour_span(span *span_ptr);
 
 void
-render_colour_span24(span *span_ptr);
+render_transparent_span(span *span_ptr);
 
 void
-render_colour_span32(span *span_ptr);
-
-void
-render_transparent_span16(span *span_ptr);
-
-void
-render_transparent_span24(span *span_ptr);
-
-void
-render_transparent_span32(span *span_ptr);
-
-void
-render_popup_span16(span *span_ptr);
-
-void
-render_popup_span24(span *span_ptr);
-
-void
-render_popup_span32(span *span_ptr);
+render_popup_span(span *span_ptr);
 
 // Function to determine intersection of the mouse with a polygon.
 

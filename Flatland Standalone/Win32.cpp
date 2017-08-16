@@ -5775,7 +5775,7 @@ create_lit_image(cache_entry *cache_entry_ptr, int image_dimensions)
 // Render a colour span to a 16-bit frame buffer.
 //------------------------------------------------------------------------------
 
-void
+static void
 render_colour_span16(span *span_ptr)
 {
 	byte *fb_ptr;
@@ -5828,7 +5828,7 @@ render_colour_span16(span *span_ptr)
 // Render a colour span to a 24-bit frame buffer.
 //------------------------------------------------------------------------------
 
-void
+static void
 render_colour_span24(span *span_ptr)
 {
 	byte *fb_ptr;
@@ -5884,7 +5884,7 @@ render_colour_span24(span *span_ptr)
 // Render a colour span to a 32-bit frame buffer.
 //------------------------------------------------------------------------------
 
-void
+static void
 render_colour_span32(span *span_ptr)
 {
 	byte *fb_ptr;
@@ -5934,10 +5934,26 @@ render_colour_span32(span *span_ptr)
 }
 
 //------------------------------------------------------------------------------
-// Render a transparent span to a 16-bit frame buffer.
+// Render a colour span to the frame buffer.
 //------------------------------------------------------------------------------
 
 void
+render_colour_span(span *span_ptr)
+{
+	if (display_depth <= 16) {
+		render_colour_span16(span_ptr);
+	} else if (display_depth == 24) {
+		render_colour_span24(span_ptr);
+	} else {
+		render_colour_span32(span_ptr);
+	}
+}
+
+//------------------------------------------------------------------------------
+// Render a transparent span to a 16-bit frame buffer.
+//------------------------------------------------------------------------------
+
+static void
 render_transparent_span16(span *span_ptr)
 {
 	cache_entry *cache_entry_ptr;
@@ -6158,7 +6174,7 @@ render_transparent_span16(span *span_ptr)
 // Render a transparent span to a 24-bit frame buffer.
 //------------------------------------------------------------------------------
 
-void
+static void
 render_transparent_span24(span *span_ptr)
 {
 	cache_entry *cache_entry_ptr;
@@ -6379,7 +6395,7 @@ render_transparent_span24(span *span_ptr)
 // Render a transparent span to a 32-bit frame buffer.
 //------------------------------------------------------------------------------
 
-void
+static void
 render_transparent_span32(span *span_ptr)
 {
 	cache_entry *cache_entry_ptr;
@@ -6593,6 +6609,22 @@ render_transparent_span32(span *span_ptr)
 
 			mov fb_ptr, esi
 		}
+	}
+}
+
+//------------------------------------------------------------------------------
+// Render a transparent span to the frame buffer.
+//------------------------------------------------------------------------------
+
+void
+render_transparent_span(span *span_ptr)
+{
+	if (display_depth <= 16) {
+		render_transparent_span16(span_ptr);
+	} else if (display_depth == 24) {
+		render_transparent_span24(span_ptr);
+	} else {
+		render_transparent_span32(span_ptr);
 	}
 }
 
@@ -6963,7 +6995,7 @@ render_linear_span32(bool image_is_16_bit, byte *image_ptr, byte *fb_ptr,
 // Render a popup span into a 16-bit frame buffer.
 //------------------------------------------------------------------------------
 
-void
+static void
 render_popup_span16(span *span_ptr)
 {
 	pixmap *pixmap_ptr;
@@ -7022,7 +7054,7 @@ render_popup_span16(span *span_ptr)
 // Render a popup span into a 24-bit frame buffer.
 //------------------------------------------------------------------------------
 
-void
+static void
 render_popup_span24(span *span_ptr)
 {
 	pixmap *pixmap_ptr;
@@ -7082,7 +7114,7 @@ render_popup_span24(span *span_ptr)
 // Render a popup span into a 32-bit frame buffer.
 //------------------------------------------------------------------------------
 
-void
+static void
 render_popup_span32(span *span_ptr)
 {
 	pixmap *pixmap_ptr;
@@ -7135,6 +7167,22 @@ render_popup_span32(span *span_ptr)
 	render_linear_span32(pixmap_ptr->bytes_per_pixel == 2, image_ptr, fb_ptr,
 		palette_ptr, transparent_index, transparency_mask32, image_width,
 		span_width, u);
+}
+
+//------------------------------------------------------------------------------
+// Render a popup span to the frame buffer.
+//------------------------------------------------------------------------------
+
+void
+render_popup_span(span *span_ptr)
+{
+	if (display_depth <= 16) {
+		render_popup_span16(span_ptr);
+	} else if (display_depth == 24) {
+		render_popup_span24(span_ptr);
+	} else {
+		render_popup_span32(span_ptr);
+	}
 }
 
 //==============================================================================

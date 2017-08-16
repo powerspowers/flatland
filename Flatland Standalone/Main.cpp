@@ -2865,6 +2865,11 @@ set_viewport(int width, int height)
 {
 	float half_horz_field_of_view, half_vert_field_of_view;
 
+	// Compute half of the window dimensions, for convienance.
+
+	half_window_width = (float)window_width * 0.5f;
+	half_window_height = (float)window_height * 0.5f;
+
 	// Set the horizontal field of view to 60 degrees if the aspect ratio is
 	// wide (with the vertical field of view smaller), otherwise set the
 	// vertical field of view to 60 degrees (with the horizontal field of view
@@ -3554,11 +3559,6 @@ init_player_window(void)
 
 	init_free_span_list();
 	span_buffer_ptr = NULL;
-
-	// Compute half of the window dimensions, for convienance.
-
-	half_window_width = (float)window_width * 0.5f;
-	half_window_height = (float)window_height * 0.5f;
 
 	// Set the viewport based upon the window size and the
 	// horizontal and vertical fields of view.
