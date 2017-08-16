@@ -3631,7 +3631,8 @@ render_block_as_bitmap(block *block_ptr)
 }
 
 //------------------------------------------------------------------------------
-// Render the builder icons for every block definition in a blockset.
+// Render the builder icons for every block definition in a blockset that
+// doesn't yet have one.
 //------------------------------------------------------------------------------
 
 static void
@@ -3640,7 +3641,9 @@ render_builder_icons_for_blockset(blockset *blockset_ptr)
 	block_def *block_def_ptr = blockset_ptr->block_def_list;
 	while (block_def_ptr) {
 		block *block_ptr = block_def_ptr->create_simplified_block();
-		block_def_ptr->icon_bitmap_ptr = render_block_as_bitmap(block_ptr);
+		if (block_def_ptr->icon_bitmap_ptr == NULL) {
+			block_def_ptr->icon_bitmap_ptr = render_block_as_bitmap(block_ptr);
+		}
 		delete block_ptr;
 		block_def_ptr = block_def_ptr->next_block_def_ptr;
 	}
