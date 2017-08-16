@@ -3013,7 +3013,7 @@ render_frame(void)
 	if (hardware_acceleration)
 		clear_frame_buffer();
 	else
-		lock_frame_buffer(frame_buffer_ptr, frame_buffer_width);
+		lock_frame_buffer();
 
 	// Reset the span and transformed polygon lists.
 
@@ -3364,7 +3364,7 @@ render_block_as_bitmap(block *block_ptr)
 		clear_frame_buffer();
 	} else {
 		clear_frame_buffer(0, 0, window_width, window_height);
-		lock_frame_buffer(frame_buffer_ptr, frame_buffer_width);
+		lock_frame_buffer();
 	}
 
 	// Reset the span and transformed polygon lists.

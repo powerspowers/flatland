@@ -368,7 +368,7 @@ void
 destroy_frame_buffer(void);
 
 bool
-lock_frame_buffer(byte *&frame_buffer_ptr, int &frame_buffer_width);
+lock_frame_buffer(void);
 
 void
 unlock_frame_buffer(void);

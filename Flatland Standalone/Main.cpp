@@ -87,11 +87,6 @@ string spot_title;
 float visible_radius;
 vertex frustum_vertex_list[FRUSTUM_VERTICES];
 
-// Frame buffer pointer and width.
-
-byte *frame_buffer_ptr;
-int frame_buffer_width;
-
 // Span buffer.
 
 span_buffer *span_buffer_ptr;

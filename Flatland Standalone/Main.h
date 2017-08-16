@@ -72,11 +72,6 @@ extern string spot_title;
 extern float visible_radius;
 extern vertex frustum_vertex_list[FRUSTUM_VERTICES];
 
-// Frame buffer pointer and width.
-
-extern byte *frame_buffer_ptr;
-extern int frame_buffer_width;
-
 // Span buffer.
 
 extern span_buffer *span_buffer_ptr;

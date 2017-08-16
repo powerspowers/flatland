@@ -492,7 +492,7 @@ static cursor *curr_cursor_ptr;
 
 static LPDIRECTDRAW ddraw_object_ptr;
 static LPDIRECTDRAWSURFACE ddraw_primary_surface_ptr;
-static LPDIRECTDRAWSURFACE ddraw_framebuffer_surface_ptr;
+static LPDIRECTDRAWSURFACE ddraw_frame_buffer_surface_ptr;
 static LPDIRECTDRAWCLIPPER ddraw_clipper_ptr;
 
 // Direct3D data.
@@ -527,8 +527,8 @@ static ID3D11Buffer *d3d_constant_buffer_list[2];
 
 // Frame buffer used by the software renderer.
 
-static byte *framebuffer_ptr;
-static int framebuffer_width;
+static byte *frame_buffer_ptr;
+static int frame_buffer_width;
 
 // Private sound data.
 
@@ -811,18 +811,18 @@ static void
 blit_frame_buffer(void)
 {
 	POINT pos;
-	RECT framebuffer_surface_rect;
+	RECT frame_buffer_surface_rect;
 	RECT primary_surface_rect;
 	HRESULT blt_result;
 
 	// Set the frame buffer surface rectangle, and copy it to the primary
 	// surface rectangle.
 
-	framebuffer_surface_rect.left = 0;
-	framebuffer_surface_rect.top = 0;
-	framebuffer_surface_rect.right = window_width;
-	framebuffer_surface_rect.bottom = window_height;
-	primary_surface_rect = framebuffer_surface_rect;
+	frame_buffer_surface_rect.left = 0;
+	frame_buffer_surface_rect.top = 0;
+	frame_buffer_surface_rect.right = window_width;
+	frame_buffer_surface_rect.bottom = window_height;
+	primary_surface_rect = frame_buffer_surface_rect;
 
 	// Offset the primary surface rectangle by the position of the main 
 	// window's client area.
@@ -839,7 +839,7 @@ blit_frame_buffer(void)
 
 	while (true) {
 		blt_result = ddraw_primary_surface_ptr->Blt(&primary_surface_rect,
-			ddraw_framebuffer_surface_ptr, &framebuffer_surface_rect, 0, NULL);
+			ddraw_frame_buffer_surface_ptr, &frame_buffer_surface_rect, 0, NULL);
 		if (blt_result == DD_OK || blt_result != DDERR_WASSTILLDRAWING)
 			break;
 	}
@@ -3162,7 +3162,7 @@ create_main_window(void (*key_callback)(byte key_code, bool key_down),
 
 	ddraw_object_ptr = NULL;
 	ddraw_primary_surface_ptr = NULL;
-	ddraw_framebuffer_surface_ptr = NULL;
+	ddraw_frame_buffer_surface_ptr = NULL;
 	ddraw_clipper_ptr = NULL;
 	d3d_device_ptr = NULL;
 	d3d_swap_chain_ptr = NULL;
@@ -3187,7 +3187,7 @@ create_main_window(void (*key_callback)(byte key_code, bool key_down),
 	d3d_sampler_state_ptr = NULL;
 	d3d_constant_buffer_list[0] = NULL;
 	d3d_constant_buffer_list[1] = NULL;
-	framebuffer_ptr = NULL;
+	frame_buffer_ptr = NULL;
 	dsound_object_ptr = NULL;
 	label_visible = false;
 	light_window_handle = NULL;
@@ -5062,16 +5062,14 @@ create_frame_buffer(void)
 		DDSCAPS_SYSTEMMEMORY;
 	ddraw_surface_desc.dwWidth = window_width;
 	ddraw_surface_desc.dwHeight = window_height;
-	if ((result = ddraw_object_ptr->CreateSurface(&ddraw_surface_desc,
-		&ddraw_framebuffer_surface_ptr, NULL)) != DD_OK) {
+	if ((result = ddraw_object_ptr->CreateSurface(&ddraw_surface_desc, &ddraw_frame_buffer_surface_ptr, NULL)) != DD_OK) {
 		failed_to_create("frame buffer surface");
 		return(false);
 	}
 	
 	// If the display depth is 8 bits, also allocate a 16-bit frame buffer.
 
-	if (display_depth == 8 && (framebuffer_ptr = new byte[window_width * 
-		window_height * 2]) == NULL) {
+	if (display_depth == 8 && (frame_buffer_ptr = new byte[window_width * window_height * 2]) == NULL) {
 		failed_to_create("frame buffer");
 		return(false);
 	}
@@ -5112,16 +5110,16 @@ destroy_frame_buffer(void)
 {
 	// If the display depth is 8 bits, delete the 16-bit frame buffer.
 
-	if (display_depth == 8 && framebuffer_ptr != NULL) {
-		delete []framebuffer_ptr;
-		framebuffer_ptr = NULL;
+	if (display_depth == 8 && frame_buffer_ptr != NULL) {
+		delete []frame_buffer_ptr;
+		frame_buffer_ptr = NULL;
 	}
 
 	// Release the clipper object and the frame buffer and primary surfaces.
 
-	if (ddraw_framebuffer_surface_ptr != NULL) {
-		ddraw_framebuffer_surface_ptr->Release();
-		ddraw_framebuffer_surface_ptr = NULL;
+	if (ddraw_frame_buffer_surface_ptr != NULL) {
+		ddraw_frame_buffer_surface_ptr->Release();
+		ddraw_frame_buffer_surface_ptr = NULL;
 	}
 	if (ddraw_clipper_ptr != NULL) {
 		ddraw_primary_surface_ptr->SetClipper(NULL);
@@ -5135,48 +5133,22 @@ destroy_frame_buffer(void)
 }
 
 //------------------------------------------------------------------------------
-// Lock the frame buffer and return it's address and the width of the frame
-// buffer in bytes (software renderer only).
+// Lock the frame buffer  (software renderer only).
 //------------------------------------------------------------------------------
 
 bool
-lock_frame_buffer(byte *&fb_ptr, int &row_pitch)
+lock_frame_buffer()
 {
-	// If the display depth is 8, return the 16-bit frame buffer pointer and
-	// its row pitch.
+	// If the display depth is 16, 24 or 32 and the frame buffer is unlocked, lock it.
 
-	if (display_depth == 8) {
-		fb_ptr = framebuffer_ptr;
-		row_pitch = window_width << 1;
-	}
+	if (display_depth >= 16 && frame_buffer_ptr == NULL) {
+		DDSURFACEDESC ddraw_surface_desc;
 
-	// Else if the display depth is 16, 24 or 32...
-
-	else {
-
-		// If the frame buffer is already locked, simply return the current
-		// frame buffer address and width.
-
-		if (framebuffer_ptr != NULL) {
-			fb_ptr = framebuffer_ptr;
-			row_pitch = framebuffer_width;
-		}
-
-		// Otherwise attempt to lock the frame buffer and return it's address
-		// and width.
-
-		else {
-			DDSURFACEDESC ddraw_surface_desc;
-
-			ddraw_surface_desc.dwSize = sizeof(ddraw_surface_desc);
-			if (ddraw_framebuffer_surface_ptr->Lock(NULL, &ddraw_surface_desc,
-				DDLOCK_SURFACEMEMORYPTR | DDLOCK_WAIT, NULL) != DD_OK)
-				return(false);
-			fb_ptr = (byte *)ddraw_surface_desc.lpSurface;
-			row_pitch = ddraw_surface_desc.lPitch;
-			framebuffer_ptr = fb_ptr;
-			framebuffer_width = row_pitch;
-		}
+		ddraw_surface_desc.dwSize = sizeof(ddraw_surface_desc);
+		if (ddraw_frame_buffer_surface_ptr->Lock(NULL, &ddraw_surface_desc, DDLOCK_SURFACEMEMORYPTR | DDLOCK_WAIT, NULL) != DD_OK)
+			return(false);
+		frame_buffer_ptr = (byte *)ddraw_surface_desc.lpSurface;
+		frame_buffer_width = ddraw_surface_desc.lPitch;
 	}
 
 	// Return success status.
@@ -5193,9 +5165,9 @@ unlock_frame_buffer(void)
 {
 	// If the display depth is 16, 24 or 32 and the frame buffer is locked, unlock it.
 
-	if (display_depth >= 16 && framebuffer_ptr != NULL) {
-		ddraw_framebuffer_surface_ptr->Unlock(framebuffer_ptr);
-		framebuffer_ptr = NULL;
+	if (display_depth >= 16 && frame_buffer_ptr != NULL) {
+		ddraw_frame_buffer_surface_ptr->Unlock(frame_buffer_ptr);
+		frame_buffer_ptr = NULL;
 	}
 }
 
@@ -5222,8 +5194,7 @@ display_frame_buffer(void)
 		// Lock the frame buffer surface.
 
 		ddraw_surface_desc.dwSize = sizeof(ddraw_surface_desc);
-		if (ddraw_framebuffer_surface_ptr->Lock(NULL, &ddraw_surface_desc,
-			DDLOCK_SURFACEMEMORYPTR | DDLOCK_WAIT, NULL) != DD_OK)
+		if (ddraw_frame_buffer_surface_ptr->Lock(NULL, &ddraw_surface_desc, DDLOCK_SURFACEMEMORYPTR | DDLOCK_WAIT, NULL) != DD_OK)
 			return(false);
 		fb_ptr = (byte *)ddraw_surface_desc.lpSurface;
 		row_pitch = ddraw_surface_desc.lPitch;
@@ -5231,7 +5202,7 @@ display_frame_buffer(void)
 		// Get pointers to the first pixel in the frame buffer and primary
 		// surface, and compute the row gap.
 
-		old_pixel_ptr = (word *)framebuffer_ptr;
+		old_pixel_ptr = (word *)frame_buffer_ptr;
 		new_pixel_ptr = fb_ptr;
 		row_gap = row_pitch - window_width;
 
@@ -5264,7 +5235,7 @@ display_frame_buffer(void)
 
 		// Unlock the frame buffer surface.
 
-		if (ddraw_framebuffer_surface_ptr->Unlock(fb_ptr) != DD_OK)
+		if (ddraw_frame_buffer_surface_ptr->Unlock(fb_ptr) != DD_OK)
 			return(false);
 	}
 
@@ -5316,7 +5287,7 @@ clear_frame_buffer(int x, int y, int width, int height)
 	// Lock the frame buffer surface.
 
 	ddraw_surface_desc.dwSize = sizeof(ddraw_surface_desc);
-	if (ddraw_framebuffer_surface_ptr->Lock(NULL, &ddraw_surface_desc,
+	if (ddraw_frame_buffer_surface_ptr->Lock(NULL, &ddraw_surface_desc,
 		DDLOCK_SURFACEMEMORYPTR | DDLOCK_WAIT, NULL) != DD_OK)
 		return;
 	fb_ptr = (byte *)ddraw_surface_desc.lpSurface;
@@ -5335,7 +5306,7 @@ clear_frame_buffer(int x, int y, int width, int height)
 
 	// Unlock the frame buffer surface.
 
-	ddraw_framebuffer_surface_ptr->Unlock(fb_ptr);
+	ddraw_frame_buffer_surface_ptr->Unlock(fb_ptr);
 }
 
 //==============================================================================
@@ -7807,7 +7778,7 @@ draw_pixmap(pixmap *pixmap_ptr, int brightness_index, int x, int y, int width,
 	DDSURFACEDESC ddraw_surface_desc;
 
 	ddraw_surface_desc.dwSize = sizeof(ddraw_surface_desc);
-	if (ddraw_framebuffer_surface_ptr->Lock(NULL, &ddraw_surface_desc,
+	if (ddraw_frame_buffer_surface_ptr->Lock(NULL, &ddraw_surface_desc,
 		DDLOCK_SURFACEMEMORYPTR | DDLOCK_WAIT, NULL) != DD_OK)
 		return;
 	surface_ptr = (byte *)ddraw_surface_desc.lpSurface;
@@ -7897,7 +7868,7 @@ draw_pixmap(pixmap *pixmap_ptr, int brightness_index, int x, int y, int width,
 
 	// Unlock the frame buffer surface.
 
-	ddraw_framebuffer_surface_ptr->Unlock(surface_ptr);
+	ddraw_frame_buffer_surface_ptr->Unlock(surface_ptr);
 }
 
 //------------------------------------------------------------------------------
