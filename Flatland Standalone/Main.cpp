@@ -2860,10 +2860,24 @@ compute_frustum_plane_equations(void)
 // Set the viewport variables.
 //------------------------------------------------------------------------------
 
-static void
+void
 set_viewport(int width, int height)
 {
 	float half_horz_field_of_view, half_vert_field_of_view;
+
+	// Set the horizontal field of view to 60 degrees if the aspect ratio is
+	// wide (with the vertical field of view smaller), otherwise set the
+	// vertical field of view to 60 degrees (with the horizontal field of view
+	// smaller).
+
+	aspect_ratio = (float)width / (float)height;
+	if (aspect_ratio >= 1.0) {
+		horz_field_of_view = DEFAULT_FIELD_OF_VIEW;
+		vert_field_of_view = DEFAULT_FIELD_OF_VIEW / aspect_ratio;
+	} else {
+		horz_field_of_view = DEFAULT_FIELD_OF_VIEW * aspect_ratio;
+		vert_field_of_view = DEFAULT_FIELD_OF_VIEW;
+	}
 
 	// Compute half the horizontal and vertical fields of view.
 
@@ -3545,20 +3559,6 @@ init_player_window(void)
 
 	half_window_width = (float)window_width * 0.5f;
 	half_window_height = (float)window_height * 0.5f;
-
-	// Set the horizontal field of view to 60 degrees if the aspect ratio is
-	// wide (with the vertical field of view smaller), otherwise set the
-	// vertical field of view to 60 degrees (with the horizontal field of view
-	// smaller).
-
-	aspect_ratio = (float)window_width / (float)window_height;
-	if (aspect_ratio >= 1.0) {
-		horz_field_of_view = DEFAULT_FIELD_OF_VIEW;
-		vert_field_of_view = DEFAULT_FIELD_OF_VIEW / aspect_ratio;
-	} else {
-		horz_field_of_view = DEFAULT_FIELD_OF_VIEW * aspect_ratio;
-		vert_field_of_view = DEFAULT_FIELD_OF_VIEW;
-	}
 
 	// Set the viewport based upon the window size and the
 	// horizontal and vertical fields of view.

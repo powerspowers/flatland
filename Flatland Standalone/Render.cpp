@@ -3664,11 +3664,15 @@ render_builder_icons(void)
 		hardware_select_builder_render_target();
 	}
 
+	// Set the viewport to the size of a builder block icon.
+
+	set_viewport(BUILDER_ICON_WIDTH, BUILDER_ICON_HEIGHT);
+
 	// Set the player viewpoint.
 
-	player_viewpoint.position.set(0.0f, 0.0f, -UNITS_PER_BLOCK);
-	player_viewpoint.look_angle = 0.0f;
-	player_viewpoint.turn_angle = 0.0f;
+	player_viewpoint.position.set(-UNITS_PER_HALF_BLOCK, UNITS_PER_BLOCK, -UNITS_PER_HALF_BLOCK);
+	player_viewpoint.look_angle = 22.5f;
+	player_viewpoint.turn_angle = 45.0f;
 
 	// Compute the normal and inverse of the player turn and look angles, in radians.
 
@@ -3714,4 +3718,8 @@ render_builder_icons(void)
 	// Clear the "rendering block as bitmap" flag.
 
 	rendering_block_as_bitmap = false;
+
+	// Set the viewport back to the size of the main window.
+
+	set_viewport(window_width, window_height);
 }

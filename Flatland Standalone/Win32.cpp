@@ -620,11 +620,6 @@ static HWND update_period_spin_control_handle;
 
 static HWND builder_window_handle;
 
-// Builder icon size.
-
-#define BUILDER_ICON_WIDTH	128
-#define BUILDER_ICON_HEIGHT	128
-
 // Macro for converting a point size into pixel units
 
 #define	POINTS_TO_PIXELS(point_size) \

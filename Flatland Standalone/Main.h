@@ -345,6 +345,11 @@ handle_exit(const char *exit_URL, const char *exit_target, bool is_spot_URL);
 block_def *
 symbol_to_block_def(word symbol);
 
+// Set viewport.
+
+void
+set_viewport(int width, int height);
+
 // Refresh player window function.
 
 bool

@@ -81,6 +81,11 @@
 #define JUMPING_DEACCELERATION	(UNITS_PER_BLOCK * 100.0f)
 #define MAXIMUM_JUMPING_SPEED	(UNITS_PER_BLOCK * 20.0f)
 
+// Builder icon size.
+
+#define BUILDER_ICON_WIDTH	128
+#define BUILDER_ICON_HEIGHT	128
+
 //------------------------------------------------------------------------------
 // Event class.
 //------------------------------------------------------------------------------
