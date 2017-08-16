@@ -1732,20 +1732,10 @@ parse_block_tag(blockset *blockset_ptr)
 		parse_start_of_document(TOKEN_BLOCK, block_attr_list, BLOCK_ATTRIBUTES);
 
 		// The block name is only set if it wasn't already defined in the style 
-		// file.  The icon, type and entrance attributes are optional, with the
-		// latter two having default values.
+		// file.  The type and entrance attributes are optional.
 
 		if (strlen(new_block_def_ptr->name) == 0)
 			new_block_def_ptr->name = block_name;
-		if (parsed_attribute[BLOCK_ICON]) {
-			texture *texture_ptr = load_texture(blockset_ptr, block_icon, false, true);
-			block *block_ptr = new_block_def_ptr->create_simplified_block();
-			if (block_ptr) {
-				new_block_def_ptr->icon_bitmap_ptr = render_block_as_bitmap(block_ptr);
-				delete block_ptr;
-			}
-			DEL(texture_ptr, texture);
-		}
 		if (parsed_attribute[BLOCK_TYPE])
 			new_block_def_ptr->type = block_type;
 		if (parsed_attribute[BLOCK_ENTRANCE])
@@ -4601,6 +4591,10 @@ parse_spot_file(char *spot_URL, char *spot_file_path)
 	// Set up the renderer data structures.
 
 	set_up_renderer();
+
+	// Render the builder icons for all block definitions.
+
+	render_builder_icons();
 	
 	// Initialise various data structures of the spot based on what was just
 	// parsed.

@@ -3526,22 +3526,15 @@ render_frame(void)
 }
 
 //------------------------------------------------------------------------------
-// Render one block and return it as a bitmap.
+// Render a block and return it as a bitmap.
 //------------------------------------------------------------------------------
 
-bitmap *
+static bitmap *
 render_block_as_bitmap(block *block_ptr)
 {
-	// Set the "rendering block as bitmap" flag.
-
-	rendering_block_as_bitmap = true;
-
-	// If hardware acceleration is enabled select the builder render target and
-	// clear the frame buffer, otherwise clear then lock the software frame
-	// buffer.
+	// Clear (and in the case of the software renderer, lock) the frame buffer.
 
 	if (hardware_acceleration) {
-		hardware_select_builder_render_target();
 		clear_frame_buffer();
 	} else {
 		clear_frame_buffer(0, 0, window_width, window_height);
@@ -3565,38 +3558,6 @@ render_block_as_bitmap(block *block_ptr)
 
 	block_def *block_def_ptr = curr_block_ptr->block_def_ptr;
 	curr_block_type = block_def_ptr->type;
-
-	// Set the player viewpoint.
-
-	player_viewpoint.position.set(0.0f, 0.0f, -UNITS_PER_BLOCK);
-	player_viewpoint.look_angle = 0.0f;
-	player_viewpoint.turn_angle = 0.0f;
-	
-	// Compute the normal and inverse of the player turn and look angles, in radians.
-
-	player_viewpoint.turn_angle_radians = RAD(player_viewpoint.turn_angle);
-	player_viewpoint.look_angle_radians = RAD(player_viewpoint.look_angle);
-	player_viewpoint.inv_turn_angle_radians = RAD(360.0f - player_viewpoint.turn_angle);
-	player_viewpoint.inv_look_angle_radians = RAD(360.0f - pos_adjust_angle(player_viewpoint.look_angle));
-
-	// Compute the position of the camera in world space.
-
-	camera_position.x = player_camera_offset.dx;
-	camera_position.y = player_camera_offset.dy;
-	camera_position.z = player_camera_offset.dz;
-	camera_position.rotate_x(player_viewpoint.look_angle);
-	camera_position.rotate_y(player_viewpoint.turn_angle);
-	camera_position += player_viewpoint.position;
-
-	// Don't bother translating the block, which means the relative camera position
-	// is the same as the absolute camera position.
-
-	block_translation.set(0.0f, 0.0f, 0.0f);
-	relative_camera_position = camera_position;
-
-	// Determine the centre of the block.
-
-	block_centre.set(UNITS_PER_HALF_BLOCK, UNITS_PER_HALF_BLOCK, UNITS_PER_HALF_BLOCK);
 
 	// Transform each vertex by the player position and orientation, storing them in a global list.
 
@@ -3662,10 +3623,95 @@ render_block_as_bitmap(block *block_ptr)
 	bitmap *bitmap_ptr;
 	if (hardware_acceleration) {
 		bitmap_ptr = create_bitmap_from_builder_render_target();
-		hardware_select_main_render_target();
 	} else {
 		bitmap_ptr = create_bitmap_from_frame_buffer();
 		unlock_frame_buffer();
 	}
 	return bitmap_ptr;
+}
+
+//------------------------------------------------------------------------------
+// Render the builder icons for every block definition in a blockset.
+//------------------------------------------------------------------------------
+
+static void
+render_builder_icons_for_blockset(blockset *blockset_ptr)
+{
+	block_def *block_def_ptr = blockset_ptr->block_def_list;
+	while (block_def_ptr) {
+		block *block_ptr = block_def_ptr->create_simplified_block();
+		block_def_ptr->icon_bitmap_ptr = render_block_as_bitmap(block_ptr);
+		delete block_ptr;
+		block_def_ptr = block_def_ptr->next_block_def_ptr;
+	}
+}
+
+//------------------------------------------------------------------------------
+// Render the builder icons for every block definition in every blockset.
+//------------------------------------------------------------------------------
+
+void
+render_builder_icons(void)
+{
+	// Set the "rendering block as bitmap" flag, which disables certain
+	// functionality during the rendering we don't need.
+
+	rendering_block_as_bitmap = true;
+
+	// If hardware acceleration is active, select the builder render target.
+
+	if (hardware_acceleration) {
+		hardware_select_builder_render_target();
+	}
+
+	// Set the player viewpoint.
+
+	player_viewpoint.position.set(0.0f, 0.0f, -UNITS_PER_BLOCK);
+	player_viewpoint.look_angle = 0.0f;
+	player_viewpoint.turn_angle = 0.0f;
+
+	// Compute the normal and inverse of the player turn and look angles, in radians.
+
+	player_viewpoint.turn_angle_radians = RAD(player_viewpoint.turn_angle);
+	player_viewpoint.look_angle_radians = RAD(player_viewpoint.look_angle);
+	player_viewpoint.inv_turn_angle_radians = RAD(360.0f - player_viewpoint.turn_angle);
+	player_viewpoint.inv_look_angle_radians = RAD(360.0f - pos_adjust_angle(player_viewpoint.look_angle));
+
+	// Compute the position of the camera in world space.
+
+	camera_position.x = player_camera_offset.dx;
+	camera_position.y = player_camera_offset.dy;
+	camera_position.z = player_camera_offset.dz;
+	camera_position.rotate_x(player_viewpoint.look_angle);
+	camera_position.rotate_y(player_viewpoint.turn_angle);
+	camera_position += player_viewpoint.position;
+
+	// Don't bother translating the block, which means the relative camera position
+	// is the same as the absolute camera position.
+
+	block_translation.set(0.0f, 0.0f, 0.0f);
+	relative_camera_position = camera_position;
+
+	// Determine the centre of the block.
+
+	block_centre.set(UNITS_PER_HALF_BLOCK, UNITS_PER_HALF_BLOCK, UNITS_PER_HALF_BLOCK);
+
+	// Render the builder icons for each blockset, including the custom one.
+
+	render_builder_icons_for_blockset(custom_blockset_ptr);
+	blockset *blockset_ptr = blockset_list_ptr->first_blockset_ptr;
+	while (blockset_ptr) {
+		render_builder_icons_for_blockset(blockset_ptr);
+		blockset_ptr = blockset_ptr->next_blockset_ptr;
+	}
+
+	// If hardware acceleration is active, select the main render target.
+
+	if (hardware_acceleration) {
+		hardware_select_main_render_target();
+	}
+
+	// Clear the "rendering block as bitmap" flag.
+
+	rendering_block_as_bitmap = false;
 }

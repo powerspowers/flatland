@@ -507,6 +507,7 @@ static ID3D11DepthStencilView *d3d_main_depth_stencil_view_ptr;		// Depth/stenci
 static D3D11_VIEWPORT d3d_main_viewport;							// Viewport for main window.
 static ID3D11Texture2D *d3d_builder_render_target_texture_ptr;		// Render target texture used to create builder icons.
 static ID3D11RenderTargetView *d3d_builder_render_target_view_ptr;	// Render target view used to create builder icons.
+static ID3D11Texture2D *d3d_builder_staging_texture_ptr;			// Staging texture used to create builder icons.
 static ID3D11Texture2D *d3d_builder_depth_stencil_texture_ptr;		// Depth/stencil texture used to create builder icons.
 static ID3D11DepthStencilView *d3d_builder_depth_stencil_view_ptr;	// Depth/stencil view used to create builder icons.
 static D3D11_VIEWPORT d3d_builder_viewport;							// Viewport used to create builder icons.
@@ -1043,28 +1044,37 @@ create_bitmap_from_builder_render_target()
 	bitmap_ptr->height = BUILDER_ICON_HEIGHT;
 	bitmap_ptr->bytes_per_row = BUILDER_ICON_WIDTH * 4;
 
-	// Lock the texture surface.
+	// Copy the render texture to the staging texture.
 
-	if (FAILED(d3d_device_context_ptr->Map(d3d_builder_render_target_texture_ptr, 0, D3D11_MAP_READ, 0, &d3d_mapped_subresource))) {
+	d3d_device_context_ptr->CopyResource(d3d_builder_staging_texture_ptr, d3d_builder_render_target_texture_ptr);
+
+	// Lock the staging texture surface.
+
+	HRESULT result = d3d_device_context_ptr->Map(d3d_builder_staging_texture_ptr, 0, D3D11_MAP_READ, 0, &d3d_mapped_subresource);
+	if (FAILED(result)) {
 		DEL(bitmap_ptr, bitmap);
 		return NULL;
 	}
 
-	// Copy the pixel data from the texture to the bitmap.
+	// Copy the pixel data from the texture to the bitmap, performing the appropriate pixel conversion.
 
-	pixel *source_ptr = (pixel *)d3d_mapped_subresource.pData;
+	byte *source_ptr = (byte *)d3d_mapped_subresource.pData;
 	pixel *target_ptr = (pixel *)bitmap_pixels;
-	int row_gap = (d3d_mapped_subresource.RowPitch / 4) - BUILDER_ICON_WIDTH;
+	int row_gap = d3d_mapped_subresource.RowPitch - bitmap_ptr->bytes_per_row;
 	for (int row = 0; row < BUILDER_ICON_HEIGHT; row++) {
 		for (int col = 0; col < BUILDER_ICON_WIDTH; col++) {
-			*target_ptr++ = *source_ptr++;
+			byte red = *source_ptr++;
+			byte green = *source_ptr++;
+			byte blue = *source_ptr++;
+			byte alpha = *source_ptr++;
+			*target_ptr++ = (alpha << 24) | (red << 16) | (green << 8) | blue;
 		}
 		source_ptr += row_gap;
 	}
 
-	// Unlock the texture surface and return the bitmap.
+	// Unlock the staging texture surface and return the bitmap.
 
-	d3d_device_context_ptr->Unmap(d3d_builder_render_target_texture_ptr, 0);
+	d3d_device_context_ptr->Unmap(d3d_builder_staging_texture_ptr, 0);
 	return(bitmap_ptr);
 }
 
@@ -2383,7 +2393,8 @@ create_d3d_texture(int width, int height, DXGI_FORMAT format, D3D11_USAGE usage,
 	texture_desc.BindFlags = bind_flags;
 	texture_desc.CPUAccessFlags = cpu_access_flags;
 	texture_desc.MiscFlags = 0;
-	if (FAILED(d3d_device_ptr->CreateTexture2D(&texture_desc, NULL, &d3d_texture_ptr))) {
+	HRESULT result = d3d_device_ptr->CreateTexture2D(&texture_desc, NULL, &d3d_texture_ptr);
+	if (FAILED(result)) {
 		return NULL;
 	}
 	return d3d_texture_ptr;
@@ -2496,11 +2507,19 @@ start_up_hardware_renderer(void)
 	// Create the builder render target texture and view.
 
 	d3d_builder_render_target_texture_ptr = create_d3d_texture(BUILDER_ICON_WIDTH, BUILDER_ICON_HEIGHT, DXGI_FORMAT_R8G8B8A8_UNORM, D3D11_USAGE_DEFAULT, 
-		D3D11_BIND_RENDER_TARGET | D3D11_BIND_SHADER_RESOURCE, 0);
+		D3D11_BIND_RENDER_TARGET, 0);
 	if (d3d_builder_render_target_texture_ptr == NULL) {
 		return false;
 	}
 	if (FAILED(d3d_device_ptr->CreateRenderTargetView(d3d_builder_render_target_texture_ptr, NULL, &d3d_builder_render_target_view_ptr))) {
+		return false;
+	}
+
+	// Create the builder staging texture.
+
+	d3d_builder_staging_texture_ptr = create_d3d_texture(BUILDER_ICON_WIDTH, BUILDER_ICON_HEIGHT, DXGI_FORMAT_R8G8B8A8_UNORM, D3D11_USAGE_STAGING,
+		0, D3D11_CPU_ACCESS_READ);
+	if (d3d_builder_staging_texture_ptr == NULL) {
 		return false;
 	}
 
@@ -2774,6 +2793,10 @@ shut_down_hardware_renderer(void)
 	if (d3d_builder_depth_stencil_texture_ptr) {
 		d3d_builder_depth_stencil_texture_ptr->Release();
 		d3d_builder_depth_stencil_texture_ptr = NULL;
+	}
+	if (d3d_builder_staging_texture_ptr) {
+		d3d_builder_staging_texture_ptr->Release();
+		d3d_builder_staging_texture_ptr = NULL;
 	}
 	if (d3d_builder_render_target_view_ptr) {
 		d3d_builder_render_target_view_ptr->Release();
@@ -3154,6 +3177,7 @@ create_main_window(void (*key_callback)(byte key_code, bool key_down),
 	d3d_main_depth_stencil_view_ptr = NULL;
 	d3d_builder_render_target_texture_ptr = NULL;
 	d3d_builder_render_target_view_ptr = NULL;
+	d3d_builder_staging_texture_ptr = NULL;
 	d3d_builder_depth_stencil_texture_ptr = NULL;
 	d3d_builder_depth_stencil_view_ptr = NULL;
 	d3d_3D_depth_stencil_state_ptr = NULL;
