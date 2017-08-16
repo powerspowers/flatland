@@ -728,29 +728,37 @@ teleport(const char *entrance_name)
 	block *block_ptr;
 
 	// Search for the entrance with the specified name; if it doesn't exist,
-	// use the default entrance.
+	// use the default entrance.  If that doesn't exist, put the player on
+	// square (0, 0, max_level -1), turned 135 degrees.  They'll simply fall
+	// to the first occupied block, or the bottom of the map.
 
-	if ((entrance_ptr = find_entrance(entrance_name)) == NULL)
-		entrance_ptr = find_entrance("default");
+	if ((entrance_ptr = find_entrance(entrance_name)) != NULL ||
+		(entrance_ptr = find_entrance("default")) != NULL) {
+		square_ptr = entrance_ptr->square_ptr;
+		block_ptr = entrance_ptr->block_ptr;
+		player_viewpoint.turn_angle = entrance_ptr->initial_direction.angle_y;
+		player_viewpoint.look_angle = -entrance_ptr->initial_direction.angle_x;
+	} else {
+		square_ptr = world_ptr->get_square_ptr(0, 0, world_ptr->levels - 1);
+		block_ptr = NULL;
+		player_viewpoint.turn_angle = 135.0f;
+		player_viewpoint.look_angle = 0.0f;
+	}
 
 	// If this entrance does not belong to a square (meaning it belongs to a
 	// movable block), then use the closest square to the movable block as
 	// the entrance.  Note that if the entrance does belong to a square, a
 	// pointer to the block on the square needs to be obtained, if present.
 
-	square_ptr = entrance_ptr->square_ptr;
-	block_ptr = entrance_ptr->block_ptr;
 	if (square_ptr != NULL) {
 		world_ptr->get_square_location(square_ptr, &column, &row, &level);
 		block_ptr = world_ptr->get_block_ptr(column, row, level);
 	} else
 		block_ptr->translation.get_map_position(&column, &row, &level);
 
-	// Set the player position and view angles.
+	// Set the player position, and initialize the player block, if defined.
 
 	player_viewpoint.position.set_map_position(column, row, level);
-	player_viewpoint.turn_angle = entrance_ptr->initial_direction.angle_y;
-	player_viewpoint.look_angle = -entrance_ptr->initial_direction.angle_x;
 	if (player_block_ptr != NULL) {
 		player_block_ptr->set_frame(0);
 		player_block_ptr->rotate_y(player_viewpoint.turn_angle);
@@ -767,7 +775,8 @@ teleport(const char *entrance_name)
 	 else
 		player_viewpoint.position.y -= UNITS_PER_HALF_BLOCK;
 
-	// set the last position to this one so that the user starts fresh from this location
+	// Set the last position to this one so that the user starts fresh from this location.
+
 	player_viewpoint.last_position = player_viewpoint.position;
 
 	// Set a flag indicating that a teleport took place.

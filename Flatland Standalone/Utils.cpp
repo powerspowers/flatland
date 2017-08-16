@@ -880,7 +880,7 @@ init_sprite_collision_box(block *block_ptr)
 // north.  The polygon is sized to match the texture dimensions.
 //------------------------------------------------------------------------------
 
-static void
+void
 init_sprite_polygon(block *block_ptr, polygon *polygon_ptr, part *part_ptr)
 {
 	block_def *block_def_ptr;
@@ -984,7 +984,9 @@ init_sprite_polygon(block *block_ptr, polygon *polygon_ptr, part *part_ptr)
 
 	// Initialise the sprite's collision box.
 
-	init_sprite_collision_box(block_ptr);
+	if (block_ptr->requires_col_mesh) {
+		init_sprite_collision_box(block_ptr);
+	}
 }
 
 //------------------------------------------------------------------------------
@@ -2428,11 +2430,6 @@ init_spot(void)
 				}
 			}
 
-	// Check that the default entrance was defined.
-
-	if (find_entrance("default") == NULL)
-		error("There is no default entrance on the map");
-
 	// Initialise all popups with non-custom background textures.
 
 	update_non_custom_textures_in_popup_list(global_popup_list);
@@ -2772,7 +2769,6 @@ update_texture_dependancies(texture *custom_texture_ptr)
 
 	update_textures_in_popup_list(global_popup_list, custom_texture_ptr);
 	update_textures_in_blockset(custom_blockset_ptr, custom_texture_ptr);
-
 
 	// Step through the custom block definitions, and update all parts that
 	// use the custom texture.

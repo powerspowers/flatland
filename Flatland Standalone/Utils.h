@@ -61,6 +61,9 @@ void
 init_global_trigger(trigger *trigger_ptr);
 
 void
+init_sprite_polygon(block *block_ptr, polygon *polygon_ptr, part *part_ptr);
+
+void
 compute_light_list_bounding_box(light *light_list, vertex translation,
 								int &min_column, int &min_row, int &min_level,
 								int &max_column, int &max_row, int &max_level);

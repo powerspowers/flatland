@@ -1437,6 +1437,7 @@ struct block_def {
 	void create_vertex_list(int set_vertices);
 	void create_polygon_def_list(int set_polygons);
 	void dup_block_def(block_def *block_def_ptr);
+	block *create_simplified_block();
 	block *new_block(square *square_ptr);
 	block *del_block(block *block_ptr);
 	string get_symbol(void);
@@ -1554,6 +1555,7 @@ struct block {
 	int last_time_ms;				// Time of last sprite rotational change.
 	int pixmap_index;				// Sprite pixmap index (if applicable).
 	bool solid;						// TRUE if block is solid.
+	bool requires_col_mesh;			// TRUE if block requires a collision mesh.
 	COL_MESH *col_mesh_ptr;			// Pointer to the collision mesh.
 	int col_mesh_size;				// Size of collision mesh in bytes.
 	bool scripted;					// TRUE if this block has scripts.
@@ -1618,6 +1620,7 @@ struct world {
 	int rows;						// Number of rows in square map.
 	int levels;						// Number of levels in square map.
 	square *square_map;				// Map of squares.
+	bool *level_defined_list;		// Array of bools indicating which levels were defined.
 	entity **level_entity_list;		// Array of level entities.
 	float audio_scale;				// Audio scale (in metres per unit).
 

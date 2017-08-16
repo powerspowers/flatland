@@ -996,6 +996,89 @@ create_bitmap_from_texture(texture *texture_ptr)
 }
 
 //------------------------------------------------------------------------------
+// Create a bitmap and initialize it with the builder render target texture.
+//------------------------------------------------------------------------------
+
+bitmap *
+create_bitmap_from_builder_render_target()
+{
+	HBITMAP bitmap_handle;
+	byte *bitmap_pixels;
+	bitmap *bitmap_ptr;
+	HDC hdc;
+	BITMAPINFO bitmap_info;
+	D3D11_MAPPED_SUBRESOURCE d3d_mapped_subresource;
+
+	// Initialise the bitmap info structure.
+
+	bitmap_info.bmiHeader.biSize = sizeof(BITMAPINFOHEADER);
+	bitmap_info.bmiHeader.biWidth = BUILDER_ICON_WIDTH;
+	bitmap_info.bmiHeader.biHeight = -BUILDER_ICON_HEIGHT;
+	bitmap_info.bmiHeader.biPlanes = 1;
+	bitmap_info.bmiHeader.biBitCount = 32;
+	bitmap_info.bmiHeader.biSizeImage = 0;
+	bitmap_info.bmiHeader.biXPelsPerMeter = 0;
+	bitmap_info.bmiHeader.biYPelsPerMeter = 0;
+	bitmap_info.bmiHeader.biClrUsed = 0;
+	bitmap_info.bmiHeader.biClrImportant = 0;
+	bitmap_info.bmiHeader.biCompression = BI_RGB;
+
+	// Create the bitmap image as a DIB section.
+
+	hdc = GetDC(app_window_handle);
+	bitmap_handle = CreateDIBSection(hdc, &bitmap_info, DIB_RGB_COLORS, (void **)&bitmap_pixels, NULL, 0);
+	ReleaseDC(app_window_handle, hdc);
+
+	// Create the bitmap object.
+
+	NEW(bitmap_ptr, bitmap);
+	if (bitmap_ptr == NULL)
+		return(NULL);
+
+	// Fill in the bitmap structure (the parts we care about anyhow).
+
+	bitmap_ptr->handle = bitmap_handle;
+	bitmap_ptr->pixels = bitmap_pixels;
+	bitmap_ptr->width = BUILDER_ICON_WIDTH;
+	bitmap_ptr->height = BUILDER_ICON_HEIGHT;
+	bitmap_ptr->bytes_per_row = BUILDER_ICON_WIDTH * 4;
+
+	// Lock the texture surface.
+
+	if (FAILED(d3d_device_context_ptr->Map(d3d_builder_render_target_texture_ptr, 0, D3D11_MAP_READ, 0, &d3d_mapped_subresource))) {
+		DEL(bitmap_ptr, bitmap);
+		return NULL;
+	}
+
+	// Copy the pixel data from the texture to the bitmap.
+
+	pixel *source_ptr = (pixel *)d3d_mapped_subresource.pData;
+	pixel *target_ptr = (pixel *)bitmap_pixels;
+	int row_gap = (d3d_mapped_subresource.RowPitch / 4) - BUILDER_ICON_WIDTH;
+	for (int row = 0; row < BUILDER_ICON_HEIGHT; row++) {
+		for (int col = 0; col < BUILDER_ICON_WIDTH; col++) {
+			*target_ptr++ = *source_ptr++;
+		}
+		source_ptr += row_gap;
+	}
+
+	// Unlock the texture surface and return the bitmap.
+
+	d3d_device_context_ptr->Unmap(d3d_builder_render_target_texture_ptr, 0);
+	return(bitmap_ptr);
+}
+
+//------------------------------------------------------------------------------
+// Create a bitmap and initialize it with the software frame buffer.
+//------------------------------------------------------------------------------
+
+bitmap *
+create_bitmap_from_frame_buffer()
+{
+	return NULL;
+}
+
+//------------------------------------------------------------------------------
 // Destroy a bitmap handle.
 //------------------------------------------------------------------------------
 
@@ -5040,8 +5123,8 @@ destroy_frame_buffer(void)
 bool
 lock_frame_buffer(byte *&fb_ptr, int &row_pitch)
 {
-	// Otherwise if the display depth is 8, return the 16-bit frame buffer 
-	// pointer and it's row pitch.
+	// If the display depth is 8, return the 16-bit frame buffer pointer and
+	// its row pitch.
 
 	if (display_depth == 8) {
 		fb_ptr = framebuffer_ptr;

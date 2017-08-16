@@ -125,6 +125,10 @@ static bool found_selection;
 static float curr_orb_x, curr_orb_y;
 static float curr_orb_width, curr_orb_height;
 
+// Flag indicating if we're rendering a block as a bitmap.
+
+static bool rendering_block_as_bitmap;
+
 //------------------------------------------------------------------------------
 // Initialise the renderer.
 //------------------------------------------------------------------------------
@@ -1398,7 +1402,11 @@ render_polygon(polygon *polygon_ptr, float turn_angle)
 			for (vertex_no = 0; vertex_no < polygon_def_ptr->vertices; vertex_no++) {
 				polygon_vertex = *VERTEX_PTR(vertex_no) + curr_block_ptr->translation;
 				vertex_colour_ptr = &vertex_colour_list[vertex_no];
-				compute_vertex_colour(curr_block_ptr->active_light_list, &polygon_vertex, &normal_vector, vertex_colour_ptr);
+				if (rendering_block_as_bitmap) {
+					vertex_colour_ptr->set_RGB(255.0f, 255.0f, 255.0f);
+				} else {
+					compute_vertex_colour(curr_block_ptr->active_light_list, &polygon_vertex, &normal_vector, vertex_colour_ptr);
+				}
 				vertex_colour_ptr->normalise();
 			}
 		} else {
@@ -1408,7 +1416,11 @@ render_polygon(polygon *polygon_ptr, float turn_angle)
 				polygon_vertex.rotate_y(turn_angle);
 				polygon_vertex += block_centre;
 				vertex_colour_ptr = &vertex_colour_list[vertex_no];
-				compute_vertex_colour(curr_block_ptr->active_light_list, &polygon_vertex, &normal_vector, vertex_colour_ptr);
+				if (rendering_block_as_bitmap) {
+					vertex_colour_ptr->set_RGB(255.0f, 255.0f, 255.0f);
+				} else {
+					compute_vertex_colour(curr_block_ptr->active_light_list, &polygon_vertex, &normal_vector, vertex_colour_ptr);
+				}
 				vertex_colour_ptr->normalise();
 			}
 		}
@@ -1445,7 +1457,8 @@ render_polygon(polygon *polygon_ptr, float turn_angle)
 
 		// Determine whether the polygon has been selected by the mouse.
 
-		polygon_selected = !found_selection && mouse_intersects_with_polygon((float)mouse_x, (float)mouse_y, &camera_direction, tpolygon_ptr);
+		polygon_selected = !rendering_block_as_bitmap && !found_selection && 
+			mouse_intersects_with_polygon((float)mouse_x, (float)mouse_y, &camera_direction, tpolygon_ptr);
 	} 
 	
 	// If hardware acceleration is not enabled... 
@@ -1456,8 +1469,11 @@ render_polygon(polygon *polygon_ptr, float turn_angle)
 		// Compute the brightness at the polygon centroid, and compute the colour pixel.
 
 		polygon_centroid = polygon_ptr->centroid + block_translation;
-		brightness = compute_vertex_brightness(curr_block_ptr->active_light_list,
-			&polygon_centroid, &normal_vector);
+		if (rendering_block_as_bitmap) {
+			brightness = 1.0f;
+		} else {
+			brightness = compute_vertex_brightness(curr_block_ptr->active_light_list, &polygon_centroid, &normal_vector);
+		}
 		brightness_index = get_brightness_index(brightness);
 		colour = part_ptr->colour;
 		colour.adjust_brightness(brightness);
@@ -1562,7 +1578,7 @@ render_polygon(polygon *polygon_ptr, float turn_angle)
 
 		// Determine whether this polygon is selected.
 
-		polygon_selected = !found_selection && check_for_polygon_selection();
+		polygon_selected = !rendering_block_as_bitmap && !found_selection && check_for_polygon_selection();
 	}
 
 	// Check whether this polygon is selected by the mouse, and if so 
@@ -1571,7 +1587,7 @@ render_polygon(polygon *polygon_ptr, float turn_angle)
 	// translucent, and it doesn't have an exit or any mouse-based triggers,
 	// then ignore it.
 
-	if (!found_selection && polygon_selected &&
+	if (!rendering_block_as_bitmap && !found_selection && polygon_selected &&
 		(((!hardware_acceleration || part_ptr->alpha == 1.0f) &&
 		(texture_ptr == NULL || !texture_ptr->transparent)) ||
 			((curr_block_ptr != NULL &&
@@ -3161,6 +3177,10 @@ render_frame(void)
 	pixmap *pixmap_ptr;
 	int row;
 
+	// Clear the "rendering block as bitmap" flag.
+
+	rendering_block_as_bitmap = false;
+
 	// If hardware acceleration is enabled clear the frame buffer, 
 	// otherwise lock the frame buffer.
 
@@ -3503,4 +3523,149 @@ render_frame(void)
 		found_selection = true;
 		curr_selected_exit_ptr = orb_exit_ptr;
 	}
+}
+
+//------------------------------------------------------------------------------
+// Render one block and return it as a bitmap.
+//------------------------------------------------------------------------------
+
+bitmap *
+render_block_as_bitmap(block *block_ptr)
+{
+	// Set the "rendering block as bitmap" flag.
+
+	rendering_block_as_bitmap = true;
+
+	// If hardware acceleration is enabled select the builder render target and
+	// clear the frame buffer, otherwise clear then lock the software frame
+	// buffer.
+
+	if (hardware_acceleration) {
+		hardware_select_builder_render_target();
+		clear_frame_buffer();
+	} else {
+		clear_frame_buffer(0, 0, window_width, window_height);
+		lock_frame_buffer(frame_buffer_ptr, frame_buffer_width);
+	}
+
+	// Reset the span and transformed polygon lists.
+
+	colour_span_list = NULL;
+	transparent_tpolygon_list = NULL;
+	colour_tpolygon_list = NULL;
+	reset_screen_polygon_list();
+
+	// Remember the square and block pointers, and whether the block is movable.
+
+	curr_square_ptr = NULL;
+	curr_block_ptr = block_ptr;
+	curr_block_movable = false;
+
+	// Get a pointer to the block definition and remember it's type.
+
+	block_def *block_def_ptr = curr_block_ptr->block_def_ptr;
+	curr_block_type = block_def_ptr->type;
+
+	// Set the player viewpoint.
+
+	player_viewpoint.position.set(0.0f, 0.0f, -UNITS_PER_BLOCK);
+	player_viewpoint.look_angle = 0.0f;
+	player_viewpoint.turn_angle = 0.0f;
+	
+	// Compute the normal and inverse of the player turn and look angles, in radians.
+
+	player_viewpoint.turn_angle_radians = RAD(player_viewpoint.turn_angle);
+	player_viewpoint.look_angle_radians = RAD(player_viewpoint.look_angle);
+	player_viewpoint.inv_turn_angle_radians = RAD(360.0f - player_viewpoint.turn_angle);
+	player_viewpoint.inv_look_angle_radians = RAD(360.0f - pos_adjust_angle(player_viewpoint.look_angle));
+
+	// Compute the position of the camera in world space.
+
+	camera_position.x = player_camera_offset.dx;
+	camera_position.y = player_camera_offset.dy;
+	camera_position.z = player_camera_offset.dz;
+	camera_position.rotate_x(player_viewpoint.look_angle);
+	camera_position.rotate_y(player_viewpoint.turn_angle);
+	camera_position += player_viewpoint.position;
+
+	// Don't bother translating the block, which means the relative camera position
+	// is the same as the absolute camera position.
+
+	block_translation.set(0.0f, 0.0f, 0.0f);
+	relative_camera_position = camera_position;
+
+	// Determine the centre of the block.
+
+	block_centre.set(UNITS_PER_HALF_BLOCK, UNITS_PER_HALF_BLOCK, UNITS_PER_HALF_BLOCK);
+
+	// Transform each vertex by the player position and orientation, storing them in a global list.
+
+	for (int vertex_no = 0; vertex_no < curr_block_ptr->vertices; vertex_no++) {
+		transform_vertex(&curr_block_ptr->vertex_list[vertex_no], &block_tvertex_list[vertex_no]);
+	}
+
+	// If the block is a sprite, render the first polygon at a zero angle.
+
+	if (curr_block_type & SPRITE_BLOCK) {
+		render_polygon(curr_block_ptr->polygon_list, 0.0f);
+	}
+
+	// If the block is not a sprite and has a BSP tree, traverse it to render the polygons in 
+	// front-to-back order.  Otherwise just render them in the order they are defined.
+
+	else if (!block_def_ptr->movable && block_def_ptr->BSP_tree != NULL) {
+		render_polygons_in_block(block_def_ptr->BSP_tree);
+	} else {
+		for (int polygon_no = 0; polygon_no < curr_block_ptr->polygons; polygon_no++) {
+			render_polygon(&curr_block_ptr->polygon_list[polygon_no], 0.0f);
+		}
+	}
+
+	// If not using hardware acceleration, step through all opaque spans in the
+	// span buffer, and add each to the span list of the pixmap associated with
+	// that span.  Solid colour spans go in their own list.
+
+	if (!hardware_acceleration) {
+		for (int row = 0; row < window_height; row++) {
+			span_row *span_row_ptr = (*span_buffer_ptr)[row];
+			span *span_ptr = span_row_ptr->opaque_span_list;
+			while (span_ptr != NULL) {
+				int brightness_index;
+				span *next_span_ptr = span_ptr->next_span_ptr;
+				pixmap *pixmap_ptr = span_ptr->pixmap_ptr;
+				brightness_index = span_ptr->brightness_index;
+				if (pixmap_ptr != NULL) {
+					span **span_list_ptr = &pixmap_ptr->span_lists[brightness_index];
+					span_ptr->next_span_ptr = *span_list_ptr;
+					*span_list_ptr = span_ptr;
+				} else {
+					span_ptr->next_span_ptr = colour_span_list;
+					colour_span_list = span_ptr;
+				}
+				span_ptr = next_span_ptr;
+			}
+		}
+	}
+
+	// Step through each pixmap in each texture, rendering any polygons/spans listed in these pixmaps.
+
+	render_textured_polygons_or_spans();
+
+	// Render the colour polygons/spans, followed by the transparent polygons/spans.
+
+	render_colour_polygons_or_spans();
+	render_transparent_polygons_or_spans();
+
+	// Create a bitmap with the contents of either the builder render target (after which we select
+	// the main render target), or the frame buffer (which is then unlocked).
+
+	bitmap *bitmap_ptr;
+	if (hardware_acceleration) {
+		bitmap_ptr = create_bitmap_from_builder_render_target();
+		hardware_select_main_render_target();
+	} else {
+		bitmap_ptr = create_bitmap_from_frame_buffer();
+		unlock_frame_buffer();
+	}
+	return bitmap_ptr;
 }

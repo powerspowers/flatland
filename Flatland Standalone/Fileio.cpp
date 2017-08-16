@@ -60,9 +60,9 @@ static bool got_stream_tag;
 static bool got_title_tag;
 static bool got_vertex_list;
 
-// Current level of map.
+// Last level of map that was defined.
 
-static int curr_level;
+static int last_level;
 
 // List of vertex definition entries, parts and polygons in the current block
 // definition.
@@ -1739,7 +1739,11 @@ parse_block_tag(blockset *blockset_ptr)
 			new_block_def_ptr->name = block_name;
 		if (parsed_attribute[BLOCK_ICON]) {
 			texture *texture_ptr = load_texture(blockset_ptr, block_icon, false, true);
-			new_block_def_ptr->icon_bitmap_ptr = create_bitmap_from_texture(texture_ptr);
+			block *block_ptr = new_block_def_ptr->create_simplified_block();
+			if (block_ptr) {
+				new_block_def_ptr->icon_bitmap_ptr = render_block_as_bitmap(block_ptr);
+				delete block_ptr;
+			}
 			DEL(texture_ptr, texture);
 		}
 		if (parsed_attribute[BLOCK_TYPE])
@@ -3429,33 +3433,39 @@ parse_level_tag(void)
 	entity *entity_ptr;
 	const char *line_ptr;
 	char ch1, ch2;
-	int expected_levels;
-	int column, row;
+	int max_level;
+	int column, row, level;
 	square *row_ptr;
 
-	// If we've already read all levels, this is an error.
+	// If the number parameter was not given, use the last level number + 1.
 
-	if (world_ptr->ground_level_exists)
-		expected_levels = world_ptr->levels - 2;
-	else
-		expected_levels = world_ptr->levels - 1;
-	if (curr_level == expected_levels) {
-		warning("Too many levels");
-		return;
+	if (!parsed_attribute[LEVEL_NUMBER]) {
+		level_number = last_level + 1;
 	}
 
-	// If the number parameter was given, verify it is in sequence.
+	// Verify the level number is within range.
 
-	if (parsed_attribute[LEVEL_NUMBER] && level_number != curr_level + 1) {
-		warning("Level number %d is out of sequence (should be %d)", level_number, curr_level + 1);
-		return;
+	max_level = world_ptr->ground_level_exists ? world_ptr->levels - 2 : world_ptr->levels - 1;
+	if (level_number < 1 || level_number > max_level) {
+		error("Level %d is out of range (should be between 1 and %d)", level_number, max_level);
 	}
+
+	// The level index is one less than the level number if the ground level does not exist.
+
+	level = world_ptr->ground_level_exists ? level_number : level_number - 1;
+
+	// Verify the level number hasn't been seen before, then mark it as having been seen.
+
+	if (world_ptr->level_defined_list[level]) {
+		error("Level %d has been seen already", level_number);
+	}
+	world_ptr->level_defined_list[level] = true;
 
 	// Get a pointer to the nested text entity (or create an empty one).  Then store the entity in the world
 	// object for later access.
 
 	entity_ptr = nested_text_entity(TOKEN_LEVEL, true);
-	world_ptr->set_level_entity(world_ptr->ground_level_exists ? curr_level + 1 : curr_level, entity_ptr);
+	world_ptr->set_level_entity(level, entity_ptr);
 
 	// Skip over all whitespace at the beginning of the map text.
 
@@ -3479,10 +3489,9 @@ parse_level_tag(void)
 		while (ch1 == ' ' || ch1 == '\t')
 			ch1 = *++line_ptr;
 		
-		// Get a pointer to the row in the map.  This will be one more than
-		// the current level number if the ground tag was seen in the header.
+		// Get a pointer to the row in the map.
 
-		row_ptr = world_ptr->get_square_ptr(0, row, world_ptr->ground_level_exists ? curr_level + 1 : curr_level);
+		row_ptr = world_ptr->get_square_ptr(0, row, level);
 
 		// Parse the block single or double character symbols in this row,
 		// until the expected number of symbols have been parsed or the end of
@@ -3493,7 +3502,7 @@ parse_level_tag(void)
 		case SINGLE_MAP:
 			while (ch1 != '\0' && ch1 != '\n' && column < world_ptr->columns) {
 				if (not_single_symbol(ch1, false))
-					warning("Symbol at location (%d,%d,%d) was invalid", column + 1, row + 1, curr_level + 1);
+					warning("Symbol at location (%d, %d, %d) was invalid", column + 1, row + 1, level_number);
 				else
 					row_ptr->orig_block_symbol = ch1;
 				row_ptr++;
@@ -3508,7 +3517,7 @@ parse_level_tag(void)
 				ch2 = *++line_ptr;
 				if (ch2 == '\0' || ch2 == '\n' || ch2 == ' ' || ch2 == '\t' ||
 					not_double_symbol(ch1, ch2, false)) {
-					warning("Symbol at location (%d,%d,%d) was invalid", column + 1, row + 1, curr_level + 1);
+					warning("Symbol at location (%d, %d, %d) was invalid", column + 1, row + 1, level_number);
 					if (ch2 == '\0' || ch2 == '\n') {
 						ch1 = ch2;
 						break;
@@ -3533,9 +3542,9 @@ parse_level_tag(void)
 			line_ptr++;
 	}
 
-	// Increment the level number.
+	// Remember this as the last level.
 
-	curr_level++;
+	last_level = level_number;
 }
 
 //------------------------------------------------------------------------------
@@ -4327,7 +4336,7 @@ parse_body_tags(void)
 	got_player_tag = false;
 	got_player_size = false;
 	got_player_camera = false;
-	curr_level = 0;
+	last_level = 0;
 
 	// Parse the body tags.
 
@@ -4447,7 +4456,6 @@ parse_head_tags(void)
 void
 parse_spot_file(char *spot_URL, char *spot_file_path)
 {
-	int expected_levels;
 	FILE *fp;
 	int tag_token;
 
@@ -4567,21 +4575,6 @@ parse_spot_file(char *spot_URL, char *spot_file_path)
 
 	spot_entity_list = pop_file(true);
 
-	// Check that all necessary level tags were seen.  If the ground tag was
-	// seen in the header, the number of levels seen should be one less than
-	// the number of levels present on the map.
-
-	if (world_ptr->ground_level_exists)
-		expected_levels = world_ptr->levels - 2;
-	else
-		expected_levels = world_ptr->levels - 1;
-	if (curr_level != expected_levels) {
-		if (curr_level + 1 == expected_levels)
-			error("Level %d of the map is missing", curr_level + 1);
-		else
-			error("Levels %d-%d of the map are missing", curr_level + 1, expected_levels);
-	}
-
 	// If a global script was constructed, assign it to the spot object.
 
 	if (strlen(global_script) > 0)
@@ -4638,11 +4631,15 @@ save_spot_file(const char *spot_file_path)
 		prepend_tag_entity(base_tag_entity_ptr, head_tag_entity_ptr->nested_entity_list);
 	}
 
-	// Reconstruct all of the level text entities with the current state of the map.
+	// Reconstruct all of the level text entities with the current state of the map.  Skip over
+	// levels that weren't defined in the original spot file.
 
 	int start_level = world_ptr->ground_level_exists ? 1 : 0;
 	int end_level = world_ptr->levels - 1;
 	for (int level = start_level; level < end_level; level++) {
+		if (!world_ptr->level_defined_list[level]) {
+			continue;
+		}
 		entity *entity_ptr = world_ptr->get_level_entity(level);
 
 		// Copy all whitespace at the beginning of the old map text.

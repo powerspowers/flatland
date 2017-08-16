@@ -3301,6 +3301,68 @@ block_def::new_block(square *square_ptr)
 	return(block_ptr);
 }
 
+// Method to create a simplified version of a block, just enough to render its polygons.
+
+block *
+block_def::create_simplified_block()
+{
+	block *block_ptr;
+
+	// Create a new block.
+
+	NEW(block_ptr, block);
+	if (block_ptr == NULL)
+		return(NULL);
+	block_ptr->block_def_ptr = this;
+
+	// Create the vertex and polygon list for this block.
+
+	if (!block_ptr->create_vertex_list(vertices) || !block_ptr->create_polygon_list(polygons)) {
+		DEL(block_ptr, block);
+		return(NULL);
+	}
+
+	// Initialise some miscellaneous block fields.
+
+	block_ptr->square_ptr = NULL;
+	block_ptr->sprite_angle = sprite_angle;
+	block_ptr->solid = solid;
+	block_ptr->block_orientation = block_orientation;
+	block_ptr->block_origin = block_origin;
+	block_ptr->set_active_lights = true;
+	block_ptr->current_frame = -1;
+	block_ptr->requires_col_mesh = false;
+
+	// Initialise the polygon list.
+
+	for (int index = 0; index < polygons; index++) {
+		polygon *polygon_ptr = &block_ptr->polygon_list[index];
+		polygon_ptr->polygon_def_ptr = &polygon_def_list[index];
+		polygon_ptr->active = true;
+	}
+
+	// If the block is a structural block, transform it into it's final
+	// orientation and translation.
+
+	if (type == STRUCTURAL_BLOCK) {
+		block_ptr->reset_vertices();
+		block_ptr->orient();
+	}
+
+	// If the block is a sprite, initialise it directly.
+
+	else {
+		polygon *polygon_ptr = block_ptr->polygon_list;
+		polygon_def *polygon_def_ptr = polygon_ptr->polygon_def_ptr;
+		part *part_ptr = polygon_def_ptr->part_ptr;
+		init_sprite_polygon(block_ptr, polygon_ptr, part_ptr);
+	}
+
+	// Return the pointer to the block.
+
+	return(block_ptr);
+}
+
 // Method to add a block to the head of the free block list, and return a
 // pointer to the next block.
 
@@ -3714,6 +3776,7 @@ block::block()
 	polygons = 0;
 	polygon_list = NULL;
 	pixmap_index = 0;
+	requires_col_mesh = true;
 	col_mesh_ptr = NULL;
 	solid = true;
 	block_simkin_object_ptr = NULL;
@@ -3883,7 +3946,9 @@ block::update(void)
 
 	// Calculate the block's collision mesh.
 
-	COL_convertBlockToColMesh(this);
+	if (requires_col_mesh) {
+		COL_convertBlockToColMesh(this);
+	}
 }
 
 // Method to orient a block by it's current orientation.
@@ -4143,10 +4208,12 @@ world::world()
 	ground_level_exists = false;
 	square_map = NULL;
 	level_entity_list = NULL;
+	level_defined_list = NULL;
 	audio_scale = 2.0f / UNITS_PER_BLOCK;
 }
 
-// Default destructor deletes the square map and level entity list, if they exist.
+// Default destructor deletes the square map, level entity list and level defined
+// list, if they exist.
 
 world::~world()
 {
@@ -4154,17 +4221,23 @@ world::~world()
 		DELARRAY(square_map, square, columns * rows * levels);
 	if (level_entity_list != NULL)
 		DELARRAY(level_entity_list, entity *, levels);
+	if (level_defined_list != NULL)
+		DELARRAY(level_defined_list, bool, levels);
 }
 
-// Method to create the square map and level entity list.  It is assumed the 
-// dimensions for the square map are already set.
+// Method to create the square map, level entity list and level defined list.
+// It is assumed the dimensions for the square map are already set.
 
 bool
 world::create_square_map(void)
 {
 	NEWARRAY(square_map, square, columns * rows * levels);
 	NEWARRAY(level_entity_list, entity *, levels);
-	return(square_map != NULL && level_entity_list != NULL);
+	NEWARRAY(level_defined_list, bool, levels);
+	for (int i = 0; i < levels; i++) {
+		level_defined_list[i] = false;
+	}
+	return(square_map != NULL && level_entity_list != NULL && level_defined_list != NULL);
 }
 
 // Method to return a pointer to the square at a given map position.
@@ -4193,6 +4266,7 @@ world::get_block_ptr(int column, int row, int level)
 entity *
 world::get_level_entity(int level)
 {
+	debug_message("Getting entity for level %d\n", level);
 	if (level_entity_list != NULL && level >= 0 && level < levels) {
 		return level_entity_list[level];
 	}
@@ -4202,6 +4276,7 @@ world::get_level_entity(int level)
 void 
 world::set_level_entity(int level, entity *entity_ptr)
 {
+	debug_message("Setting entity for level %d to %04X\n", level, entity_ptr);
 	if (level_entity_list != NULL && level >= 0 && level < levels) {
 		level_entity_list[level] = entity_ptr;
 	}

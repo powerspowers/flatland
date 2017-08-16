@@ -334,6 +334,12 @@ get_password(string *username_ptr, string *password_ptr);
 bitmap *
 create_bitmap_from_texture(texture *texture_ptr);
 
+bitmap *
+create_bitmap_from_builder_render_target();
+
+bitmap *
+create_bitmap_from_frame_buffer();
+
 void
 destroy_bitmap_handle(void *bitmap_handle);
 

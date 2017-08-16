@@ -26,3 +26,6 @@ transform_vertex(vertex *old_vertex_ptr, vertex *new_vertex_ptr);
 
 void 
 render_frame(void);
+
+bitmap *
+render_block_as_bitmap(block *block_ptr);
