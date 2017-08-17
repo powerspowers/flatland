@@ -7267,6 +7267,88 @@ render_popup_span(span *span_ptr)
 	}
 }
 
+//------------------------------------------------------------------------------
+// Render a pixel to the frame buffer.
+//------------------------------------------------------------------------------
+
+static void
+render_pixel16(int x, int y, pixel pixel_colour)
+{
+	*(word *)(frame_buffer_ptr + frame_buffer_row_pitch * y + (x << 1)) = pixel_colour;
+}
+
+static void
+render_pixel24(int x, int y, pixel pixel_colour)
+{
+	word *fb_ptr = (word *)(frame_buffer_ptr + frame_buffer_row_pitch * y + (x * 3));
+	*fb_ptr = (*fb_ptr & 0xFF000000) | (pixel_colour & 0x00FFFFFF);
+}
+
+static void
+render_pixel32(int x, int y, pixel pixel_colour)
+{
+	*(pixel *)(frame_buffer_ptr + frame_buffer_row_pitch * y + (x << 2)) = pixel_colour;
+}
+
+//------------------------------------------------------------------------------
+// Render a line to the frame buffer.
+//------------------------------------------------------------------------------
+
+static void
+render_line(spoint *spoint1_ptr, spoint *spoint2_ptr, pixel pixel_colour)
+{
+	int x0 = (int)spoint1_ptr->sx;
+	int y0 = (int)spoint1_ptr->sy;
+	int x1 = (int)spoint2_ptr->sx;
+	int y1 = (int)spoint2_ptr->sy;
+	int dx = abs(x1 - x0);
+	int sx = x0 < x1 ? 1 : -1;
+	int dy = abs(y1 - y0);
+	int sy = y0 < y1 ? 1 : -1; 
+	int err = (dx > dy ? dx : -dy) / 2;
+	for (;;) {
+		if (x0 >= 0 && x0 < window_width && y0 >= 0 && y0 < window_height) {
+			switch (frame_buffer_depth) {
+			case 16:
+				render_pixel16(x0, y0, pixel_colour);
+				break;
+			case 24:
+				render_pixel24(x0, y0, pixel_colour);
+				break;
+			case 32:
+				render_pixel32(x0, y0, pixel_colour);
+			}
+		}
+		if (x0 == x1 && y0 == y1) {
+			break;
+		}
+		int e2 = err;
+		if (e2 > -dx) { 
+			err -= dy; 
+			x0 += sx; 
+		}
+		if (e2 < dy) { 
+			err += dx; 
+			y0 += sy;
+		}
+	}
+}
+
+//------------------------------------------------------------------------------
+// Render a list of lines to the frame buffer.
+//------------------------------------------------------------------------------
+
+void
+render_lines(spoint *spoint_list, int spoints, RGBcolour colour)
+{
+	pixel pixel_colour = RGB_to_display_pixel(colour);
+	for (int i = 0; i < spoints; i += 2) {
+		spoint *spoint1_ptr = spoint_list++;
+		spoint *spoint2_ptr = spoint_list++;
+		render_line(spoint1_ptr, spoint2_ptr, pixel_colour);
+	}
+}
+
 //==============================================================================
 // Function to determine intersection of the mouse with a polygon.
 //==============================================================================

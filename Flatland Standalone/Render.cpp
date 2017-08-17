@@ -593,6 +593,58 @@ clip_3D_line(vertex *tvertex1_ptr, vertex_def *vertex1_def_ptr,
 }
 
 //------------------------------------------------------------------------------
+// Project a vertex into screen space and assign to a screen point.
+//------------------------------------------------------------------------------
+
+static void
+project_vertex(spoint *spoint_ptr, vertex *tvertex_ptr, 
+			   vertex_def *vertex_def_ptr = NULL, 
+			    RGBcolour *vertex_colour_ptr = NULL)
+{
+	// Project vertex into screen space.
+
+	float one_on_tz = 1.0f / tvertex_ptr->z;
+	float px = tvertex_ptr->x * horz_scaling_factor * one_on_tz;
+	float py = tvertex_ptr->y * vert_scaling_factor * one_on_tz;
+	spoint_ptr->sx = half_frame_buffer_width + (px * half_frame_buffer_width);
+	spoint_ptr->sy = half_frame_buffer_height - (py * half_frame_buffer_height);
+
+	// If a vertex definition was provided, calculate u/tz and v/tz.
+
+	if (vertex_def_ptr) {
+
+		// Save 1/tz.
+
+		spoint_ptr->one_on_tz = one_on_tz;
+
+		// If or v are 0 or 1, move them in by half a texel to prevent inaccurate
+		// texture wrapping.
+
+		float u = vertex_def_ptr->u;
+		if (FEQ(u, 0.0f))
+			u += half_texel_u;
+		else if (FEQ(u, 1.0f))
+			u -= half_texel_u;
+		float v = vertex_def_ptr->v;
+		if (FEQ(v, 0.0f))
+			v += half_texel_v;
+		else if (FEQ(v, 1.0f))
+			v -= half_texel_v;
+
+		// Compute u/tz and v/tz.
+
+		spoint_ptr->u_on_tz = u * one_on_tz;
+		spoint_ptr->v_on_tz = v * one_on_tz;
+	}
+
+	// Save the normalised lit colour, if it were provided.
+
+	if (vertex_colour_ptr) {
+		spoint_ptr->colour = *vertex_colour_ptr;
+	}
+}
+
+//------------------------------------------------------------------------------
 // Project a transformed vertex into screen space, and add the resulting screen
 // point to the polygon's screen point list.  Also compute 1/tz for that screen
 // point.
@@ -603,47 +655,12 @@ add_spoint_to_list(vertex *tvertex_ptr, vertex_def *vertex_def_ptr,
 				   RGBcolour *vertex_colour_ptr)
 {
 	spoint *spoint_ptr;
-	float one_on_tz, px, py;
-	float u, v;
 
-	// Get a pointer to the next available screen point.
+	// Get a pointer to the next available screen point, then project the vertex
+	// into screen space.
 
 	spoint_ptr = &main_spoint_list[spoints++];
-
-	// Project vertex into screen space.
-
-	one_on_tz = 1.0f / tvertex_ptr->z;
-	px = tvertex_ptr->x * horz_scaling_factor * one_on_tz;
-	py = tvertex_ptr->y * vert_scaling_factor * one_on_tz;
-	spoint_ptr->sx = half_frame_buffer_width + (px * half_frame_buffer_width);
-	spoint_ptr->sy = half_frame_buffer_height - (py * half_frame_buffer_height);
-
-	// Save 1/tz.
-
-	spoint_ptr->one_on_tz = one_on_tz;
-
-	// If or v are 0 or 1, move them in by half a texel to prevent inaccurate
-	// texture wrapping.
-
-	u = vertex_def_ptr->u;
-	if (FEQ(u, 0.0f))
-		u += half_texel_u;
-	else if (FEQ(u, 1.0f))
-		u -= half_texel_u;
-	v = vertex_def_ptr->v;
-	if (FEQ(v, 0.0f))
-		v += half_texel_v;
-	else if (FEQ(v, 1.0f))
-		v -= half_texel_v;
-
-	// Compute u/tz and v/tz.
-
-	spoint_ptr->u_on_tz = u * one_on_tz;
-	spoint_ptr->v_on_tz = v * one_on_tz;
-
-	// Save the normalised lit colour.
-
-	spoint_ptr->colour = *vertex_colour_ptr;
+	project_vertex(spoint_ptr, tvertex_ptr, vertex_def_ptr, vertex_colour_ptr);
 	return(spoint_ptr);
 }
 
@@ -1873,12 +1890,21 @@ render_wireframe_square(square *square_ptr)
 	vertices[20] = tbbox[2]; vertices[21] = tbbox[6];
 	vertices[22] = tbbox[3]; vertices[23] = tbbox[7];
 
-	// Draw the lines.
+	// Draw the lines.  For software rendering, we need to project the vertices
+	// into screen space first.
 
 	if (hardware_acceleration) {
 		RGBcolour white;
 		white.set_RGB(1.0f, 1.0f, 1.0f, 1.0f);
 		hardware_render_lines(vertices, 24, white);
+	} else {
+		spoint spoints[24];
+		for (int i = 0; i < 24; i++) {
+			project_vertex(&spoints[i], &vertices[i]);
+		}
+		RGBcolour white;
+		white.set_RGB(255.0f, 255.0f, 255.0f, 255.0f);
+		render_lines(spoints, 24, white);
 	}
 }
 

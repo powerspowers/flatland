@@ -404,6 +404,9 @@ render_transparent_span(span *span_ptr);
 void
 render_popup_span(span *span_ptr);
 
+void
+render_lines(spoint *spoint_list, int spoints, RGBcolour colour);
+
 // Function to determine intersection of the mouse with a polygon.
 
 bool
