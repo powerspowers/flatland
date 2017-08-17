@@ -3487,11 +3487,9 @@ render_builder_icons(void)
 
 	rendering_block_as_bitmap = true;
 
-	// If hardware acceleration is active, select the builder render target.
+	// Select the builder render target.
 
-	if (hardware_acceleration) {
-		hardware_select_builder_render_target();
-	}
+	select_builder_render_target();
 
 	// Set the viewport to the size of a builder block icon.
 
@@ -3538,11 +3536,9 @@ render_builder_icons(void)
 		blockset_ptr = blockset_ptr->next_blockset_ptr;
 	}
 
-	// If hardware acceleration is active, select the main render target.
+	// Select the main render target.
 
-	if (hardware_acceleration) {
-		hardware_select_main_render_target();
-	}
+	select_main_render_target();
 
 	// Clear the "rendering block as bitmap" flag.
 

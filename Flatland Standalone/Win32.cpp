@@ -141,9 +141,10 @@ event::wait_for_event(void)
 
 string app_dir;
 
-// Display, texture and video pixel formats.
+// Display, builder and texture pixel formats.
 
 pixel_format display_pixel_format;
+pixel_format builder_pixel_format;
 pixel_format texture_pixel_format;
 
 // Largest texture size permitted.
@@ -525,10 +526,22 @@ static ID3D11RasterizerState *d3d_rasterizer_state_ptr;
 static ID3D11SamplerState *d3d_sampler_state_ptr;
 static ID3D11Buffer *d3d_constant_buffer_list[2];
 
-// Frame buffer used by the software renderer.
+// Intermediate 16-bit frame buffer used by 8-bit display depth.
+
+static byte *intermediate_frame_buffer_ptr;
+
+// 32-bit frame buffer used to create builder icons.
+
+static byte *builder_frame_buffer_ptr;
+
+// Current frame buffer being used by the software renderer,
+// along with its width (in bytes) and its depth (in bits),
+// and a pointer to its pixel format.
 
 static byte *frame_buffer_ptr;
 static int frame_buffer_width;
+static int frame_buffer_depth;
+static pixel_format *frame_buffer_pixel_format_ptr;
 
 // Private sound data.
 
@@ -2706,7 +2719,7 @@ start_up_hardware_renderer(void)
 
 	// Select the main render target.
 
-	hardware_select_main_render_target();
+	select_main_render_target();
 
 	// Set the colour component masks.
 
@@ -2865,6 +2878,10 @@ start_up_software_renderer(void)
 		green_comp_mask = (pixel)ddraw_surface_desc.ddpfPixelFormat.dwGBitMask;
 		blue_comp_mask = (pixel)ddraw_surface_desc.ddpfPixelFormat.dwBBitMask;
 	}
+
+	// Select the main render target.
+
+	select_main_render_target();
 
 	// Indicate success.
 
@@ -3290,6 +3307,10 @@ create_main_window(void (*key_callback)(byte key_code, bool key_down),
 	} else {
 		set_pixel_format(&texture_pixel_format, 0x7c00, 0x03e0, 0x001f, 0x8000);
 	}
+
+	// The builder pixel format is always 8888 ARGB.
+
+	set_pixel_format(&builder_pixel_format, 0x00ff0000, 0x0000ff00, 0x000000ff, 0xff000000);
 	
 	// If the display has a depth of 8 bits...
 
@@ -5034,6 +5055,44 @@ get_password(string *username_ptr, string *password_ptr)
 //==============================================================================
 
 //------------------------------------------------------------------------------
+// Select the main render target.
+//------------------------------------------------------------------------------
+
+void
+select_main_render_target()
+{
+	// Set a flag indicating the main render target is selected.
+
+	main_render_target_selected = true;
+
+	// If hardware acceleration is enabled, set the main render target and depth stencil view, and the main viewport.
+
+	if (hardware_acceleration) {
+		d3d_device_context_ptr->OMSetRenderTargets(1, &d3d_main_render_target_view_ptr, d3d_main_depth_stencil_view_ptr);
+		d3d_device_context_ptr->RSSetViewports(1, &d3d_main_viewport);
+	}
+}
+
+//------------------------------------------------------------------------------
+// Select the builder render target.
+//------------------------------------------------------------------------------
+
+void
+select_builder_render_target()
+{
+	// Set a flag indicating the main render target is not selected.
+
+	main_render_target_selected = false;
+
+	// If hardware acceleration is enabled, set the builder render target and depth stencil view, and the builder viewport.
+
+	if (hardware_acceleration) {
+		d3d_device_context_ptr->OMSetRenderTargets(1, &d3d_builder_render_target_view_ptr, d3d_builder_depth_stencil_view_ptr);
+		d3d_device_context_ptr->RSSetViewports(1, &d3d_builder_viewport);
+	}
+}
+
+//------------------------------------------------------------------------------
 // Create the frame buffer.  Only used by the software renderer.
 //------------------------------------------------------------------------------
 
@@ -5058,8 +5117,7 @@ create_frame_buffer(void)
 	// Create a seperate frame buffer surface in system memory.
 
 	ddraw_surface_desc.dwFlags = DDSD_CAPS | DDSD_WIDTH | DDSD_HEIGHT;
-	ddraw_surface_desc.ddsCaps.dwCaps = DDSCAPS_OFFSCREENPLAIN | 
-		DDSCAPS_SYSTEMMEMORY;
+	ddraw_surface_desc.ddsCaps.dwCaps = DDSCAPS_OFFSCREENPLAIN | DDSCAPS_SYSTEMMEMORY;
 	ddraw_surface_desc.dwWidth = window_width;
 	ddraw_surface_desc.dwHeight = window_height;
 	if ((result = ddraw_object_ptr->CreateSurface(&ddraw_surface_desc, &ddraw_frame_buffer_surface_ptr, NULL)) != DD_OK) {
@@ -5067,21 +5125,27 @@ create_frame_buffer(void)
 		return(false);
 	}
 	
-	// If the display depth is 8 bits, also allocate a 16-bit frame buffer.
+	// If the display depth is 8 bits, also allocate an intermediate 16-bit frame buffer.  This will be dithered down
+	// to 8-bit display pixels.
 
-	if (display_depth == 8 && (frame_buffer_ptr = new byte[window_width * window_height * 2]) == NULL) {
-		failed_to_create("frame buffer");
+	if (display_depth == 8 && (intermediate_frame_buffer_ptr = new byte[window_width * window_height * 2]) == NULL) {
+		failed_to_create("intermediate frame buffer");
 		return(false);
 	}
 
-	// Create a clipper object for the main window, and attach it to the 
-	// primary surface.
+	// Create a clipper object for the main window, and attach it to the primary surface.
 
-	if (ddraw_object_ptr->CreateClipper(0, &ddraw_clipper_ptr, NULL) != 
-		DD_OK || ddraw_clipper_ptr->SetHWnd(0, main_window_handle) != 
-		DD_OK || ddraw_primary_surface_ptr->SetClipper(ddraw_clipper_ptr) !=
-		DD_OK) {
+	if (ddraw_object_ptr->CreateClipper(0, &ddraw_clipper_ptr, NULL) != DD_OK || 
+		ddraw_clipper_ptr->SetHWnd(0, main_window_handle) != DD_OK ||
+		ddraw_primary_surface_ptr->SetClipper(ddraw_clipper_ptr) != DD_OK) {
 		failed_to_create("clipper");
+		return(false);
+	}
+
+	// Create a 32-bit frame buffer used to render builder icons.
+
+	if ((builder_frame_buffer_ptr = new byte[BUILDER_ICON_WIDTH * BUILDER_ICON_HEIGHT * 4]) == NULL) {
+		failed_to_create("builder frame buffer");
 		return(false);
 	}
 
@@ -5108,11 +5172,11 @@ recreate_frame_buffer(void)
 void
 destroy_frame_buffer(void)
 {
-	// If the display depth is 8 bits, delete the 16-bit frame buffer.
+	// If the display depth is 8 bits, delete the intermediate 16-bit frame buffer.
 
-	if (display_depth == 8 && frame_buffer_ptr != NULL) {
-		delete []frame_buffer_ptr;
-		frame_buffer_ptr = NULL;
+	if (display_depth == 8 && intermediate_frame_buffer_ptr != NULL) {
+		delete []intermediate_frame_buffer_ptr;
+		intermediate_frame_buffer_ptr = NULL;
 	}
 
 	// Release the clipper object and the frame buffer and primary surfaces.
@@ -5130,6 +5194,13 @@ destroy_frame_buffer(void)
 		ddraw_primary_surface_ptr->Release();
 		ddraw_primary_surface_ptr = NULL;
 	}
+
+	// Delete the builder frame buffer.
+
+	if (builder_frame_buffer_ptr != NULL) {
+		delete []builder_frame_buffer_ptr;
+		builder_frame_buffer_ptr = NULL;
+	}
 }
 
 //------------------------------------------------------------------------------
@@ -5139,16 +5210,41 @@ destroy_frame_buffer(void)
 bool
 lock_frame_buffer()
 {
-	// If the display depth is 16, 24 or 32 and the frame buffer is unlocked, lock it.
+	// Don't do anything if the frame buffer is already locked.
 
-	if (display_depth >= 16 && frame_buffer_ptr == NULL) {
+	if (frame_buffer_ptr != NULL) {
+		return true;
+	}
+
+	// If the builder render target has been selected, use the 32-bit builder frame buffer.
+
+	if (!main_render_target_selected) {
+		frame_buffer_ptr = builder_frame_buffer_ptr;
+		frame_buffer_width = BUILDER_ICON_WIDTH * 4;
+		frame_buffer_depth = 32;
+		frame_buffer_pixel_format_ptr = &builder_pixel_format;
+	}
+
+	// If the display depth is 8, use the 16-bit intermediate frame buffer.
+
+	else if (display_depth == 8) {
+		frame_buffer_ptr = intermediate_frame_buffer_ptr;
+		frame_buffer_width = window_width * 2;
+		frame_buffer_depth = 16;
+		frame_buffer_pixel_format_ptr = &display_pixel_format;
+	}
+
+	// If the display depth is 16, 24 or 32, lock the DirectDraw frame buffer surface.
+
+	else {
 		DDSURFACEDESC ddraw_surface_desc;
-
 		ddraw_surface_desc.dwSize = sizeof(ddraw_surface_desc);
 		if (ddraw_frame_buffer_surface_ptr->Lock(NULL, &ddraw_surface_desc, DDLOCK_SURFACEMEMORYPTR | DDLOCK_WAIT, NULL) != DD_OK)
 			return(false);
 		frame_buffer_ptr = (byte *)ddraw_surface_desc.lpSurface;
 		frame_buffer_width = ddraw_surface_desc.lPitch;
+		frame_buffer_depth = display_depth;
+		frame_buffer_pixel_format_ptr = &display_pixel_format;
 	}
 
 	// Return success status.
@@ -5163,12 +5259,18 @@ lock_frame_buffer()
 void
 unlock_frame_buffer(void)
 {
-	// If the display depth is 16, 24 or 32 and the frame buffer is locked, unlock it.
+	// Don't do anything if the frame buffer is already unlocked.
 
-	if (display_depth >= 16 && frame_buffer_ptr != NULL) {
-		ddraw_frame_buffer_surface_ptr->Unlock(frame_buffer_ptr);
-		frame_buffer_ptr = NULL;
+	if (frame_buffer_ptr == NULL) {
+		return;
 	}
+
+	// If the display depth is 16, 24 or 32, unlock the DirectDraw frame buffer surface.
+
+	if (display_depth >= 16) {
+		ddraw_frame_buffer_surface_ptr->Unlock(frame_buffer_ptr);
+	}
+	frame_buffer_ptr = NULL;
 }
 
 //------------------------------------------------------------------------------
@@ -5199,8 +5301,7 @@ display_frame_buffer(void)
 		fb_ptr = (byte *)ddraw_surface_desc.lpSurface;
 		row_pitch = ddraw_surface_desc.lPitch;
 
-		// Get pointers to the first pixel in the frame buffer and primary
-		// surface, and compute the row gap.
+		// Get pointers to the first pixel in the frame buffer and primary surface, and compute the row gap.
 
 		old_pixel_ptr = (word *)frame_buffer_ptr;
 		new_pixel_ptr = fb_ptr;
@@ -5358,17 +5459,15 @@ create_lit_image(cache_entry *cache_entry_ptr, int image_dimensions)
 	// If the pixmap is a 16-bit image...
 
 	if (pixmap_ptr->bytes_per_pixel == 2) {
-		switch (display_depth) {
+		switch (frame_buffer_depth) {
 
-		// If the display depth is 8 or 16, convert the unlit image to a 16-bit
-		// lit image...
+		// If the frame buffer depth is 16, convert the unlit image to a 16-bit lit image.
 
-		case 8:
 		case 16:
 
 			// Get the transparency mask.
 
-			transparency_mask16 = (word)display_pixel_format.alpha_comp_mask;
+			transparency_mask16 = (word)frame_buffer_pixel_format_ptr->alpha_comp_mask;
 		
 			// Perform the conversion.
 
@@ -5454,15 +5553,14 @@ create_lit_image(cache_entry *cache_entry_ptr, int image_dimensions)
 			}
 			break;
 
-		// If the display depth is 24 or 32, convert the unlit image to a 32-bit
-		// lit image...
+		// If the frame buffer depth is 24 or 32, convert the unlit image to a 32-bit lit image.
 
 		case 24:
 		case 32:
 
 			// Get the transparency mask.
 
-			transparency_mask32 = display_pixel_format.alpha_comp_mask;
+			transparency_mask32 = frame_buffer_pixel_format_ptr->alpha_comp_mask;
 
 			// Perform the conversion.
 
@@ -5552,17 +5650,15 @@ create_lit_image(cache_entry *cache_entry_ptr, int image_dimensions)
 	// If the pixmap is an 8-bit image...
 
 	else {
-		switch (display_depth) {
+		switch (frame_buffer_depth) {
 
-		// If the display depth is 8 or 16, convert the unlit image to a 16-bit
-		// lit image...
+		// If the frame buffer depth is 16, convert the unlit image to a 16-bit lit image...
 
-		case 8:
 		case 16:
 
 			// Get the transparency mask.
 
-			transparency_mask16 = (word)display_pixel_format.alpha_comp_mask;
+			transparency_mask16 = (word)frame_buffer_pixel_format_ptr->alpha_comp_mask;
 
 			// Perform the conversion.
 
@@ -5655,7 +5751,7 @@ create_lit_image(cache_entry *cache_entry_ptr, int image_dimensions)
 
 			// Get the transparency mask.
 
-			transparency_mask32 = display_pixel_format.alpha_comp_mask;
+			transparency_mask32 = frame_buffer_pixel_format_ptr->alpha_comp_mask;
 
 			// Perform the conversion.
 
@@ -5760,8 +5856,7 @@ render_colour_span16(span *span_ptr)
 
 	// Calculate the frame buffer pointer and span width.
 
-	fb_ptr = frame_buffer_ptr + frame_buffer_width * span_ptr->sy + 
-		(span_ptr->start_sx << 1);
+	fb_ptr = frame_buffer_ptr + frame_buffer_width * span_ptr->sy + (span_ptr->start_sx << 1);
 	span_width = span_ptr->end_sx - span_ptr->start_sx;
 
 	// Get the 16-bit colour pixel.
@@ -5813,8 +5908,7 @@ render_colour_span24(span *span_ptr)
 
 	// Calculate the frame buffer pointer and span width.
 
-	fb_ptr = frame_buffer_ptr + frame_buffer_width * span_ptr->sy + 
-		span_ptr->start_sx * 3;
+	fb_ptr = frame_buffer_ptr + frame_buffer_width * span_ptr->sy + span_ptr->start_sx * 3;
 	span_width = span_ptr->end_sx - span_ptr->start_sx;
 
 	// Get the 24-bit colour pixel.
@@ -5869,8 +5963,7 @@ render_colour_span32(span *span_ptr)
 
 	// Calculate the frame buffer pointer and span width.
 
-	fb_ptr = frame_buffer_ptr + frame_buffer_width * span_ptr->sy + 
-		(span_ptr->start_sx << 2);
+	fb_ptr = frame_buffer_ptr + frame_buffer_width * span_ptr->sy + (span_ptr->start_sx << 2);
 	span_width = span_ptr->end_sx - span_ptr->start_sx;
 
 	// Get the 32-bit colour pixel.
@@ -5911,11 +6004,14 @@ render_colour_span32(span *span_ptr)
 void
 render_colour_span(span *span_ptr)
 {
-	if (display_depth <= 16) {
+	switch (frame_buffer_depth) {
+	case 16:
 		render_colour_span16(span_ptr);
-	} else if (display_depth == 24) {
+		break;
+	case 24:
 		render_colour_span24(span_ptr);
-	} else {
+		break;
+	case 32:
 		render_colour_span32(span_ptr);
 	}
 }
@@ -5948,8 +6044,7 @@ render_transparent_span16(span *span_ptr)
 
 	// Get the lit image data.
 
-	cache_entry_ptr = get_cache_entry(span_ptr->pixmap_ptr, 
-		span_ptr->brightness_index);
+	cache_entry_ptr = get_cache_entry(span_ptr->pixmap_ptr, span_ptr->brightness_index);
 	image_ptr = cache_entry_ptr->lit_image_ptr;
 	mask = cache_entry_ptr->lit_image_mask;
 	shift = cache_entry_ptr->lit_image_shift;
@@ -5972,12 +6067,11 @@ render_transparent_span16(span *span_ptr)
 
 	// Get the pointer to the starting pixel in the frame buffer.
 	
-	fb_ptr = frame_buffer_ptr + frame_buffer_width * span_ptr->sy + 
-		(span_ptr->start_sx << 1);
+	fb_ptr = frame_buffer_ptr + frame_buffer_width * span_ptr->sy + (span_ptr->start_sx << 1);
 
 	// Get the transparency mask.
 
-	transparency_mask16 = (word)display_pixel_format.alpha_comp_mask;
+	transparency_mask16 = (word)frame_buffer_pixel_format_ptr->alpha_comp_mask;
 
 	// Compute (u,v) for that pixel.  We are now representing (u,v) as true fixed
 	// point values for speed.
@@ -6169,8 +6263,7 @@ render_transparent_span24(span *span_ptr)
 
 	// Get the lit image data.
 
-	cache_entry_ptr = get_cache_entry(span_ptr->pixmap_ptr, 
-		span_ptr->brightness_index);
+	cache_entry_ptr = get_cache_entry(span_ptr->pixmap_ptr, span_ptr->brightness_index);
 	image_ptr = cache_entry_ptr->lit_image_ptr;
 	mask = cache_entry_ptr->lit_image_mask;
 	shift = cache_entry_ptr->lit_image_shift;
@@ -6193,12 +6286,11 @@ render_transparent_span24(span *span_ptr)
 
 	// Get the pointer to the starting pixel in the frame buffer.
 	
-	fb_ptr = frame_buffer_ptr + frame_buffer_width * span_ptr->sy + 
-		(span_ptr->start_sx * 3);
+	fb_ptr = frame_buffer_ptr + frame_buffer_width * span_ptr->sy + (span_ptr->start_sx * 3);
 
 	// Get the transparency mask.
 
-	transparency_mask24 = display_pixel_format.alpha_comp_mask;
+	transparency_mask24 = frame_buffer_pixel_format_ptr->alpha_comp_mask;
 
 	// Compute (u,v) for that pixel.  We are now representing (u,v) as true fixed
 	// point values for speed.
@@ -6414,12 +6506,11 @@ render_transparent_span32(span *span_ptr)
 
 	// Get the pointer to the starting pixel in the frame buffer.
 	
-	fb_ptr = frame_buffer_ptr + frame_buffer_width * span_ptr->sy + 
-		(span_ptr->start_sx << 2);
+	fb_ptr = frame_buffer_ptr + frame_buffer_width * span_ptr->sy + (span_ptr->start_sx << 2);
 
 	// Get the transparency mask.
 
-	transparency_mask32 = display_pixel_format.alpha_comp_mask;
+	transparency_mask32 = frame_buffer_pixel_format_ptr->alpha_comp_mask;
 
 	// Compute (u,v) for that pixel.  We are now representing (u,v) as true fixed
 	// point values for speed.
@@ -6590,11 +6681,14 @@ render_transparent_span32(span *span_ptr)
 void
 render_transparent_span(span *span_ptr)
 {
-	if (display_depth <= 16) {
+	switch (frame_buffer_depth) {
+	case 16:
 		render_transparent_span16(span_ptr);
-	} else if (display_depth == 24) {
+		break;
+	case 24:
 		render_transparent_span24(span_ptr);
-	} else {
+		break;
+	case 32:
 		render_transparent_span32(span_ptr);
 	}
 }
@@ -7003,8 +7097,7 @@ render_popup_span16(span *span_ptr)
 
 	// Get the pointer to the starting pixel in the frame buffer.
 	
-	fb_ptr = frame_buffer_ptr + frame_buffer_width * span_ptr->sy + 
-		(span_ptr->start_sx << 1);
+	fb_ptr = frame_buffer_ptr + frame_buffer_width * span_ptr->sy + (span_ptr->start_sx << 1);
 
 	// Compute the image pointer.
 
@@ -7062,8 +7155,7 @@ render_popup_span24(span *span_ptr)
 
 	// Get the pointer to the starting pixel in the frame buffer.
 	
-	fb_ptr = frame_buffer_ptr + frame_buffer_width * span_ptr->sy + 
-		span_ptr->start_sx * 3;
+	fb_ptr = frame_buffer_ptr + frame_buffer_width * span_ptr->sy + span_ptr->start_sx * 3;
 
 	// Compute the image pointer.
 
@@ -7122,8 +7214,7 @@ render_popup_span32(span *span_ptr)
 
 	// Get the pointer to the starting pixel in the frame buffer.
 	
-	fb_ptr = frame_buffer_ptr + frame_buffer_width * span_ptr->sy + 
-		(span_ptr->start_sx << 2);
+	fb_ptr = frame_buffer_ptr + frame_buffer_width * span_ptr->sy + (span_ptr->start_sx << 2);
 
 	// Compute the image pointer.
 
@@ -7147,11 +7238,14 @@ render_popup_span32(span *span_ptr)
 void
 render_popup_span(span *span_ptr)
 {
-	if (display_depth <= 16) {
+	switch (frame_buffer_depth) {
+	case 16:
 		render_popup_span16(span_ptr);
-	} else if (display_depth == 24) {
+		break;
+	case 24:
 		render_popup_span24(span_ptr);
-	} else {
+		break;
+	case 32:
 		render_popup_span32(span_ptr);
 	}
 }
@@ -7186,46 +7280,6 @@ mouse_intersects_with_polygon(float mouse_x, float mouse_y, vector *camera_direc
 //==============================================================================
 // Hardware rendering functions.
 //==============================================================================
-
-//------------------------------------------------------------------------------
-// Select the main render target.
-//------------------------------------------------------------------------------
-
-void
-hardware_select_main_render_target()
-{
-	// Set a flag indicating the main render target is selected.
-
-	main_render_target_selected = true;
-
-	// Set the main render target and depth stencil view.
-
-	d3d_device_context_ptr->OMSetRenderTargets(1, &d3d_main_render_target_view_ptr, d3d_main_depth_stencil_view_ptr);
-
-	// Set the main viewport.
-
-	d3d_device_context_ptr->RSSetViewports(1, &d3d_main_viewport);
-}
-
-//------------------------------------------------------------------------------
-// Select the builder render target.
-//------------------------------------------------------------------------------
-
-void
-hardware_select_builder_render_target()
-{
-	// Set a flag indicating the main render target is not selected.
-
-	main_render_target_selected = false;
-
-	// Set the builder render target and depth stencil view.
-
-	d3d_device_context_ptr->OMSetRenderTargets(1, &d3d_builder_render_target_view_ptr, d3d_builder_depth_stencil_view_ptr);
-
-	// Set the builder viewport.
-
-	d3d_device_context_ptr->RSSetViewports(1, &d3d_builder_viewport);
-}
 
 //------------------------------------------------------------------------------
 // Set the perspective transform.
@@ -7721,8 +7775,7 @@ hardware_render_lines(vertex *vertex_list, int vertices, RGBcolour colour)
 //------------------------------------------------------------------------------
 
 void
-draw_pixmap(pixmap *pixmap_ptr, int brightness_index, int x, int y, int width,
-			int height)
+draw_pixmap(pixmap *pixmap_ptr, int brightness_index, int x, int y, int width, int height)
 {
 	int clipped_x, clipped_y;
 	int clipped_width, clipped_height;

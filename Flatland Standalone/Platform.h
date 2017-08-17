@@ -358,6 +358,12 @@ destroy_label_texture(void);
 
 // Frame buffer functions.
 
+void
+select_main_render_target();
+
+void
+select_builder_render_target();
+
 bool
 create_frame_buffer(void);
 
@@ -402,12 +408,6 @@ bool
 mouse_intersects_with_polygon(float mouse_x, float mouse_y, vector *camera_direction_ptr, tpolygon *tpolygon_ptr);
 
 // Hardware rendering functions (called by the player thread only).
-
-void
-hardware_select_main_render_target();
-
-void
-hardware_select_builder_render_target();
 
 void
 hardware_set_projection_transform(float viewport_width, float viewport_height, float near_z, float far_z);
