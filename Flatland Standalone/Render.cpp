@@ -3447,19 +3447,15 @@ render_block_as_bitmap(block *block_ptr)
 static void
 render_builder_icons_for_blockset(blockset *blockset_ptr)
 {
-	debug_message("Rendering blockset %s\n", blockset_ptr->name);
 	block_def *block_def_ptr = blockset_ptr->block_def_list;
 	while (block_def_ptr) {
 		block *block_ptr = block_def_ptr->create_simplified_block();
 		if (block_def_ptr->icon_bitmap_ptr == NULL) {
-			debug_message("Rendering block %s\n", block_ptr->block_def_ptr->name);
 			block_def_ptr->icon_bitmap_ptr = render_block_as_bitmap(block_ptr);
-			debug_message("Done rendering block %s\n", block_ptr->block_def_ptr->name);
 		}
 		delete block_ptr;
 		block_def_ptr = block_def_ptr->next_block_def_ptr;
 	}
-	debug_message("Done rendering blockset %s\n", blockset_ptr->name);
 }
 
 //------------------------------------------------------------------------------
@@ -3470,16 +3466,11 @@ void
 render_builder_icons(void)
 {
 	// Set the "rendering block as bitmap" flag, which disables certain
-	// functionality during the rendering we don't need.
+	// functionality during the rendering we don't need, select the builder
+	// render taget, and set the viewport to the size of a builder block icon.
 
 	rendering_block_as_bitmap = true;
-
-	// Select the builder render target.
-
 	select_builder_render_target();
-
-	// Set the viewport to the size of a builder block icon.
-
 	set_viewport(BUILDER_ICON_WIDTH, BUILDER_ICON_HEIGHT);
 
 	// Set the player viewpoint.
@@ -3523,15 +3514,12 @@ render_builder_icons(void)
 		blockset_ptr = blockset_ptr->next_blockset_ptr;
 	}
 
-	// Select the main render target.
+	// Recreate the image caches, select the main render target, clear the "rendering block as bitmap" flag,
+	// and set the viewport back to the size of the main window.
 
+	delete_image_caches();
+	create_image_caches();
 	select_main_render_target();
-
-	// Clear the "rendering block as bitmap" flag.
-
 	rendering_block_as_bitmap = false;
-
-	// Set the viewport back to the size of the main window.
-
 	set_viewport(window_width, window_height);
 }

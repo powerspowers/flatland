@@ -1366,8 +1366,6 @@ cache_entry::~cache_entry()
 bool
 cache_entry::create_image_buffer(int image_size_index)
 {
-	int image_dimensions;
-	
 	// Make sure the image size index is valid.
 
 	if (image_size_index < 0 || image_size_index >= IMAGE_SIZES)
@@ -1376,22 +1374,14 @@ cache_entry::create_image_buffer(int image_size_index)
 	// If hardware acceleration is enabled, create the hardware texture.
 
 	if (hardware_acceleration) {
-		if ((hardware_texture_ptr = hardware_create_texture(image_size_index)) 
-			== NULL)
+		if ((hardware_texture_ptr = hardware_create_texture(image_size_index)) == NULL)
 			return(false);
 	} 
 	
 	// If software rendering is enabled, create the image buffer.
 
-	else {
-		image_dimensions = image_dimensions_list[image_size_index];
-		if (display_depth <= 16)
-			lit_image_size = image_dimensions * image_dimensions * 2;
-		else
-			lit_image_size = image_dimensions * image_dimensions * 4;
-		NEWARRAY(lit_image_ptr, cachebyte, lit_image_size);
-		if (lit_image_ptr == NULL)
-			return(false);
+	else if (!create_lit_image(this, image_dimensions_list[image_size_index])) {
+		return(false);
 	}
 
 	// Indicate success.

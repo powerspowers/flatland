@@ -123,7 +123,6 @@ extern int max_texture_size;
 
 // Display properties.
 
-extern int display_depth;
 extern int window_width;
 extern int window_height;
 extern float half_window_width;
@@ -390,8 +389,11 @@ clear_builder_frame_buffer();
 
 // Software rendering functions (called by the player thread only).
 
-void
+bool
 create_lit_image(cache_entry *cache_entry_ptr, int image_dimensions);
+
+void
+set_lit_image(cache_entry *cache_entry_ptr, int image_dimensions);
 
 void
 render_colour_span(span *span_ptr);

@@ -153,7 +153,6 @@ int max_texture_size;
 
 // Display properties.
 
-int display_depth;
 int window_width;
 int window_height;
 float half_window_width;
@@ -425,6 +424,10 @@ char *texture_pixel_shader_source =
 // Local variables.
 //------------------------------------------------------------------------------
 
+// Display depth.
+
+static int display_depth;
+
 // Pixel mask table for component sizes of 1 to 8 bits.
 
 static int pixel_mask_table[8] = {
@@ -538,7 +541,7 @@ static byte *intermediate_frame_buffer_ptr;
 static byte *builder_frame_buffer_ptr;
 
 // Current frame buffer being used by the software renderer,
-// along with its width (in bytes) and its depth (in bits),
+// along with its row pitch (in bytes), it's pixel depth (in bites),
 // and a pointer to its pixel format.
 
 static byte *frame_buffer_ptr;
@@ -5417,12 +5420,23 @@ clear_builder_frame_buffer(void)
 // Software rendering functions.
 //==============================================================================
 
+bool
+create_lit_image(cache_entry *cache_entry_ptr, int image_dimensions)
+{
+	if (frame_buffer_depth == 16)
+		cache_entry_ptr->lit_image_size = image_dimensions * image_dimensions * 2;
+	else
+		cache_entry_ptr->lit_image_size = image_dimensions * image_dimensions * 4;
+	NEWARRAY(cache_entry_ptr->lit_image_ptr, cachebyte, cache_entry_ptr->lit_image_size);
+	return cache_entry_ptr->lit_image_ptr != NULL;
+}
+
 //------------------------------------------------------------------------------
-// Create a lit image for the given cache entry.
+// Set a lit image for the given cache entry.
 //------------------------------------------------------------------------------
 
 void
-create_lit_image(cache_entry *cache_entry_ptr, int image_dimensions)
+set_lit_image(cache_entry *cache_entry_ptr, int image_dimensions)
 {
 	pixmap *pixmap_ptr;
 	byte *image_ptr, *end_image_ptr, *new_image_ptr;

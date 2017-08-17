@@ -198,7 +198,7 @@ get_cache_entry(pixmap *pixmap_ptr, int brightness_index)
 			if (hardware_acceleration)
 				hardware_set_texture(cache_entry_ptr);
 			else
-				create_lit_image(cache_entry_ptr, image_dimensions);
+				set_lit_image(cache_entry_ptr, image_dimensions);
 		}
 
 #endif
@@ -230,7 +230,7 @@ get_cache_entry(pixmap *pixmap_ptr, int brightness_index)
 	if (hardware_acceleration)
 		hardware_set_texture(cache_entry_ptr);
 	else
-		create_lit_image(cache_entry_ptr, image_dimensions);
+		set_lit_image(cache_entry_ptr, image_dimensions);
 
 	// Return the pointer to the cache entry.
 
