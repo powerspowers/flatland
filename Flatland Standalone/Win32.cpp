@@ -154,7 +154,10 @@ int max_texture_size;
 // Display properties.
 
 int display_depth;
-int window_width, window_height;
+int window_width;
+int window_height;
+float half_window_width;
+float half_window_height;
 
 // Flag indicating whether the main window is ready.
 
@@ -539,7 +542,7 @@ static byte *builder_frame_buffer_ptr;
 // and a pointer to its pixel format.
 
 static byte *frame_buffer_ptr;
-static int frame_buffer_width;
+static int frame_buffer_row_pitch;
 static int frame_buffer_depth;
 static pixel_format *frame_buffer_pixel_format_ptr;
 
@@ -1052,37 +1055,57 @@ create_bitmap_from_builder_render_target()
 	bitmap_ptr->height = BUILDER_ICON_HEIGHT;
 	bitmap_ptr->bytes_per_row = BUILDER_ICON_WIDTH * 4;
 
-	// Copy the render texture to the staging texture.
+	// If hardware acceleration is enabled...
 
-	d3d_device_context_ptr->CopyResource(d3d_builder_staging_texture_ptr, d3d_builder_render_target_texture_ptr);
+	if (hardware_acceleration) {
 
-	// Lock the staging texture surface.
+		// Copy the render texture to the staging texture.
 
-	HRESULT result = d3d_device_context_ptr->Map(d3d_builder_staging_texture_ptr, 0, D3D11_MAP_READ, 0, &d3d_mapped_subresource);
-	if (FAILED(result)) {
-		DEL(bitmap_ptr, bitmap);
-		return NULL;
-	}
+		d3d_device_context_ptr->CopyResource(d3d_builder_staging_texture_ptr, d3d_builder_render_target_texture_ptr);
 
-	// Copy the pixel data from the texture to the bitmap, performing the appropriate pixel conversion.
+		// Lock the staging texture surface.
 
-	byte *source_ptr = (byte *)d3d_mapped_subresource.pData;
-	pixel *target_ptr = (pixel *)bitmap_pixels;
-	int row_gap = d3d_mapped_subresource.RowPitch - bitmap_ptr->bytes_per_row;
-	for (int row = 0; row < BUILDER_ICON_HEIGHT; row++) {
-		for (int col = 0; col < BUILDER_ICON_WIDTH; col++) {
-			byte red = *source_ptr++;
-			byte green = *source_ptr++;
-			byte blue = *source_ptr++;
-			byte alpha = *source_ptr++;
-			*target_ptr++ = (alpha << 24) | (red << 16) | (green << 8) | blue;
+		HRESULT result = d3d_device_context_ptr->Map(d3d_builder_staging_texture_ptr, 0, D3D11_MAP_READ, 0, &d3d_mapped_subresource);
+		if (FAILED(result)) {
+			DEL(bitmap_ptr, bitmap);
+			return NULL;
 		}
-		source_ptr += row_gap;
+
+		// Copy the pixel data from the texture to the bitmap, performing the appropriate pixel conversion.
+
+		byte *source_ptr = (byte *)d3d_mapped_subresource.pData;
+		pixel *target_ptr = (pixel *)bitmap_pixels;
+		int row_gap = d3d_mapped_subresource.RowPitch - bitmap_ptr->bytes_per_row;
+		for (int row = 0; row < BUILDER_ICON_HEIGHT; row++) {
+			for (int col = 0; col < BUILDER_ICON_WIDTH; col++) {
+				byte red = *source_ptr++;
+				byte green = *source_ptr++;
+				byte blue = *source_ptr++;
+				byte alpha = *source_ptr++;
+				*target_ptr++ = (alpha << 24) | (red << 16) | (green << 8) | blue;
+			}
+			source_ptr += row_gap;
+		}
+
+		// Unlock the staging texture surface and return the bitmap.
+
+		d3d_device_context_ptr->Unmap(d3d_builder_staging_texture_ptr, 0);
 	}
 
-	// Unlock the staging texture surface and return the bitmap.
+	// If software rendering is enabled, just copy the builder frame buffer to the bitmap.
 
-	d3d_device_context_ptr->Unmap(d3d_builder_staging_texture_ptr, 0);
+	else {
+		pixel *source_ptr = (pixel *)builder_frame_buffer_ptr;
+		pixel *target_ptr = (pixel *)bitmap_pixels;
+		for (int row = 0; row < BUILDER_ICON_HEIGHT; row++) {
+			for (int col = 0; col < BUILDER_ICON_WIDTH; col++) {
+				*target_ptr++ = *source_ptr++;
+			}
+		}
+	}
+
+	// Return the bitmap.
+
 	return(bitmap_ptr);
 }
 
@@ -3128,6 +3151,8 @@ set_main_window_size(int width, int height)
 {
 	window_width = width;
 	window_height = height;
+	half_window_width = (float)width / 2.0f;
+	half_window_height = (float) height / 2.0f;
 }
 
 //------------------------------------------------------------------------------
@@ -5220,7 +5245,7 @@ lock_frame_buffer()
 
 	if (!main_render_target_selected) {
 		frame_buffer_ptr = builder_frame_buffer_ptr;
-		frame_buffer_width = BUILDER_ICON_WIDTH * 4;
+		frame_buffer_row_pitch = BUILDER_ICON_WIDTH * 4;
 		frame_buffer_depth = 32;
 		frame_buffer_pixel_format_ptr = &builder_pixel_format;
 	}
@@ -5229,7 +5254,7 @@ lock_frame_buffer()
 
 	else if (display_depth == 8) {
 		frame_buffer_ptr = intermediate_frame_buffer_ptr;
-		frame_buffer_width = window_width * 2;
+		frame_buffer_row_pitch = window_width * 2;
 		frame_buffer_depth = 16;
 		frame_buffer_pixel_format_ptr = &display_pixel_format;
 	}
@@ -5242,7 +5267,7 @@ lock_frame_buffer()
 		if (ddraw_frame_buffer_surface_ptr->Lock(NULL, &ddraw_surface_desc, DDLOCK_SURFACEMEMORYPTR | DDLOCK_WAIT, NULL) != DD_OK)
 			return(false);
 		frame_buffer_ptr = (byte *)ddraw_surface_desc.lpSurface;
-		frame_buffer_width = ddraw_surface_desc.lPitch;
+		frame_buffer_row_pitch = ddraw_surface_desc.lPitch;
 		frame_buffer_depth = display_depth;
 		frame_buffer_pixel_format_ptr = &display_pixel_format;
 	}
@@ -5374,40 +5399,18 @@ clear_frame_buffer(void)
 }
 
 //------------------------------------------------------------------------------
-// Method to clear a rectangle in the frame buffer (software renderer only).
+// Method to clear a rectangle in the builder frame buffer (software renderer only).
 //------------------------------------------------------------------------------
 
 void
-clear_frame_buffer(int x, int y, int width, int height)
+clear_builder_frame_buffer(void)
 {
-	DDSURFACEDESC ddraw_surface_desc;
-	byte *fb_ptr;
-	int row_pitch;
-	int bytes_per_pixel;
-
-	// Lock the frame buffer surface.
-
-	ddraw_surface_desc.dwSize = sizeof(ddraw_surface_desc);
-	if (ddraw_frame_buffer_surface_ptr->Lock(NULL, &ddraw_surface_desc,
-		DDLOCK_SURFACEMEMORYPTR | DDLOCK_WAIT, NULL) != DD_OK)
-		return;
-	fb_ptr = (byte *)ddraw_surface_desc.lpSurface;
-	row_pitch = ddraw_surface_desc.lPitch;
-
-	// Calculate the bytes per pixel.
-
-	bytes_per_pixel = display_depth / 8;
-
-	// Clear the frame buffer surface.
-
-	for (int row = y; row < y + height; row++) {
-		byte *row_ptr = fb_ptr + row * row_pitch + x * bytes_per_pixel;
-		memset(row_ptr, 0, width * bytes_per_pixel);
+	byte *fb_ptr = builder_frame_buffer_ptr;
+	for (int row = 0; row < BUILDER_ICON_HEIGHT; row++) {
+		for (int column = 0; column < BUILDER_ICON_WIDTH * 4; column++) {
+			*fb_ptr++ = 0;
+		}
 	}
-
-	// Unlock the frame buffer surface.
-
-	ddraw_frame_buffer_surface_ptr->Unlock(fb_ptr);
 }
 
 //==============================================================================
@@ -5856,7 +5859,7 @@ render_colour_span16(span *span_ptr)
 
 	// Calculate the frame buffer pointer and span width.
 
-	fb_ptr = frame_buffer_ptr + frame_buffer_width * span_ptr->sy + (span_ptr->start_sx << 1);
+	fb_ptr = frame_buffer_ptr + frame_buffer_row_pitch * span_ptr->sy + (span_ptr->start_sx << 1);
 	span_width = span_ptr->end_sx - span_ptr->start_sx;
 
 	// Get the 16-bit colour pixel.
@@ -5908,7 +5911,7 @@ render_colour_span24(span *span_ptr)
 
 	// Calculate the frame buffer pointer and span width.
 
-	fb_ptr = frame_buffer_ptr + frame_buffer_width * span_ptr->sy + span_ptr->start_sx * 3;
+	fb_ptr = frame_buffer_ptr + frame_buffer_row_pitch * span_ptr->sy + span_ptr->start_sx * 3;
 	span_width = span_ptr->end_sx - span_ptr->start_sx;
 
 	// Get the 24-bit colour pixel.
@@ -5963,7 +5966,7 @@ render_colour_span32(span *span_ptr)
 
 	// Calculate the frame buffer pointer and span width.
 
-	fb_ptr = frame_buffer_ptr + frame_buffer_width * span_ptr->sy + (span_ptr->start_sx << 2);
+	fb_ptr = frame_buffer_ptr + frame_buffer_row_pitch * span_ptr->sy + (span_ptr->start_sx << 2);
 	span_width = span_ptr->end_sx - span_ptr->start_sx;
 
 	// Get the 32-bit colour pixel.
@@ -6067,7 +6070,7 @@ render_transparent_span16(span *span_ptr)
 
 	// Get the pointer to the starting pixel in the frame buffer.
 	
-	fb_ptr = frame_buffer_ptr + frame_buffer_width * span_ptr->sy + (span_ptr->start_sx << 1);
+	fb_ptr = frame_buffer_ptr + frame_buffer_row_pitch * span_ptr->sy + (span_ptr->start_sx << 1);
 
 	// Get the transparency mask.
 
@@ -6286,7 +6289,7 @@ render_transparent_span24(span *span_ptr)
 
 	// Get the pointer to the starting pixel in the frame buffer.
 	
-	fb_ptr = frame_buffer_ptr + frame_buffer_width * span_ptr->sy + (span_ptr->start_sx * 3);
+	fb_ptr = frame_buffer_ptr + frame_buffer_row_pitch * span_ptr->sy + (span_ptr->start_sx * 3);
 
 	// Get the transparency mask.
 
@@ -6506,7 +6509,7 @@ render_transparent_span32(span *span_ptr)
 
 	// Get the pointer to the starting pixel in the frame buffer.
 	
-	fb_ptr = frame_buffer_ptr + frame_buffer_width * span_ptr->sy + (span_ptr->start_sx << 2);
+	fb_ptr = frame_buffer_ptr + frame_buffer_row_pitch * span_ptr->sy + (span_ptr->start_sx << 2);
 
 	// Get the transparency mask.
 
@@ -7097,7 +7100,7 @@ render_popup_span16(span *span_ptr)
 
 	// Get the pointer to the starting pixel in the frame buffer.
 	
-	fb_ptr = frame_buffer_ptr + frame_buffer_width * span_ptr->sy + (span_ptr->start_sx << 1);
+	fb_ptr = frame_buffer_ptr + frame_buffer_row_pitch * span_ptr->sy + (span_ptr->start_sx << 1);
 
 	// Compute the image pointer.
 
@@ -7155,7 +7158,7 @@ render_popup_span24(span *span_ptr)
 
 	// Get the pointer to the starting pixel in the frame buffer.
 	
-	fb_ptr = frame_buffer_ptr + frame_buffer_width * span_ptr->sy + span_ptr->start_sx * 3;
+	fb_ptr = frame_buffer_ptr + frame_buffer_row_pitch * span_ptr->sy + span_ptr->start_sx * 3;
 
 	// Compute the image pointer.
 
@@ -7214,7 +7217,7 @@ render_popup_span32(span *span_ptr)
 
 	// Get the pointer to the starting pixel in the frame buffer.
 	
-	fb_ptr = frame_buffer_ptr + frame_buffer_width * span_ptr->sy + (span_ptr->start_sx << 2);
+	fb_ptr = frame_buffer_ptr + frame_buffer_row_pitch * span_ptr->sy + (span_ptr->start_sx << 2);
 
 	// Compute the image pointer.
 

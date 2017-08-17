@@ -124,7 +124,10 @@ extern int max_texture_size;
 // Display properties.
 
 extern int display_depth;
-extern int window_width, window_height;
+extern int window_width;
+extern int window_height;
+extern float half_window_width;
+extern float half_window_height;
 
 // Flag indicating whether the main window is ready.
 
@@ -342,9 +345,6 @@ create_bitmap_from_texture(texture *texture_ptr);
 bitmap *
 create_bitmap_from_builder_render_target();
 
-bitmap *
-create_bitmap_from_frame_buffer();
-
 void
 destroy_bitmap_handle(void *bitmap_handle);
 
@@ -386,7 +386,7 @@ void
 clear_frame_buffer(void);
 
 void
-clear_frame_buffer(int x, int y, int width, int height);
+clear_builder_frame_buffer();
 
 // Software rendering functions (called by the player thread only).
 

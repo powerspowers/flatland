@@ -4594,9 +4594,7 @@ parse_spot_file(char *spot_URL, char *spot_file_path)
 
 	// Render the builder icons for all block definitions.
 
-	if (hardware_acceleration) {
-		render_builder_icons();
-	}
+	render_builder_icons();
 	
 	// Initialise various data structures of the spot based on what was just
 	// parsed.

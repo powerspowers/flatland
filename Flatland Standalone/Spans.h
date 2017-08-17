@@ -25,9 +25,6 @@ bool
 create_image_caches(void);
 
 void
-purge_image_caches(int delta_frames);
-
-void
 delete_image_caches(void);
 
 int

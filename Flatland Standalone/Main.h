@@ -12,10 +12,15 @@
 
 extern int min_blockset_update_period;
 
-// Display dimensions and other related information.
+// Frame buffer dimensions (for software renderer only).
 
-extern float half_window_width;
-extern float half_window_height;
+extern float frame_buffer_width;
+extern float frame_buffer_height;
+extern float half_frame_buffer_width;
+extern float half_frame_buffer_height;
+
+// Viewport information.
+
 extern float horz_field_of_view;
 extern float vert_field_of_view;
 extern float horz_scaling_factor;

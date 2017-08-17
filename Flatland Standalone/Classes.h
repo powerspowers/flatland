@@ -836,6 +836,7 @@ struct span_buffer {
 	span_buffer();
 	~span_buffer();
 	bool create_buffer(int set_rows);
+	void clear_buffer();
 	span_row *operator[](int row);
 };
 

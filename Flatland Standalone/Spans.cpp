@@ -317,8 +317,8 @@ add_span(int sy, edge *left_edge_ptr, edge *right_edge_ptr, pixmap *pixmap_ptr,
 
 	if (left_sx < 0.0)
 		left_sx = 0.0;
-	if (right_sx > (float)window_width)
-		right_sx = (float)window_width;
+	if (right_sx > frame_buffer_width)
+		right_sx = frame_buffer_width;
 
 	// Compute the delta values for the new span.  Note that these deltas are
 	// computed from the original left and right screen x coordinates, not the
@@ -610,8 +610,8 @@ add_movable_span(int sy, edge *left_edge_ptr, edge *right_edge_ptr,
 
 	if (left_sx < 0.0)
 		left_sx = 0.0;
-	if (right_sx > (float)window_width)
-		right_sx = (float)window_width;
+	if (right_sx > frame_buffer_width)
+		right_sx = frame_buffer_width;
 
 	// Compute the delta values for the new span.  Note that these deltas are
 	// computed from the original left and right screen x coordinates, not the

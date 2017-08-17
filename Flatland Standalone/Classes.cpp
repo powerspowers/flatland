@@ -1307,6 +1307,18 @@ span_buffer::create_buffer(int set_rows)
 	return(true);
 }
 
+// Method to clear the span buffer.
+
+void 
+span_buffer::clear_buffer()
+{
+	for (int row = 0; row < rows; row++) {
+		span_row *span_row_ptr = &buffer_ptr[row];
+		span_row_ptr->opaque_span_list = NULL;
+		span_row_ptr->transparent_span_list = NULL;
+	}
+}
+
 // Method to return the pointer to a span buffer row.
 
 span_row *
@@ -4264,7 +4276,6 @@ world::get_block_ptr(int column, int row, int level)
 entity *
 world::get_level_entity(int level)
 {
-	debug_message("Getting entity for level %d\n", level);
 	if (level_entity_list != NULL && level >= 0 && level < levels) {
 		return level_entity_list[level];
 	}
@@ -4274,7 +4285,6 @@ world::get_level_entity(int level)
 void 
 world::set_level_entity(int level, entity *entity_ptr)
 {
-	debug_message("Setting entity for level %d to %04X\n", level, entity_ptr);
 	if (level_entity_list != NULL && level >= 0 && level < levels) {
 		level_entity_list[level] = entity_ptr;
 	}

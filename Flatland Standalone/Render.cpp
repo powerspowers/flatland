@@ -414,7 +414,7 @@ compare_spoints_against_window(void)
 	spoints_inside = 0;
 	for (spoint_index = 0; spoint_index < spoints; spoint_index++) {
 		spoint_ptr = &main_spoint_list[spoint_index];
-		if (spoint_ptr->sx < window_width)
+		if (spoint_ptr->sx < frame_buffer_width)
 			spoints_inside++;
 	}
 	if (spoints_inside == 0)
@@ -436,7 +436,7 @@ compare_spoints_against_window(void)
 	spoints_inside = 0;
 	for (spoint_index = 0; spoint_index < spoints; spoint_index++) {
 		spoint_ptr = &main_spoint_list[spoint_index];
-		if (spoint_ptr->sy < window_height)
+		if (spoint_ptr->sy < frame_buffer_height)
 			spoints_inside++;
 	}
 	if (spoints_inside == 0)
@@ -615,8 +615,8 @@ add_spoint_to_list(vertex *tvertex_ptr, vertex_def *vertex_def_ptr,
 	one_on_tz = 1.0f / tvertex_ptr->z;
 	px = tvertex_ptr->x * horz_scaling_factor * one_on_tz;
 	py = tvertex_ptr->y * vert_scaling_factor * one_on_tz;
-	spoint_ptr->sx = half_window_width + (px * half_window_width);
-	spoint_ptr->sy = half_window_height - (py * half_window_height);
+	spoint_ptr->sx = half_frame_buffer_width + (px * half_frame_buffer_width);
+	spoint_ptr->sy = half_frame_buffer_height - (py * half_frame_buffer_height);
 
 	// Save 1/tz.
 
@@ -671,7 +671,6 @@ project_3D_polygon(polygon_def *polygon_def_ptr, pixmap *pixmap_ptr)
 
 	spoints = 0;
 	for (vertex_no = 0; vertex_no < vertices; vertex_no++) {
-
 		vertex_def_ptr = &vertex_def_list[vertex_no];
 		tvertex_ptr = &block_tvertex_list[vertex_def_ptr->vertex_no];
 		vertex_colour_ptr = &vertex_colour_list[vertex_no];
@@ -683,12 +682,12 @@ project_3D_polygon(polygon_def *polygon_def_ptr, pixmap *pixmap_ptr)
 
 		if (spoint_ptr->sx < 0)
 			spoint_ptr->sx = 0;
-		else if (spoint_ptr->sx >= window_width)
-			spoint_ptr->sx = (float)(window_width - 1);
+		else if (spoint_ptr->sx >= frame_buffer_width)
+			spoint_ptr->sx = frame_buffer_width - 1.0f;
 		if (spoint_ptr->sy < 0)
 			spoint_ptr->sy = 0;
-		else if (spoint_ptr->sy >= window_height)
-			spoint_ptr->sy = (float)(window_height - 1);
+		else if (spoint_ptr->sy >= frame_buffer_height)
+			spoint_ptr->sy = frame_buffer_height - 1.0f;
 	}
 }
 
@@ -940,9 +939,9 @@ clip_2D_polygon(void)
 	// Set up the clipping edges of the display.
 
 	left_sx = 0.0;
-	right_sx = (float)window_width;
+	right_sx = frame_buffer_width;
 	top_sy = 0.0;
-	bottom_sy = (float)window_height;
+	bottom_sy = frame_buffer_height;
 
 	// Clip the projected polygon against the left display edge.
 
@@ -1546,7 +1545,7 @@ render_polygon(polygon *polygon_ptr, float turn_angle)
 		// vertex, until we've reached the bottom vertex or the bottom of
 		// the display.
 
-		while ((int)sy < window_height) {
+		while (sy < frame_buffer_height) {
 
 			// Add this span to the span buffer.
 
@@ -2313,10 +2312,10 @@ render_popup_texture(popup *popup_ptr, pixmap *pixmap_ptr)
 
 		// If the popup overlaps the right or bottom edge, clip it.
 
-		if (popup_ptr->sx + width > window_width)
-			width = window_width - popup_ptr->sx;
-		if (popup_ptr->sy + height > window_height)
-			height = window_height - popup_ptr->sy;
+		if (popup_ptr->sx + width > frame_buffer_width)
+			width = (int)frame_buffer_width - popup_ptr->sx;
+		if (popup_ptr->sy + height > frame_buffer_height)
+			height = (int)frame_buffer_height - popup_ptr->sy;
 
 		// Initialise the fields of the popup's left and right edge
 		// that do not change.
@@ -2487,12 +2486,12 @@ add_visible_popups_in_popup_list(popup *popup_list, vertex *translation_ptr)
 			case TOP:
 			case CENTRE:
 			case BOTTOM:
-				popup_ptr->sx = (window_width - popup_width) / 2;
+				popup_ptr->sx = ((int)frame_buffer_width - popup_width) / 2;
 				break;
 			case TOP_RIGHT:
 			case RIGHT:
 			case BOTTOM_RIGHT:
-				popup_ptr->sx = window_width - popup_width;
+				popup_ptr->sx = (int)frame_buffer_width - popup_width;
 			}
 			switch (popup_ptr->window_alignment) {
 			case TOP_LEFT:
@@ -2503,12 +2502,12 @@ add_visible_popups_in_popup_list(popup *popup_list, vertex *translation_ptr)
 			case LEFT:
 			case CENTRE:
 			case RIGHT:
-				popup_ptr->sy = (window_height - popup_height) / 2;
+				popup_ptr->sy = ((int)frame_buffer_height - popup_height) / 2;
 				break;
 			case BOTTOM_LEFT:
 			case BOTTOM:
 			case BOTTOM_RIGHT:
-				popup_ptr->sy = window_height - popup_height;
+				popup_ptr->sy = (int)frame_buffer_height - popup_height;
 			}
 			
 			// If a mouse selection hasn't been found yet, check whether
@@ -2632,15 +2631,13 @@ render_orb(void)
 
 	// Now calculate the 2D position of the orb in the window.
 
-	curr_orb_x = half_window_width + relative_orb_direction.angle_y * 
-		horz_pixels_per_degree - half_orb_width;
-	curr_orb_y = half_window_height - relative_orb_direction.angle_x * 
-		vert_pixels_per_degree - half_orb_height;
+	curr_orb_x = half_frame_buffer_width + relative_orb_direction.angle_y * horz_pixels_per_degree - half_orb_width;
+	curr_orb_y = half_frame_buffer_height - relative_orb_direction.angle_x * vert_pixels_per_degree - half_orb_height;
 
 	// If the orb is complete outside of the window, don't render it.
 
-	if (FLT(curr_orb_x + orb_width, 0.0f) || FGE(curr_orb_x, window_width) ||
-		FLT(curr_orb_y + orb_height, 0.0f) || FGE(curr_orb_y, window_height))
+	if (FLT(curr_orb_x + orb_width, 0.0f) || FGE(curr_orb_x, frame_buffer_width) ||
+		FLT(curr_orb_y + orb_height, 0.0f) || FGE(curr_orb_y, frame_buffer_height))
 		return;
 
 	// If the screen x or y coordinates are negative, then we clamp 
@@ -2665,10 +2662,10 @@ render_orb(void)
 
 	// If the texture overlaps the right or bottom edge, clip it.
 
-	if (curr_orb_x + curr_orb_width > (float)window_width)
-		curr_orb_width = (float)window_width - curr_orb_x;
-	if (curr_orb_y + curr_orb_height > (float)window_height)
-		curr_orb_height = (float)window_height - curr_orb_y;
+	if (curr_orb_x + curr_orb_width > frame_buffer_width)
+		curr_orb_width = frame_buffer_width - curr_orb_x;
+	if (curr_orb_y + curr_orb_height > frame_buffer_height)
+		curr_orb_height = frame_buffer_height - curr_orb_y;
 
 	// Calculating the scaling factor for the size of the orb.
 
@@ -2910,7 +2907,7 @@ render_transparent_polygons_or_spans(void)
 	// are rendered as linear texture-mapped spans.
 
 	else {
-		for (row = 0; row < window_height; row++) {
+		for (row = 0; row < frame_buffer_height; row++) {
 			span_row_ptr = (*span_buffer_ptr)[row];
 			span_ptr = span_row_ptr->transparent_span_list;
 			while (span_ptr != NULL) {
@@ -2989,6 +2986,36 @@ hide_rollover_popups(popup *popup_list)
 }
 
 //------------------------------------------------------------------------------
+// Step through all opaque spans in the span buffer, and add each to the span 
+// list of the pixmap associated with that span.  Solid colour spans go in their
+// own list.
+//------------------------------------------------------------------------------
+
+static void
+add_spans_to_pixmaps(void)
+{
+	for (int row = 0; row < frame_buffer_height; row++) {
+		span_row *span_row_ptr = (*span_buffer_ptr)[row];
+		span *span_ptr = span_row_ptr->opaque_span_list;
+		while (span_ptr != NULL) {
+			int brightness_index;
+			span *next_span_ptr = span_ptr->next_span_ptr;
+			pixmap *pixmap_ptr = span_ptr->pixmap_ptr;
+			brightness_index = span_ptr->brightness_index;
+			if (pixmap_ptr != NULL) {
+				span **span_list_ptr = &pixmap_ptr->span_lists[brightness_index];
+				span_ptr->next_span_ptr = *span_list_ptr;
+				*span_list_ptr = span_ptr;
+			} else {
+				span_ptr->next_span_ptr = colour_span_list;
+				colour_span_list = span_ptr;
+			}
+			span_ptr = next_span_ptr;
+		}
+	}
+}
+
+//------------------------------------------------------------------------------
 // Render the entire frame.
 //------------------------------------------------------------------------------
 
@@ -3000,7 +3027,6 @@ render_frame(void)
 	pixmap *sky_pixmap_ptr;
 	float sky_start_u, sky_start_v, sky_end_u, sky_end_v;
 	texture *texture_ptr;
-	pixmap *pixmap_ptr;
 	int row;
 
 	// Clear the "rendering block as bitmap" flag.
@@ -3108,8 +3134,8 @@ render_frame(void)
 
 	// Compute the direction of the camera in view space.
 
-	float view_mouse_x = (mouse_x - half_window_width) / half_window_width * half_viewport_width;
-	float view_mouse_y = (half_window_height - mouse_y) / half_window_height * half_viewport_height;
+	float view_mouse_x = (mouse_x - half_frame_buffer_width) / half_frame_buffer_width * half_viewport_width;
+	float view_mouse_y = (half_frame_buffer_height - mouse_y) / half_frame_buffer_height * half_viewport_height;
 	camera_direction = vector(view_mouse_x, view_mouse_y, 1.0f);
 	camera_direction.normalise();
 
@@ -3122,11 +3148,11 @@ render_frame(void)
 
 		if (global_fog_enabled) {
 			hardware_render_2D_polygon(NULL, global_fog.colour, 1.0f,
-				0.0f, 0.0f, (float)window_width, (float)window_height, 
+				0.0f, 0.0f, frame_buffer_width, frame_buffer_height, 
 				sky_start_u, sky_start_v, sky_end_u, sky_end_v);
 		} else {
 			hardware_render_2D_polygon(sky_pixmap_ptr, sky_colour, sky_brightness,
-				0.0f, 0.0f, (float)window_width, (float)window_height, 
+				0.0f, 0.0f, frame_buffer_width, frame_buffer_height, 
 				sky_start_u, sky_start_v, sky_end_u, sky_end_v);
 			render_orb();
 		}
@@ -3138,11 +3164,7 @@ render_frame(void)
 
 		// Clear the span buffer.
 
-		for (row = 0; row < window_height; row++) {
-			span_row *span_row_ptr = (*span_buffer_ptr)[row];
-			span_row_ptr->opaque_span_list = NULL;
-			span_row_ptr->transparent_span_list = NULL;
-		}
+		span_buffer_ptr->clear_buffer();
 
 		// Render the visible popups in front to back order.
 
@@ -3191,15 +3213,15 @@ render_frame(void)
 		sky_left_edge.one_on_tz = 0.0f;
 		sky_left_edge.u_on_tz = sky_start_u;
 		sky_left_edge.v_on_tz = sky_start_v; 
-		sky_right_edge.sx = (float)window_width;
+		sky_right_edge.sx = frame_buffer_width;
 		sky_right_edge.one_on_tz = 0.0f;
 		sky_right_edge.u_on_tz = sky_end_u;
 		sky_right_edge.v_on_tz = sky_start_v;
 
 		// Fill each span buffer row with a sky span.
 
-		sky_delta_v = (sky_end_v - sky_start_v) / window_height;
-		for (row = 0; row < window_height; row++) {
+		sky_delta_v = (sky_end_v - sky_start_v) / frame_buffer_height;
+		for (row = 0; row < frame_buffer_height; row++) {
 
 			// Add the sky span to the span buffer.
 
@@ -3222,31 +3244,11 @@ render_frame(void)
 	if (player_block_ptr != NULL)
 		render_player_block();
 
-	// If not using hardware acceleration, step through all opaque spans in the
-	// span buffer, and add each to the span list of the pixmap associated with
-	// that span.  Solid colour spans go in their own list.
+	// If not using hardware acceleration, add spans to their associated
+	// pixmaps.
 
 	if (!hardware_acceleration) {
-		for (row = 0; row < window_height; row++) {
-			span_row *span_row_ptr = (*span_buffer_ptr)[row];
-			span *span_ptr = span_row_ptr->opaque_span_list;
-			while (span_ptr != NULL) {
-				int brightness_index;
-				span *next_span_ptr = span_ptr->next_span_ptr;
-				pixmap_ptr = span_ptr->pixmap_ptr;
-				brightness_index = span_ptr->brightness_index;
-				if (pixmap_ptr != NULL) {
-					span **span_list_ptr = 
-						&pixmap_ptr->span_lists[brightness_index];
-					span_ptr->next_span_ptr = *span_list_ptr;
-					*span_list_ptr = span_ptr;
-				} else {
-					span_ptr->next_span_ptr = colour_span_list;
-					colour_span_list = span_ptr;
-				}
-				span_ptr = next_span_ptr;
-			}
-		}
+		add_spans_to_pixmaps();
 	}
 
 	// Step through each pixmap in each texture, rendering any polygons/spans
@@ -3358,21 +3360,25 @@ render_frame(void)
 static bitmap *
 render_block_as_bitmap(block *block_ptr)
 {
-	// Clear (and in the case of the software renderer, lock) the frame buffer.
+	// Clear (and in the case of the software renderer, lock) the builder frame buffer.
 
 	if (hardware_acceleration) {
 		clear_frame_buffer();
 	} else {
-		clear_frame_buffer(0, 0, window_width, window_height);
+		clear_builder_frame_buffer();
 		lock_frame_buffer();
 	}
 
 	// Reset the span and transformed polygon lists.
 
-	colour_span_list = NULL;
-	transparent_tpolygon_list = NULL;
-	colour_tpolygon_list = NULL;
-	reset_screen_polygon_list();
+	if (hardware_acceleration) {
+		transparent_tpolygon_list = NULL;
+		colour_tpolygon_list = NULL;
+	} else {
+		reset_screen_polygon_list();
+		span_buffer_ptr->clear_buffer();
+		colour_span_list = NULL;
+	}
 
 	// Remember the square and block pointers, and whether the block is movable.
 
@@ -3408,30 +3414,10 @@ render_block_as_bitmap(block *block_ptr)
 		}
 	}
 
-	// If not using hardware acceleration, step through all opaque spans in the
-	// span buffer, and add each to the span list of the pixmap associated with
-	// that span.  Solid colour spans go in their own list.
+	// If not using hardware acceleration, add all spans to their corresponding pixmaps.
 
 	if (!hardware_acceleration) {
-		for (int row = 0; row < window_height; row++) {
-			span_row *span_row_ptr = (*span_buffer_ptr)[row];
-			span *span_ptr = span_row_ptr->opaque_span_list;
-			while (span_ptr != NULL) {
-				int brightness_index;
-				span *next_span_ptr = span_ptr->next_span_ptr;
-				pixmap *pixmap_ptr = span_ptr->pixmap_ptr;
-				brightness_index = span_ptr->brightness_index;
-				if (pixmap_ptr != NULL) {
-					span **span_list_ptr = &pixmap_ptr->span_lists[brightness_index];
-					span_ptr->next_span_ptr = *span_list_ptr;
-					*span_list_ptr = span_ptr;
-				} else {
-					span_ptr->next_span_ptr = colour_span_list;
-					colour_span_list = span_ptr;
-				}
-				span_ptr = next_span_ptr;
-			}
-		}
+		add_spans_to_pixmaps();
 	}
 
 	// Step through each pixmap in each texture, rendering any polygons/spans listed in these pixmaps.
@@ -3443,14 +3429,11 @@ render_block_as_bitmap(block *block_ptr)
 	render_colour_polygons_or_spans();
 	render_transparent_polygons_or_spans();
 
-	// Create a bitmap with the contents of either the builder render target (after which we select
-	// the main render target), or the frame buffer (which is then unlocked).
+	// Create a bitmap with the contents of the builder render target, then
+	// unlock the frame buffer if hardware acceleration is not enabled.
 
-	bitmap *bitmap_ptr;
-	if (hardware_acceleration) {
-		bitmap_ptr = create_bitmap_from_builder_render_target();
-	} else {
-		bitmap_ptr = create_bitmap_from_frame_buffer();
+	bitmap *bitmap_ptr = create_bitmap_from_builder_render_target();
+	if (!hardware_acceleration) {
 		unlock_frame_buffer();
 	}
 	return bitmap_ptr;
@@ -3464,15 +3447,19 @@ render_block_as_bitmap(block *block_ptr)
 static void
 render_builder_icons_for_blockset(blockset *blockset_ptr)
 {
+	debug_message("Rendering blockset %s\n", blockset_ptr->name);
 	block_def *block_def_ptr = blockset_ptr->block_def_list;
 	while (block_def_ptr) {
 		block *block_ptr = block_def_ptr->create_simplified_block();
 		if (block_def_ptr->icon_bitmap_ptr == NULL) {
+			debug_message("Rendering block %s\n", block_ptr->block_def_ptr->name);
 			block_def_ptr->icon_bitmap_ptr = render_block_as_bitmap(block_ptr);
+			debug_message("Done rendering block %s\n", block_ptr->block_def_ptr->name);
 		}
 		delete block_ptr;
 		block_def_ptr = block_def_ptr->next_block_def_ptr;
 	}
+	debug_message("Done rendering blockset %s\n", blockset_ptr->name);
 }
 
 //------------------------------------------------------------------------------

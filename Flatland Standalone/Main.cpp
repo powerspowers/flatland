@@ -32,10 +32,15 @@
 
 int min_blockset_update_period;
 
-// Display dimensions and other related information.
+// Frame buffer dimensions (for software renderer only).
 
-float half_window_width;
-float half_window_height;
+float frame_buffer_width;
+float frame_buffer_height;
+float half_frame_buffer_width;
+float half_frame_buffer_height;
+
+// Viewport information.
+
 float horz_field_of_view;
 float vert_field_of_view;
 float horz_scaling_factor;
@@ -2860,10 +2865,12 @@ set_viewport(int width, int height)
 {
 	float half_horz_field_of_view, half_vert_field_of_view;
 
-	// Compute half of the window dimensions, for convienance.
+	// Set the frame buffer dimensions (only used by software renderer).
 
-	half_window_width = (float)window_width * 0.5f;
-	half_window_height = (float)window_height * 0.5f;
+	frame_buffer_width = (float)width;
+	frame_buffer_height = (float)height;
+	half_frame_buffer_width = frame_buffer_width / 2.0f;
+	half_frame_buffer_height = frame_buffer_height / 2.0f;
 
 	// Set the horizontal field of view to 60 degrees if the aspect ratio is
 	// wide (with the vertical field of view smaller), otherwise set the
@@ -3561,11 +3568,12 @@ init_player_window(void)
 	set_viewport(window_width, window_height);
 
 	// If hardware acceleration is not enabled, create the span buffer.
+	// Make sure its at least BUILDER_ICON_HEIGHT rows in height.
 
 	if (!hardware_acceleration) {
 		NEW(span_buffer_ptr, span_buffer);
 		if (span_buffer_ptr == NULL ||
-			!span_buffer_ptr->create_buffer(window_height)) {
+			!span_buffer_ptr->create_buffer(MAX(BUILDER_ICON_HEIGHT, window_height))) {
 			display_low_memory_error();
 			return(false);
 		}
@@ -3686,10 +3694,6 @@ refresh_player_window(void)
 					player_window_shutdown_requested.send_event(true);
 					return(false);
 				}
-				if (!hardware_acceleration) {
-					clear_frame_buffer(0, 0, window_width, window_height);
-				}
-				display_frame_buffer();
 			}
 		}
 	}
