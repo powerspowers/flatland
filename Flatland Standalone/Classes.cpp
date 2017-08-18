@@ -4208,12 +4208,10 @@ world::world()
 	ground_level_exists = false;
 	square_map = NULL;
 	level_entity_list = NULL;
-	level_defined_list = NULL;
 	audio_scale = 2.0f / UNITS_PER_BLOCK;
 }
 
-// Default destructor deletes the square map, level entity list and level defined
-// list, if they exist.
+// Default destructor deletes the square map and level entity list, if they exist.
 
 world::~world()
 {
@@ -4221,11 +4219,9 @@ world::~world()
 		DELARRAY(square_map, square, columns * rows * levels);
 	if (level_entity_list != NULL)
 		DELARRAY(level_entity_list, entity *, levels);
-	if (level_defined_list != NULL)
-		DELARRAY(level_defined_list, bool, levels);
 }
 
-// Method to create the square map, level entity list and level defined list.
+// Method to create the square map and level entity list.
 // It is assumed the dimensions for the square map are already set.
 
 bool
@@ -4233,11 +4229,7 @@ world::create_square_map(void)
 {
 	NEWARRAY(square_map, square, columns * rows * levels);
 	NEWARRAY(level_entity_list, entity *, levels);
-	NEWARRAY(level_defined_list, bool, levels);
-	for (int i = 0; i < levels; i++) {
-		level_defined_list[i] = false;
-	}
-	return(square_map != NULL && level_entity_list != NULL && level_defined_list != NULL);
+	return(square_map != NULL && level_entity_list != NULL);
 }
 
 // Method to return a pointer to the square at a given map position.

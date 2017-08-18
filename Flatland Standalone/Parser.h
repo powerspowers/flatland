@@ -195,6 +195,9 @@ stop_parsing_value(bool generate_error);
 
 // Document parsing functions.
 
+entity *
+create_entity(int type, int line_no, string text, attr *attr_list);
+
 void
 parse_start_of_document(int start_tag_token, attr_def *attr_def_list,
 						int attributes);
@@ -219,6 +222,12 @@ string
 nested_tags_to_string(void);
 
 entity *
+get_first_entity(void);
+
+entity *
+get_current_entity(void);
+
+entity *
 nested_text_entity(int start_tag_token, bool create_if_missing = false);
 
 string
@@ -231,7 +240,10 @@ entity *
 find_tag_entity(string tag_name, entity *entity_list);
 
 void
-prepend_tag_entity(entity *entity_ptr, entity *entity_list);
+prepend_tag_entity(entity *tag_entity_ptr, entity *entity_list);
+
+void
+insert_tag_entity(entity *tag_entity_ptr, entity *entity_ptr);
 
 void
 set_entity_attr(entity *entity_ptr, string attr_name, string attr_value);

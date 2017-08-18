@@ -1621,7 +1621,6 @@ struct world {
 	int rows;						// Number of rows in square map.
 	int levels;						// Number of levels in square map.
 	square *square_map;				// Map of squares.
-	bool *level_defined_list;		// Array of bools indicating which levels were defined.
 	entity **level_entity_list;		// Array of level entities.
 	float audio_scale;				// Audio scale (in metres per unit).
 

@@ -60,9 +60,10 @@ static bool got_stream_tag;
 static bool got_title_tag;
 static bool got_vertex_list;
 
-// Last level of map that was defined.
+// Number of last level of map that was defined.
 
-static int last_level;
+static entity *last_body_entity_ptr;
+static int last_level_number;
 
 // List of vertex definition entries, parts and polygons in the current block
 // definition.
@@ -3414,6 +3415,41 @@ parse_imagemap_tag(void)
 }
 
 //------------------------------------------------------------------------------
+// Insert empty level tags with the given range of level numbers, starting from
+// the last body tag.
+//------------------------------------------------------------------------------
+
+static void
+insert_missing_level_tags(int first_level_number, int last_level_number)
+{
+	int missing_level_number = first_level_number;
+	entity *last_entity_ptr = last_body_entity_ptr;
+	while (missing_level_number <= last_level_number) {
+
+		// Create a level tag and insert it after the last entity.
+
+		entity *missing_level_tag_entity_ptr = create_tag_entity("level", last_entity_ptr->line_no,
+			"number", (char *)int_to_string(missing_level_number), NULL);
+		insert_tag_entity(missing_level_tag_entity_ptr, last_entity_ptr);
+
+		// If the entity after the level tag is a text entity, duplicate it and store it as the
+		// nested entity of the level tag, otherwise create an empty one, then store a pointer to
+		// it for later.
+
+		//entity *next_entity_ptr = missing_level_tag_entity_ptr->next_entity_ptr;
+		//string text = next_entity_ptr && next_entity_ptr->type == TEXT_ENTITY ? next_entity_ptr->text : "";
+		entity *text_entity_ptr = create_entity(TEXT_ENTITY, missing_level_tag_entity_ptr->line_no, "", NULL);
+		missing_level_tag_entity_ptr->nested_entity_list = text_entity_ptr;
+		world_ptr->set_level_entity(missing_level_number, text_entity_ptr);
+
+		// Move to the next missing level tag.
+
+		last_entity_ptr = missing_level_tag_entity_ptr;
+		missing_level_number++;
+	}
+}
+
+//------------------------------------------------------------------------------
 // Parse the level tag.
 //------------------------------------------------------------------------------
 
@@ -3423,33 +3459,36 @@ parse_level_tag(void)
 	entity *entity_ptr;
 	const char *line_ptr;
 	char ch1, ch2;
-	int max_level;
+	int max_level_number;
 	int column, row, level;
 	square *row_ptr;
 
-	// If the number parameter was not given, use the last level number + 1.
+	// If the number parameter was not given, use the last level number + 1, and add the number attribute to the tag.
 
+	entity *curr_level_tag_entity_ptr = get_current_entity();
 	if (!parsed_attribute[LEVEL_NUMBER]) {
-		level_number = last_level + 1;
+		level_number = last_level_number + 1;
+		set_entity_attr(curr_level_tag_entity_ptr, "number", (char *)int_to_string(level_number));
 	}
 
-	// Verify the level number is within range.
+	// Otherwise verify the level number is greater than the last level number and not greater than the maximum level number.
 
-	max_level = world_ptr->ground_level_exists ? world_ptr->levels - 2 : world_ptr->levels - 1;
-	if (level_number < 1 || level_number > max_level) {
-		error("Level %d is out of range (should be between 1 and %d)", level_number, max_level);
+	else {
+		max_level_number = world_ptr->ground_level_exists ? world_ptr->levels - 2 : world_ptr->levels - 1;
+		if (level_number <= last_level_number || level_number > max_level_number) {
+			error("Level %d is out of range (should be between %d and %d)", level_number, last_level_number + 1, max_level_number);
+		}
+	}
+
+	// If the level number is greater than the last level number + 1, insert new empty level tags in between to fill the gaps.
+
+	if (level_number > last_level_number + 1) {
+		insert_missing_level_tags(last_level_number + 1, level_number - 1);
 	}
 
 	// The level index is one less than the level number if the ground level does not exist.
 
 	level = world_ptr->ground_level_exists ? level_number : level_number - 1;
-
-	// Verify the level number hasn't been seen before, then mark it as having been seen.
-
-	if (world_ptr->level_defined_list[level]) {
-		error("Level %d has been seen already", level_number);
-	}
-	world_ptr->level_defined_list[level] = true;
 
 	// Get a pointer to the nested text entity (or create an empty one).  Then store the entity in the world
 	// object for later access.
@@ -3532,9 +3571,9 @@ parse_level_tag(void)
 			line_ptr++;
 	}
 
-	// Remember this as the last level.
+	// Remember this as the last level number.
 
-	last_level = level_number;
+	last_level_number = level_number;
 }
 
 //------------------------------------------------------------------------------
@@ -4326,13 +4365,23 @@ parse_body_tags(void)
 	got_player_tag = false;
 	got_player_size = false;
 	got_player_camera = false;
-	last_level = 0;
+	last_level_number = 0;
 
-	// Parse the body tags.
+	// Parse the body tags, remembering the last one parsed.
 
 	start_parsing_nested_tags();
-	while (parse_next_nested_tag(TOKEN_BODY, body_tag_list, false, &tag_token))
+	last_body_entity_ptr = get_first_entity();
+	while (parse_next_nested_tag(TOKEN_BODY, body_tag_list, false, &tag_token)) {
 		parse_next_body_tag(tag_token, true);
+		last_body_entity_ptr = get_current_entity();
+	}
+
+	// If we haven't seen all required level tags, add the missing ones.
+
+	int max_level_number = world_ptr->ground_level_exists ? world_ptr->levels - 2 : world_ptr->levels - 1;
+	if (last_level_number < max_level_number) {
+		insert_missing_level_tags(last_level_number + 1, max_level_number);
+	}
 	stop_parsing_nested_tags();
 }
 
@@ -4625,15 +4674,11 @@ save_spot_file(const char *spot_file_path)
 		prepend_tag_entity(base_tag_entity_ptr, head_tag_entity_ptr->nested_entity_list);
 	}
 
-	// Reconstruct all of the level text entities with the current state of the map.  Skip over
-	// levels that weren't defined in the original spot file.
+	// Reconstruct all of the level text entities with the current state of the map.
 
 	int start_level = world_ptr->ground_level_exists ? 1 : 0;
 	int end_level = world_ptr->levels - 1;
 	for (int level = start_level; level < end_level; level++) {
-		if (!world_ptr->level_defined_list[level]) {
-			continue;
-		}
 		entity *entity_ptr = world_ptr->get_level_entity(level);
 
 		// Copy all whitespace at the beginning of the old map text.

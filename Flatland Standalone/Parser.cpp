@@ -3700,7 +3700,7 @@ parse_attribute(void)
 // Create a tag entity with the given type, line number, text and attribute list.
 //------------------------------------------------------------------------------
 
-static entity *
+entity *
 create_entity(int type, int line_no, string text, attr *attr_list)
 {
 	entity *entity_ptr;
@@ -4481,6 +4481,26 @@ nested_tags_to_string(void)
 }
 
 //------------------------------------------------------------------------------
+// Return the first entity of the current entity list.
+//------------------------------------------------------------------------------
+
+entity *
+get_first_entity(void)
+{
+	return file_stack_ptr->parse_stack_ptr->entity_list;
+}
+
+//------------------------------------------------------------------------------
+// Return the current entity.
+//------------------------------------------------------------------------------
+
+entity *
+get_current_entity(void)
+{
+	return file_stack_ptr->parse_stack_ptr->curr_entity_ptr;
+}
+
+//------------------------------------------------------------------------------
 // Return a nested text entity, creating one with an empty string if missing and
 // requested.  Throws an error if there are also nested tags present.
 //------------------------------------------------------------------------------
@@ -4614,6 +4634,27 @@ prepend_tag_entity(entity *tag_entity_ptr, entity *entity_list)
 	} else {
 		tag_entity_ptr->next_entity_ptr = entity_list->next_entity_ptr;
 		entity_list->next_entity_ptr = tag_entity_ptr;
+	}
+}
+
+//------------------------------------------------------------------------------
+// Insert a new entity after an existing one.  For prettiness, insert after the
+// first text entity, if it exists, and duplicate that text entity after the
+// inserted entity so that the indentation is the same.
+//------------------------------------------------------------------------------
+
+void
+insert_tag_entity(entity *tag_entity_ptr, entity *entity_ptr)
+{
+	entity *next_entity_ptr = entity_ptr->next_entity_ptr;
+	if (next_entity_ptr && next_entity_ptr->type == TEXT_ENTITY) {
+		entity *dup_text_entity = create_entity(TEXT_ENTITY, next_entity_ptr->line_no, next_entity_ptr->text, NULL);
+		dup_text_entity->next_entity_ptr = next_entity_ptr->next_entity_ptr;
+		next_entity_ptr->next_entity_ptr = tag_entity_ptr;
+		tag_entity_ptr->next_entity_ptr = dup_text_entity;
+	} else {
+		entity_ptr->next_entity_ptr = tag_entity_ptr;
+		tag_entity_ptr->next_entity_ptr = next_entity_ptr;
 	}
 }
 
