@@ -2272,9 +2272,8 @@ execute_replace_action(trigger *trigger_ptr, action *action_ptr)
 	if (block_def_ptr != NULL) {
 		if (block_def_ptr->movable) {
 			if (!removed_movable_block)
-				translation.set_map_translation(target_column, target_row,
-					target_level);
-			add_movable_block(block_def_ptr, translation);
+				translation.set_map_translation(target_column, target_row, target_level);
+			add_movable_block(block_def_ptr, target_square_ptr, translation);
 		} else
 			add_fixed_block(block_def_ptr, target_square_ptr, true);
 	}
@@ -3168,7 +3167,13 @@ render_next_frame(void)
 
 			if (block_def_ptr && (!square_has_entrance(builder_square_ptr) || block_def_ptr->allow_entrance)) {
 				remove_fixed_block(builder_square_ptr);
-				add_fixed_block(block_def_ptr, builder_square_ptr, true);
+				if (block_def_ptr->movable) {
+					vertex translation;
+					translation.set_map_translation(column, row, level);
+					add_movable_block(block_def_ptr, builder_square_ptr, translation);
+				} else {
+					add_fixed_block(block_def_ptr, builder_square_ptr, true);
+				}
 			}
 		} 
 		

@@ -3533,7 +3533,7 @@ parse_level_tag(void)
 				if (not_single_symbol(ch1, false))
 					warning("Symbol at location (%d, %d, %d) was invalid", column + 1, row + 1, level_number);
 				else
-					row_ptr->orig_block_symbol = ch1;
+					row_ptr->curr_block_symbol = ch1;
 				row_ptr++;
 				column++;
 				ch1 = *++line_ptr;
@@ -3552,9 +3552,9 @@ parse_level_tag(void)
 						break;
 					}
 				} else if (ch1 == '.')
-					row_ptr->orig_block_symbol = ch2;
+					row_ptr->curr_block_symbol = ch2;
 				else	
-					row_ptr->orig_block_symbol = (ch1 << 7) + ch2;
+					row_ptr->curr_block_symbol = (ch1 << 7) + ch2;
 				row_ptr++;
 				column++;
 				ch1 = *++line_ptr;
@@ -4357,7 +4357,7 @@ parse_body_tags(void)
 		for (int row = 0; row < world_ptr->rows; row++)
 			for (int column = 0; column < world_ptr->columns; column++) {
 				square *square_ptr = world_ptr->get_square_ptr(column, row, 0);
-				square_ptr->orig_block_symbol = GROUND_BLOCK_SYMBOL;
+				square_ptr->curr_block_symbol = GROUND_BLOCK_SYMBOL;
 			}
 
 	// Initialise some state variables.
@@ -4716,8 +4716,7 @@ save_spot_file(const char *spot_file_path)
 				if (world_ptr->map_style == DOUBLE_MAP && column > 0) {
 					new_map_text += ' ';
 				}
-				block *block_ptr = row_ptr->block_ptr;
-				new_map_text += block_ptr ? block_ptr->block_def_ptr->get_symbol() : get_symbol(NULL_BLOCK_SYMBOL);
+				new_map_text += get_symbol(row_ptr->curr_block_symbol);
 				row_ptr++;
 			}
 			new_map_text += '\n';

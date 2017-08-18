@@ -1731,6 +1731,7 @@ add_fixed_block(block_def *block_def_ptr, square *square_ptr,
 	translation.set_map_translation(column, row, level);
 	block_ptr = create_new_block(block_def_ptr, square_ptr, translation);
 	square_ptr->block_ptr = block_ptr;
+	square_ptr->curr_block_symbol = world_ptr->map_style == SINGLE_MAP ? block_def_ptr->single_symbol : block_def_ptr->double_symbol;
 
 	// If this block has a light, sound, popup or trigger list, or an entrance,
 	// add it to the fixed block list.
@@ -1778,10 +1779,14 @@ add_fixed_block(block_def *block_def_ptr, square *square_ptr,
 //------------------------------------------------------------------------------
 
 block *
-add_movable_block(block_def *block_def_ptr, vertex translation)
+add_movable_block(block_def *block_def_ptr, square *square_ptr, vertex translation)
 {
 	block *block_ptr;
 	trigger * trigger_ptr;
+
+	// Set the current block symbol for the square where the movable block starts at.
+
+	square_ptr->curr_block_symbol = world_ptr->map_style == SINGLE_MAP ? block_def_ptr->single_symbol : block_def_ptr->double_symbol;
 
 	// Create a block from the given block definition, at the given map
 	// position.
@@ -1874,7 +1879,8 @@ remove_fixed_block(square *square_ptr)
 			prev_block_ptr->next_block_ptr = curr_block_ptr->next_block_ptr;
 	}
 
-	// check to see if there are any clock actions to remove
+	// Check to see if there are any clock actions to remove.
+
 	remove_clock_action_by_block(block_ptr);
 
 	// Delete the block.
@@ -1885,6 +1891,7 @@ remove_fixed_block(square *square_ptr)
 	// Clear the pointer to the block.
 
 	square_ptr->block_ptr = NULL;
+	square_ptr->curr_block_symbol = NULL_BLOCK_SYMBOL;
 }
 
 //------------------------------------------------------------------------------
@@ -2379,7 +2386,7 @@ init_spot(void)
 		for (row = 0; row < world_ptr->rows; row++)
 			for (column = 0; column < world_ptr->columns; column++) {
 				square_ptr = world_ptr->get_square_ptr(column, row, level);
-				block_symbol = square_ptr->orig_block_symbol;
+				block_symbol = square_ptr->curr_block_symbol;
 				if (block_symbol != NULL_BLOCK_SYMBOL) {
 
 					// Refresh the player window.
@@ -2406,7 +2413,7 @@ init_spot(void)
 							warning("Block \"%s\" cannot be placed on an entrance square", block_def_ptr->name);
 						else if (block_def_ptr->movable) {
 							translation.set_map_translation(column, row, level);
-							add_movable_block(block_def_ptr, translation);
+							add_movable_block(block_def_ptr, square_ptr, translation);
 						} else
 							add_fixed_block(block_def_ptr, square_ptr, false);
 					}

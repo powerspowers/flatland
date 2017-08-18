@@ -117,7 +117,7 @@ semaphore<blockset *> selected_blockset_ptr;
 
 // Saved spot file path.
 
-const char *saved_spot_file_path;
+char *saved_spot_file_path;
 
 // Snapshot size, position and file path.
 

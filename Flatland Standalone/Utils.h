@@ -98,11 +98,10 @@ void
 remove_clock_action_by_type(action *action_ptr, int type);
 
 block *
-add_fixed_block(block_def *block_def_ptr, square *square_ptr, 
-				bool update_active_polygons);
+add_fixed_block(block_def *block_def_ptr, square *square_ptr, bool update_active_polygons);
 
 block *
-add_movable_block(block_def *block_def_ptr, vertex translation);
+add_movable_block(block_def *block_def_ptr, square *square_ptr, vertex translation);
 
 void
 remove_fixed_block(square *square_ptr);

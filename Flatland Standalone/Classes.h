@@ -1596,7 +1596,7 @@ struct block {
 //------------------------------------------------------------------------------
 
 struct square {
-	word orig_block_symbol;				// Symbol of original block on square.
+	word curr_block_symbol;				// Symbol of current block on square.
 	block *block_ptr;					// Pointer to block (if any).
 	hyperlink *exit_ptr;				// Pointer to exit (if any).
 	int popup_trigger_flags;			// Popup trigger flags.

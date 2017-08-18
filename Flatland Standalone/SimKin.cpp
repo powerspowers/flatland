@@ -2207,8 +2207,7 @@ map_simkin_object::method(const skString& method, skRValueArray& arguments, skRV
 
 		// If the map location is valid...
 
-		if ((square_ptr = world_ptr->get_square_ptr(column, row, level)) 
-			!= NULL) {
+		if ((square_ptr = world_ptr->get_square_ptr(column, row, level)) != NULL) {
 
 			// Remove the current block from this location.
 
@@ -2222,7 +2221,7 @@ map_simkin_object::method(const skString& method, skRValueArray& arguments, skRV
 				(block_def_ptr = symbol_to_block_def(symbol)) != NULL) {
 				if (block_def_ptr->movable) {
 					translation.set_map_translation(column, row, level);
-					add_movable_block(block_def_ptr, translation);
+					add_movable_block(block_def_ptr, square_ptr, translation);
 				} else
 					add_fixed_block(block_def_ptr, square_ptr, true);
 			}

@@ -2114,7 +2114,7 @@ INT_PTR CALLBACK about_box_dialog_proc(HWND hDlg, UINT message, WPARAM wParam, L
 
 static char save_file_path[_MAX_PATH];
 
-const char *
+static char *
 get_save_file_name(char *title, char *filter, char *initial_dir_path)
 {
 	OPENFILENAME save_file_name;
@@ -2177,6 +2177,10 @@ LRESULT CALLBACK app_window_proc(HWND hWnd, UINT message, WPARAM wParam, LPARAM 
 				{
 					saved_spot_file_path = get_save_file_name("Save spot to 3DML file", "3DML file\0*.3dml\0", NULL);
 					if (saved_spot_file_path != NULL) {
+						const char *ext_ptr = strrchr(saved_spot_file_path, '.');
+						if (ext_ptr == NULL) {
+							strcat(saved_spot_file_path, ".3dml");
+						}
 						save_3DML_source_requested.send_event(true);
 					}
 				}
