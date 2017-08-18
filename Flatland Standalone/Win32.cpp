@@ -2178,7 +2178,7 @@ LRESULT CALLBACK app_window_proc(HWND hWnd, UINT message, WPARAM wParam, LPARAM 
 					saved_spot_file_path = get_save_file_name("Save spot to 3DML file", "3DML file\0*.3dml\0", NULL);
 					if (saved_spot_file_path != NULL) {
 						const char *ext_ptr = strrchr(saved_spot_file_path, '.');
-						if (ext_ptr == NULL) {
+						if (ext_ptr == NULL || _stricmp(ext_ptr, ".3dml")) {
 							strcat(saved_spot_file_path, ".3dml");
 						}
 						save_3DML_source_requested.send_event(true);
