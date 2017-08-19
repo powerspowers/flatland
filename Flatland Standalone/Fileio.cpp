@@ -3426,18 +3426,14 @@ insert_missing_level_tags(int first_level_number, int last_level_number)
 	entity *last_entity_ptr = last_body_entity_ptr;
 	while (missing_level_number <= last_level_number) {
 
-		// Create a level tag and insert it after the last entity.
+		// Create an empty level tag and insert it after the last entity.
 
 		entity *missing_level_tag_entity_ptr = create_tag_entity("level", last_entity_ptr->line_no,
 			"number", (char *)int_to_string(missing_level_number), NULL);
 		insert_tag_entity(missing_level_tag_entity_ptr, last_entity_ptr);
 
-		// If the entity after the level tag is a text entity, duplicate it and store it as the
-		// nested entity of the level tag, otherwise create an empty one, then store a pointer to
-		// it for later.
+		// Create an empty nested text element in the empty level tag, then store a pointer to it for later.
 
-		//entity *next_entity_ptr = missing_level_tag_entity_ptr->next_entity_ptr;
-		//string text = next_entity_ptr && next_entity_ptr->type == TEXT_ENTITY ? next_entity_ptr->text : "";
 		entity *text_entity_ptr = create_entity(TEXT_ENTITY, missing_level_tag_entity_ptr->line_no, "", NULL);
 		missing_level_tag_entity_ptr->nested_entity_list = text_entity_ptr;
 		world_ptr->set_level_entity(missing_level_number, text_entity_ptr);
@@ -4674,71 +4670,73 @@ save_spot_file(const char *spot_file_path)
 		prepend_tag_entity(base_tag_entity_ptr, head_tag_entity_ptr->nested_entity_list);
 	}
 
+	// Create a buffer for each map level.
+
+	int symbol_size = world_ptr->map_style == SINGLE_MAP ? 2 : 3;
+	int map_size = world_ptr->rows * (world_ptr->columns * symbol_size + 1) + 1;
+	char *map_level = new char[map_size];
+
 	// Reconstruct all of the level text entities with the current state of the map.
 
 	int start_level = world_ptr->ground_level_exists ? 1 : 0;
 	int end_level = world_ptr->levels - 1;
 	for (int level = start_level; level < end_level; level++) {
 		entity *entity_ptr = world_ptr->get_level_entity(level);
-
-		// Copy all whitespace at the beginning of the old map text.
-
-		string new_map_text;
 		const char *line_ptr = entity_ptr->text;
-		char ch1 = *line_ptr;
-		while (ch1 == ' ' || ch1 == '\t' || ch1 == '\n') {
-			new_map_text += ch1;
-			ch1 = *++line_ptr;
-		}
 
-		// Now generate all rows of the map.
+		// Generate all rows of the map.
 
+		char *map_level_ptr = map_level;
 		for (int row = 0; row < world_ptr->rows; row++) {
 
-			// If we haven't reached the end of the old map text, copy all leading white space in this row,
-			// then skip all characters to the end of the row (since we're going to replace them).
-
-			while (ch1 == ' ' || ch1 == '\t') {
-				new_map_text += ch1;
-				ch1 = *++line_ptr;
-			}
+			// If we haven't reached the end of the old map text, skip all all characters to the end of the row (since we're going to replace them).
+		
+			char ch1 = *line_ptr;
 			while (ch1 != '\0' && ch1 != '\n') {
 				ch1 = *++line_ptr;
 			}
 
-			// Get a pointer to the row in the map, and output a row of single or double symbols
+			// Get a pointer to the first square of the row in the map, and output a row of single or double symbols
 
-			square *row_ptr = world_ptr->get_square_ptr(0, row, level);
+			square *square_ptr = world_ptr->get_square_ptr(0, row, level);
 
 			// Output a row of single or double symbols into the new map text.
 
 			for (int column = 0; column < world_ptr->columns; column++) {
 				if (world_ptr->map_style == DOUBLE_MAP && column > 0) {
-					new_map_text += ' ';
+					*map_level_ptr++ = ' ';
 				}
-				new_map_text += get_symbol(row_ptr->curr_block_symbol);
-				row_ptr++;
+				switch (world_ptr->map_style) {
+				case SINGLE_MAP:
+					*map_level_ptr++ = (char)square_ptr->curr_block_symbol;
+					break;
+				case DOUBLE_MAP:
+					{
+						char ch = (char)(square_ptr->curr_block_symbol >> 7);
+						*map_level_ptr++ = ch == 0 ? '.' : ch;
+						*map_level_ptr++ = (char)(square_ptr->curr_block_symbol & 127);
+					}
+				}
+				square_ptr++;
 			}
-			new_map_text += '\n';
+			*map_level_ptr++ = '\n';
 	
-			// Skip to the start of the next row, if there is one.
+			// Skip over the trailing newline, if there is one.
 
 			if (ch1 == '\n') {
 				ch1 = *++line_ptr;
 			}
 		}
-
-		// Copy any trailing whitespace to the new map text.
-
-		while (ch1 == ' ' || ch1 == '\t' || ch1 == '\n') {
-			new_map_text += ch1;
-			ch1 = *++line_ptr;
-		}
+		*map_level_ptr = '\0';
 
 		// Replace the entity's text with the new map.
 
-		entity_ptr->text = new_map_text;
+		entity_ptr->text = map_level;
 	}
+
+	// Delete the map level buffer.
+
+	delete []map_level;
 
 	// Save the document represented by the spot entity list.
 

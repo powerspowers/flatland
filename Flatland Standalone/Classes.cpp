@@ -8,6 +8,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <math.h>
+#include <ctype.h>
 #include "Classes.h"
 #include "Light.h"
 #include "Main.h"
@@ -249,6 +250,15 @@ string::write(FILE *fp)
 	char *ch_ptr = text;
 	for (int index = 0; index < length; index++)
 		fputc(*ch_ptr++, fp);
+}
+
+void
+string::to_lowercase()
+{
+	int length = strlen(text);
+	char *ch_ptr = text;
+	for (int index = 0; index < length; index++)
+		*ch_ptr++ = tolower(*ch_ptr);
 }
 
 //------------------------------------------------------------------------------

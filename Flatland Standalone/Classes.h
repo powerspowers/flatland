@@ -31,9 +31,10 @@ typedef int fixed;
 
 // XML entity types.
 
-#define TEXT_ENTITY		0
-#define COMMENT_ENTITY	1
-#define TAG_ENTITY		2
+#define DELETED_TEXT_ENTITY	0
+#define TEXT_ENTITY			1
+#define COMMENT_ENTITY		2
+#define TAG_ENTITY			3
 
 // Minimum delays before checking for an update.
 
@@ -318,6 +319,7 @@ public:
 	void copy(const char *new_text, unsigned int new_length);
 	void append(const char *add_text, unsigned int add_length);
 	void write(FILE *fp);
+	void to_lowercase();
 };
 
 //------------------------------------------------------------------------------

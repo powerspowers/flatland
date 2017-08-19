@@ -33,7 +33,6 @@ static char error_str[ERROR_MSG_SIZE];
 static bool strict_XML_compliance;
 static bool inside_tag;
 
-
 // Parse stack element class.
 
 struct parse_stack_element {
@@ -529,6 +528,10 @@ static char *last_value_string_ptr;
 static char unsafe_char[UNSAFE_CHARS] = {
 	' ', '<', '>', '%', '{', '}', '|', '\\', '^', '~', '[', ']', '`'
 };
+
+// Indent level for when converting a nested entity list into a string.
+
+static int indent_level;
 
 //==============================================================================
 // Parser intialisation function.
@@ -1119,7 +1122,7 @@ destroy_attr_list(attr *attr_list)
 	attr *next_attr_ptr;
 
 	while (attr_list != NULL) {
-		next_attr_ptr = attr_list->next_attr_ptr;
+			next_attr_ptr = attr_list->next_attr_ptr;
 		DEL(attr_list, attr);
 		attr_list = next_attr_ptr;
 	}
@@ -3191,9 +3194,12 @@ parse_stack_element *
 pop_parse_stack(void)
 {
 	file_stack_ptr->parse_stack_depth--;
-	if (file_stack_ptr->parse_stack_depth > 0)
-		return(file_stack_ptr->parse_stack_ptr = &file_stack_ptr->parse_stack[file_stack_ptr->parse_stack_depth - 1]);
-	return(file_stack_ptr->parse_stack_ptr = NULL);
+	if (file_stack_ptr->parse_stack_depth > 0) {
+		file_stack_ptr->parse_stack_ptr = &file_stack_ptr->parse_stack[file_stack_ptr->parse_stack_depth - 1];
+	} else {
+		file_stack_ptr->parse_stack_ptr = NULL;
+	}
+	return(file_stack_ptr->parse_stack_ptr);
 }
 
 //------------------------------------------------------------------------------
@@ -3664,8 +3670,7 @@ parse_nested_entity_list(const char *end_tag_name)
 	int token;
 	bool is_start_tag;
 
-	// Parse each entity in turn, until the named end tag has been reached, or
-	// the document start tag is found.
+	// Parse each entity in turn, until the named end tag has been reached, or the document start tag is found.
 
 	entity_list = NULL;
 	last_entity_ptr = NULL;
@@ -4102,13 +4107,28 @@ parse_attribute_list(attr_def *attr_def_list, int attributes)
 }
 
 //------------------------------------------------------------------------------
+// Get the current indentation as a string.
+//------------------------------------------------------------------------------
+
+static string
+get_indentation()
+{
+	string indentation = "";
+	for (int i = 0; i < indent_level; i++) {
+		indentation += '\t';
+	}
+	return indentation;
+}
+
+//------------------------------------------------------------------------------
 // Convert the current nested entity list to a string.
 //------------------------------------------------------------------------------
 
 static string
-entity_list_to_string(entity *entity_list)
+entity_list_to_string(entity *entity_list, bool add_formatting)
 {
 	string text;
+	string name;
 	attr *attr_ptr;
 	entity *entity_ptr;
 
@@ -4117,6 +4137,14 @@ entity_list_to_string(entity *entity_list)
 	entity_ptr = entity_list;
 	while (entity_ptr != NULL) {
 		switch (entity_ptr->type) {
+
+		// If the entity is deleted text, only use it if not adding formatting.
+
+		case DELETED_TEXT_ENTITY:
+			if (!add_formatting) {
+				text += entity_ptr->text;
+			}
+			break;
 		
 		// If the entity is text, use it as-is.
 
@@ -4127,26 +4155,43 @@ entity_list_to_string(entity *entity_list)
 		// If the entity is a comment, reconstruct the comment tag.
 
 		case COMMENT_ENTITY:
+			if (add_formatting) {
+				text += get_indentation();
+			}
 			text += "<!--";
 			text += entity_ptr->text;
 			text += "-->";
+			if (add_formatting) {
+				text += '\n';
+			}
 			break;
 
 		// If the entity is a tag...
 
 		case TAG_ENTITY:
+			if (add_formatting) {
+				text += get_indentation();
+			}
 
 			// Convert the tag name.
 
 			text += "<";
-			text += entity_ptr->text;
+			name = entity_ptr->text;
+			if (add_formatting) {
+				name.to_lowercase();
+			}
+			text += name;
 
 			// Convert the attribute list.
 
 			attr_ptr = entity_ptr->attr_list;
 			while (attr_ptr) {
 				text += " ";
-				text += attr_ptr->name;
+				name = attr_ptr->name;
+				if (add_formatting) {
+					name.to_lowercase();
+				}
+				text += name;
 				text += "=\"";
 				text += attr_ptr->value;
 				text += "\"";
@@ -4158,12 +4203,27 @@ entity_list_to_string(entity *entity_list)
 
 			if (entity_ptr->nested_entity_list != NULL) {
 				text += ">";
-				text += entity_list_to_string(entity_ptr->nested_entity_list);
+				if (add_formatting) {
+					text += '\n';
+				}
+				indent_level++;
+				text += entity_list_to_string(entity_ptr->nested_entity_list, add_formatting);
+				indent_level--;
+				if (add_formatting) {
+					text += get_indentation();
+				}
 				text += "</";
-				text += entity_ptr->text;
+				name = entity_ptr->text;
+				if (add_formatting) {
+					name.to_lowercase();
+				}
+				text += name;
 				text += ">";
 			} else
 				text += "/>";
+			if (add_formatting) {
+				text += '\n';
+			}
 		} 
 
 		// Move onto the next entity in the list.
@@ -4249,20 +4309,20 @@ parse_next_nested_tag(int start_tag_token, tag_def *tag_def_list, bool allow_tex
 {
 	tag_def *tag_def_ptr;
 	parse_stack_element *parse_stack_ptr;
+	entity *prev_entity_ptr;
 	entity *entity_ptr;
 
 	// Skip over the last nested tag entity parsed, if there is one.  Otherwise
 	// start at the beginning of the nested entity list.
 
 	parse_stack_ptr = file_stack_ptr->parse_stack_ptr;
-	entity_ptr = parse_stack_ptr->curr_entity_ptr;
-	if (entity_ptr != NULL)
-		entity_ptr = entity_ptr->next_entity_ptr;
+	prev_entity_ptr = parse_stack_ptr->curr_entity_ptr;
+	if (prev_entity_ptr != NULL)
+		entity_ptr = prev_entity_ptr->next_entity_ptr;
 	else
 		entity_ptr = parse_stack_ptr->entity_list;
 
-	// Keep looking for a tag entity until the end of the nested entity list
-	// has been reached.
+	// Keep looking for a tag entity until the end of the nested entity list has been reached.
 
 	while (entity_ptr != NULL) {
 
@@ -4275,30 +4335,31 @@ parse_next_nested_tag(int start_tag_token, tag_def *tag_def_list, bool allow_tex
 
 		switch (entity_ptr->type) {
 
-		// If this is a text entity and text is allowed, return 
-		// TOKEN_CHARACTER_DATA.  Otherwise we ignore it.
+		// If this is a text entity and text is allowed, return TOKEN_CHARACTER_DATA.  
+		// Otherwise mark it as a deleted entity, after warning about non-whitespace text.
 	
 		case TEXT_ENTITY:
 			if (allow_text) {
 				parse_stack_ptr->curr_entity_ptr = entity_ptr;
 				*tag_token = TOKEN_CHARACTER_DATA;
 				return(true);
-			} else if (not_all_whitespace(entity_ptr->text)) 
-				warning(entity_ptr->line_no, "Text is not allowed inside the <I>%s</I> tag", get_name(start_tag_token));
+			} else {
+				if (not_all_whitespace(entity_ptr->text)) 
+					warning(entity_ptr->line_no, "Text is not allowed inside the <I>%s</I> tag", get_name(start_tag_token));
+				entity_ptr->type = DELETED_TEXT_ENTITY;
+			}
 			break;
 
 		// If this is a tag entity...
 
 		case TAG_ENTITY:
 
-			// If the tag name of this entity does not resolve to a valid
-			// token, generate a warning.
+			// If the tag name of this entity does not resolve to a valid token, generate a warning.
 
 			if ((*tag_token = get_token(entity_ptr->text)) == TOKEN_NONE)
 				warning(entity_ptr->line_no, "Unrecognised tag name <I>%s</I>", entity_ptr->text);
 
-			// Otherwise attempt to match the tag entity against the tag
-			// definition list.
+			// Otherwise attempt to match the tag entity against the tag definition list.
 
 			else {
 				tag_def_ptr = tag_def_list;
@@ -4322,7 +4383,7 @@ parse_next_nested_tag(int start_tag_token, tag_def *tag_def_list, bool allow_tex
 			}
 		}
 
-		// Try the next nested entity.
+		// Skip over this entity.
 
 		entity_ptr = entity_ptr->next_entity_ptr;
 	}
@@ -4356,7 +4417,7 @@ text_to_string(void)
 string
 nested_tags_to_string(void)
 {
-	return(entity_list_to_string(file_stack_ptr->parse_stack_ptr->curr_entity_ptr->nested_entity_list));
+	return(entity_list_to_string(file_stack_ptr->parse_stack_ptr->curr_entity_ptr->nested_entity_list, false));
 }
 
 //------------------------------------------------------------------------------
@@ -4495,45 +4556,26 @@ find_tag_entity(string tag_name, entity *entity_list)
 }
 
 //------------------------------------------------------------------------------
-// Prepend an entity to an entity list.  For prettiness, insert after the first
-// text entity, if it exists, and duplicate that text entity after the inserted
-// entity so that the indentation is the same (this assumes the entity list is
-// one that only contains tags).
+// Prepend an entity to an entity list.
 //------------------------------------------------------------------------------
 
 void
 prepend_tag_entity(entity *tag_entity_ptr, entity *entity_list)
 {
-	if (entity_list->type == TEXT_ENTITY) {
-		entity *dup_text_entity = create_entity(TEXT_ENTITY, entity_list->line_no, entity_list->text, NULL);
-		dup_text_entity->next_entity_ptr = entity_list->next_entity_ptr;
-		tag_entity_ptr->next_entity_ptr = dup_text_entity;
-		entity_list->next_entity_ptr = tag_entity_ptr;
-	} else {
-		tag_entity_ptr->next_entity_ptr = entity_list->next_entity_ptr;
-		entity_list->next_entity_ptr = tag_entity_ptr;
-	}
+	tag_entity_ptr->next_entity_ptr = entity_list->next_entity_ptr;
+	entity_list->next_entity_ptr = tag_entity_ptr;
 }
 
 //------------------------------------------------------------------------------
-// Insert a new entity after an existing one.  For prettiness, insert after the
-// first text entity, if it exists, and duplicate that text entity after the
-// inserted entity so that the indentation is the same.
+// Insert a new entity after an existing one.
 //------------------------------------------------------------------------------
 
 void
 insert_tag_entity(entity *tag_entity_ptr, entity *entity_ptr)
 {
 	entity *next_entity_ptr = entity_ptr->next_entity_ptr;
-	if (next_entity_ptr && next_entity_ptr->type == TEXT_ENTITY) {
-		entity *dup_text_entity = create_entity(TEXT_ENTITY, next_entity_ptr->line_no, next_entity_ptr->text, NULL);
-		dup_text_entity->next_entity_ptr = next_entity_ptr->next_entity_ptr;
-		next_entity_ptr->next_entity_ptr = tag_entity_ptr;
-		tag_entity_ptr->next_entity_ptr = dup_text_entity;
-	} else {
-		entity_ptr->next_entity_ptr = tag_entity_ptr;
-		tag_entity_ptr->next_entity_ptr = next_entity_ptr;
-	}
+	entity_ptr->next_entity_ptr = tag_entity_ptr;
+	tag_entity_ptr->next_entity_ptr = next_entity_ptr;
 }
 
 //------------------------------------------------------------------------------
@@ -4572,7 +4614,8 @@ save_document(const char *file_name, entity *entity_list)
 	string text;
 	FILE *fp;
 
-	text = entity_list_to_string(entity_list);
+	indent_level = 0;
+	text = entity_list_to_string(entity_list, true);
 	if ((fp = fopen(file_name, "w")) != NULL) {
 		text.write(fp);
 		fclose(fp);
