@@ -4672,8 +4672,8 @@ save_spot_file(const char *spot_file_path)
 
 	// Create a buffer for each map level.
 
-	int symbol_size = world_ptr->map_style == SINGLE_MAP ? 2 : 3;
-	int map_size = world_ptr->rows * (world_ptr->columns * symbol_size + 1) + 1;
+	int symbol_size = world_ptr->map_style == SINGLE_MAP ? 1 : 3;
+	int map_size = world_ptr->rows * (world_ptr->columns * symbol_size + 4) + 1;
 	char *map_level = new char[map_size];
 
 	// Reconstruct all of the level text entities with the current state of the map.
@@ -4695,6 +4695,12 @@ save_spot_file(const char *spot_file_path)
 			while (ch1 != '\0' && ch1 != '\n') {
 				ch1 = *++line_ptr;
 			}
+
+			// Add 3 tabs to the beginning of the row.
+
+			*map_level_ptr++ = '\t';
+			*map_level_ptr++ = '\t';
+			*map_level_ptr++ = '\t';
 
 			// Get a pointer to the first square of the row in the map, and output a row of single or double symbols
 
