@@ -620,8 +620,8 @@ create_URL(const char *URL_dir, const char *file_name)
 	// or the strings "http:" or "file:", then assume it's an absolute URL.
 
 	if (file_name[0] == '/' || file_name[0] == '\\' ||
-		(strlen(file_name) > 1 && isalpha(file_name[0]) && file_name[1] == ':')
-		|| !_strnicmp(file_name, "http:", 5) || !_strnicmp(file_name, "file:", 5))
+		(strlen(file_name) > 1 && isalpha(file_name[0]) && file_name[1] == ':') ||
+		!_strnicmp(file_name, "http:", 5) || !_strnicmp(file_name, "file:", 5))
 		URL = file_name;
 
 	// Otherwise concatenate the URL directory and file name parameters to create
@@ -837,8 +837,7 @@ not_double_symbol(char ch1, char ch2, bool disallow_dot_dot)
 //------------------------------------------------------------------------------
 
 bool
-string_to_single_symbol(const char *string_ptr, char *symbol_ptr,
-						bool disallow_dot)
+string_to_single_symbol(const char *string_ptr, char *symbol_ptr, bool disallow_dot)
 {
 	if (strlen(string_ptr) != 1 || not_single_symbol(*string_ptr, disallow_dot))
 		return(false);
@@ -853,11 +852,9 @@ string_to_single_symbol(const char *string_ptr, char *symbol_ptr,
 //------------------------------------------------------------------------------
 
 bool
-string_to_double_symbol(const char *string_ptr, word *symbol_ptr,
-						bool disallow_dot_dot)
+string_to_double_symbol(const char *string_ptr, word *symbol_ptr, bool disallow_dot_dot)
 {
-	if (strlen(string_ptr) != 2 || not_double_symbol(*string_ptr, 
-		*(string_ptr + 1), disallow_dot_dot))
+	if (strlen(string_ptr) != 2 || not_double_symbol(*string_ptr, *(string_ptr + 1), disallow_dot_dot))
 		return(false);
 	if (*string_ptr == '.')
 		*symbol_ptr = *(string_ptr + 1);
@@ -871,8 +868,7 @@ string_to_double_symbol(const char *string_ptr, word *symbol_ptr,
 //------------------------------------------------------------------------------
 
 bool
-string_to_symbol(const char *string_ptr, word *symbol_ptr, 
-				 bool disallow_dot_dot)
+string_to_symbol(const char *string_ptr, word *symbol_ptr, bool disallow_dot_dot)
 {
 	char symbol;
 
@@ -882,7 +878,6 @@ string_to_symbol(const char *string_ptr, word *symbol_ptr,
 			*symbol_ptr = symbol;
 			return(true);
 		}
-
 		break;
 	case DOUBLE_MAP:
 		if (string_to_double_symbol(string_ptr, symbol_ptr, disallow_dot_dot))
@@ -988,8 +983,7 @@ download_blockset(const char *URL, const char *name)
 	// Add the cached blockset to the cached blockset list, and save the list
 	// to the cache file.  Then return a pointer to the cached blockset entry.
 
-	if ((cached_blockset_ptr = new_cached_blockset(cache_file_path, URL, size, 
-		time(NULL))) == NULL)
+	if ((cached_blockset_ptr = new_cached_blockset(cache_file_path, URL, size, time(NULL))) == NULL)
 		return(NULL);
 	save_cached_blockset_list();
 	return(cached_blockset_ptr);
@@ -1042,16 +1036,13 @@ open_blockset(const char *blockset_URL, const char *blockset_name)
 
 		if ((cached_blockset_ptr = find_cached_blockset(blockset_URL)) == NULL) {
 			if ((fp = fopen(cached_blockset_path, "r")) == NULL) {
-				if ((cached_blockset_ptr = download_blockset(blockset_URL, 
-					blockset_name)) == NULL)
+				if ((cached_blockset_ptr = download_blockset(blockset_URL, blockset_name)) == NULL)
 					return(false);
 			} else {
 				fseek(fp, 0, SEEK_END);
 				size = ftell(fp);
 				fclose(fp);
-				if ((cached_blockset_ptr = new_cached_blockset(
-					cached_blockset_path, blockset_URL, size, time(NULL))) 
-					== NULL)
+				if ((cached_blockset_ptr = new_cached_blockset(cached_blockset_path, blockset_URL, size, time(NULL))) == NULL)
 					return(false);
 				save_cached_blockset_list();
 			}
@@ -1061,8 +1052,7 @@ open_blockset(const char *blockset_URL, const char *blockset_name)
 		// has expired, and the current spot is from a web-based URL, 
 		// check whether a new update is available.
 
-		if (time(NULL) - cached_blockset_ptr->updated > 
-			min_blockset_update_period && spot_on_web) {
+		if (time(NULL) - cached_blockset_ptr->updated > min_blockset_update_period && spot_on_web) {
 
 			// Construct the URL to the blockset's version file.
 
@@ -1075,8 +1065,7 @@ open_blockset(const char *blockset_URL, const char *blockset_name)
 			// agreed to download it.  If so, remove the current version of the
 			// blockset and download the new one.
 
-			if (check_for_blockset_update(version_file_URL, blockset_name,
-				cached_blockset_ptr->version)) {
+			if (check_for_blockset_update(version_file_URL, blockset_name, cached_blockset_ptr->version)) {
 				delete_cached_blockset(blockset_URL);
 				save_cached_blockset_list();
 				remove(cached_blockset_path);
@@ -1173,8 +1162,7 @@ destroy_entity_list(entity *entity_list)
 //------------------------------------------------------------------------------
 
 static void
-push_file_on_stack(string file_URL, bool text_file, bool in_zip_archive,
-				   char *file_buffer, int file_size)
+push_file_on_stack(string file_URL, bool text_file, bool in_zip_archive, char *file_buffer, int file_size)
 {
 	// If the file is in the currently open zip archive, add it's name to the
 	// file URL.
@@ -1274,8 +1262,8 @@ push_curr_zip_file(const char *file_path, bool text_file, int file_size)
 	// Open the file, read it into the file buffer, then close the file.
 
 	if (unzOpenCurrentFile(zip_archive_handle) != UNZ_OK ||
-		unzReadCurrentFile(zip_archive_handle, file_buffer, file_size) < 
-		file_size || unzCloseCurrentFile(zip_archive_handle) != UNZ_OK) {
+		unzReadCurrentFile(zip_archive_handle, file_buffer, file_size) < file_size ||
+		unzCloseCurrentFile(zip_archive_handle) != UNZ_OK) {
 		DELARRAY(file_buffer, char, file_size + 1);
 		return(false);
 	}
@@ -1303,8 +1291,7 @@ push_zip_file(const char *file_path, bool text_file)
 
 	// Get the uncompressed size of the file.
 
-	if (unzGetCurrentFileInfo(zip_archive_handle, &info, NULL, 0, NULL, 0, 
-		NULL, 0) != UNZ_OK)
+	if (unzGetCurrentFileInfo(zip_archive_handle, &info, NULL, 0, NULL, 0, NULL, 0) != UNZ_OK)
 		return(false);
 
 	// Push the file.
@@ -1336,8 +1323,7 @@ push_zip_file_with_ext(const char *file_ext, bool text_file)
 
 		// Get the information for the current file.
 
-		if (unzGetCurrentFileInfo(zip_archive_handle, &info, file_name, 
-			_MAX_PATH, NULL, 0, NULL, 0) != UNZ_OK)
+		if (unzGetCurrentFileInfo(zip_archive_handle, &info, file_name, _MAX_PATH, NULL, 0, NULL, 0) != UNZ_OK)
 			return(false);
 
 		// If the file name ends with the requested extension, push it onto the
@@ -1345,8 +1331,7 @@ push_zip_file_with_ext(const char *file_ext, bool text_file)
 
 		ext_ptr = strrchr(file_name, '.');
 		if (ext_ptr && !_stricmp(ext_ptr, file_ext))
-			return(push_curr_zip_file(file_name, text_file,
-				info.uncompressed_size));
+			return(push_curr_zip_file(file_name, text_file, info.uncompressed_size));
 
 		// Otherwise move onto the next file in the zip archive.
 
@@ -1428,8 +1413,7 @@ pop_file(bool return_entity_list)
 	// Delete the file buffer, if it exists.
 
 	if (file_stack_ptr->file_buffer != NULL)
-		DELBASEARRAY(file_stack_ptr->file_buffer, char, 
-			file_stack_ptr->file_size + 1);
+		DELBASEARRAY(file_stack_ptr->file_buffer, char, file_stack_ptr->file_size + 1);
 
 	// Save or destroy the entity list, if it exists.
 
@@ -1531,8 +1515,7 @@ copy_file(const char *file_path, bool text_file)
 			ch = *file_buffer_ptr++;
 			switch (ch) {
 			case '\r':
-				if (file_buffer_ptr < end_buffer_ptr &&
-					*file_buffer_ptr == '\n')
+				if (file_buffer_ptr < end_buffer_ptr && *file_buffer_ptr == '\n')
 					file_buffer_ptr++;
 			case '\n':
 				fputc('\r', fp);
@@ -1667,8 +1650,7 @@ warning(int line_no, const char *format, ...)
 
 	// Add the line number of entity to the message.
 
-	write_error_log("<B>Warning on line %d of %s:</B> %s.\n<BR>\n", 
-		line_no, file_stack_ptr->file_URL, message);
+	write_error_log("<B>Warning on line %d of %s:</B> %s.\n<BR>\n", line_no, file_stack_ptr->file_URL, message);
 
 	// Set a flag indicating warnings are present in the error log.
 
@@ -1700,8 +1682,7 @@ warning(const char *format, ...)
 		// entity, and the file URL to the error message.
 
 		parse_stack_ptr = file_stack_ptr->parse_stack_ptr;
-		if (parse_stack_ptr != NULL && 
-			parse_stack_ptr->curr_entity_ptr != NULL) {
+		if (parse_stack_ptr != NULL && parse_stack_ptr->curr_entity_ptr != NULL) {
 			warning(parse_stack_ptr->curr_entity_ptr->line_no, "%s", message);
 			return;
 		}
@@ -1711,11 +1692,9 @@ warning(const char *format, ...)
 		// URL.
 
 		else if (file_stack_ptr->text_file)
-			warning(file_stack_ptr->line_no, "%s", file_stack_ptr->file_URL, 
-				message);
+			warning(file_stack_ptr->line_no, "%s", file_stack_ptr->file_URL, message);
 		else
-			write_error_log("<B>Warning in %s:</B> %s.\n<BR>\n", 
-				file_stack_ptr->file_URL, message);
+			write_error_log("<B>Warning in %s:</B> %s.\n<BR>\n", file_stack_ptr->file_URL, message);
 	} 
 	
 	// Otherwise just write a generic error format.
@@ -1756,8 +1735,7 @@ error(int line_no, const char *format, ...)
 
 	// Add the line number of the entity to it.
 
-	bprintf(error_str, ERROR_MSG_SIZE, "<B>Error on line %d of %s:</B> "
-		"%s.\n<BR>\n", line_no, file_stack_ptr->file_URL, message);
+	bprintf(error_str, ERROR_MSG_SIZE, "<B>Error on line %d of %s:</B> %s.\n<BR>\n", line_no, file_stack_ptr->file_URL, message);
 
 	// Throw the error message.
 
@@ -1797,11 +1775,9 @@ error(const char *format, ...)
 		// URL.
 
 		else if (file_stack_ptr->text_file)
-			error(file_stack_ptr->line_no, "%s", file_stack_ptr->file_URL,
-				message);
+			error(file_stack_ptr->line_no, "%s", file_stack_ptr->file_URL, message);
 		else
-			bprintf(error_str, ERROR_MSG_SIZE, "<B>Error in %s:</B> "
-				"%s.\n<BR>\n", file_stack_ptr->file_URL, message);
+			bprintf(error_str, ERROR_MSG_SIZE, "<B>Error in %s:</B> %s.\n<BR>\n", file_stack_ptr->file_URL, message);
 	} 
 	
 	// Otherwise just display a generic error format.
@@ -1822,8 +1798,7 @@ void
 memory_error(const char *object)
 {
 	low_memory = true;
-	bprintf(error_str, ERROR_MSG_SIZE, "Insufficient memory for allocating %s",
-		object);
+	bprintf(error_str, ERROR_MSG_SIZE, "Insufficient memory for allocating %s", object);
 	throw (char *)error_str;
 }
 
@@ -1896,13 +1871,10 @@ bad_attribute_value(const char *pre_message, const char *post_message)
 	
 	value_string_size = last_value_string_ptr - value_string;
 	if (value_string_size > 0)
-		bprintf(message, ERROR_MSG_SIZE, "Following <I>\"%.*s\"</I>, "
-			"expected %s in the <I>%s</I> attribute of the <I>%s</I> tag%s", 
-			value_string_size, value_string, pre_message, 
-			get_name(curr_attr_token), get_name(curr_tag_token), post_message);
+		bprintf(message, ERROR_MSG_SIZE, "Following <I>\"%.*s\"</I>, expected %s in the <I>%s</I> attribute of the <I>%s</I> tag%s", 
+			value_string_size, value_string, pre_message, get_name(curr_attr_token), get_name(curr_tag_token), post_message);
 	else
-		bprintf(message, ERROR_MSG_SIZE, "Expected %s in the <I>%s</I> "
-			"attribute of the <I>%s</I> tag%s", pre_message, 
+		bprintf(message, ERROR_MSG_SIZE, "Expected %s in the <I>%s</I> attribute of the <I>%s</I> tag%s", pre_message, 
 			get_name(curr_attr_token), get_name(curr_tag_token), post_message);
 
 	// Display it as an error or warning.
@@ -1925,8 +1897,7 @@ check_int_range(int value, int min, int max)
 
 	if (value >= min && value <= max)
 		return(true);
-	bprintf(message, ERROR_MSG_SIZE, "a whole number between %d and %d", 
-		min, max);
+	bprintf(message, ERROR_MSG_SIZE, "a whole number between %d and %d", min, max);
 	bad_attribute_value(message, "");
 	return(false);
 }
@@ -1977,8 +1948,7 @@ check_float_range(float value, float min, float max)
 
 	if (FGE(value, min) && FLE(value, max))
 		return(true);
-	bprintf(message, ERROR_MSG_SIZE, "a floating point number between %g and %g",
-		min, max);
+	bprintf(message, ERROR_MSG_SIZE, "a floating point number between %g and %g", min, max);
 	bad_attribute_value(message, "");
 	return(false);
 }
@@ -2141,8 +2111,7 @@ parse_name(const char *old_name, string *new_name, bool allow_list, bool allow_w
 //------------------------------------------------------------------------------
 
 void
-start_parsing_value(int tag_token, int attr_token, char *attr_value, 
-					bool attr_required)
+start_parsing_value(int tag_token, int attr_token, char *attr_value, bool attr_required)
 {
 	// Remember the tag token as the current one.
 
@@ -2375,8 +2344,7 @@ parse_float_in_value(float *float_ptr)
 static bool
 parse_name_in_value(string *string_ptr, bool allow_list, bool allow_wildcard)
 {
-	const char *end_msg = " (a valid name begins with an alphanumeric character, "
-		"and may only contain alphanumeric and underscore characters)";
+	const char *end_msg = " (a valid name begins with an alphanumeric character, and may only contain alphanumeric and underscore characters)";
 	if (!parse_name(value_string_ptr, string_ptr, allow_list, allow_wildcard)) {
 		if (allow_list) {
 			if (allow_wildcard) {
@@ -2522,8 +2490,7 @@ parse_value(int *value_ptr, value_def *value_def_list, int value_defs,
 //------------------------------------------------------------------------------
 
 static bool parse_relative_coordinates(relcoords *relcoords_ptr);
-static bool parse_symbol(word *symbol_ptr, bool disallow_empty_block_symbol,
-						 bool generate_error);
+static bool parse_symbol(word *symbol_ptr, bool disallow_empty_block_symbol, bool generate_error);
 
 static bool
 parse_block_reference(blockref *block_ref_ptr)
@@ -2578,16 +2545,13 @@ parse_delay_range(delayrange *delay_range_ptr)
 {
 	float min_delay, max_delay;
 
-	if (!parse_float_in_value(&min_delay) || 
-		!check_float_greater_or_equal(min_delay, 0.0f))
+	if (!parse_float_in_value(&min_delay) || !check_float_greater_or_equal(min_delay, 0.0f))
 		return(false);
 	delay_range_ptr->min_delay_ms = (int)(min_delay * 1000.0f);
 	if (token_in_value_is("..", false)) {
-		if (!parse_float_in_value(&max_delay) || 
-			!check_float_greater_or_equal(max_delay, min_delay))
+		if (!parse_float_in_value(&max_delay) || !check_float_greater_or_equal(max_delay, min_delay))
 			return(false);
-		delay_range_ptr->delay_range_ms = (int)(max_delay * 1000.0f) -
-			delay_range_ptr->min_delay_ms;
+		delay_range_ptr->delay_range_ms = (int)(max_delay * 1000.0f) - delay_range_ptr->min_delay_ms;
 	} else
 		delay_range_ptr->delay_range_ms = 0;
 	return(true);
@@ -2623,10 +2587,8 @@ parse_direction_range(dirrange *dirrange_ptr)
 		if (!parse_direction(&dirrange_ptr->max_direction))
 			return(false);
 	} else {
-		dirrange_ptr->max_direction.angle_y = 
-			dirrange_ptr->min_direction.angle_y;
-		dirrange_ptr->max_direction.angle_x = 
-			dirrange_ptr->min_direction.angle_x;
+		dirrange_ptr->max_direction.angle_y = dirrange_ptr->min_direction.angle_y;
+		dirrange_ptr->max_direction.angle_x = dirrange_ptr->min_direction.angle_x;
 	}
 	return(true);
 }
@@ -2757,8 +2719,7 @@ parse_orientation(orientation *orientation_ptr)
 	// If the parameter value starts with a compass direction, this is the new
 	// style of orientation.
 
-	if (!parse_value(&orientation_ptr->direction, orientation_value_list,
-		ORIENTATION_VALUES, false, false))
+	if (!parse_value(&orientation_ptr->direction, orientation_value_list, ORIENTATION_VALUES, false, false))
 		orientation_ptr->direction = NONE;
 
 	// If a compass direction was given, parse an angle of rotation around
@@ -2768,8 +2729,7 @@ parse_orientation(orientation *orientation_ptr)
 		if (token_in_value_is(",", false)) {
 			if (!parse_float_in_value(&orientation_ptr->angle))
 				return(false);
-			orientation_ptr->angle = 
-				pos_adjust_angle(orientation_ptr->angle);
+			orientation_ptr->angle = pos_adjust_angle(orientation_ptr->angle);
 		} else
 			orientation_ptr->angle = 0.0f;
 	}
@@ -2784,13 +2744,11 @@ parse_orientation(orientation *orientation_ptr)
 		if (token_in_value_is(",", false)) {
 			if (!parse_float_in_value(&orientation_ptr->angle_x))
 				return(false);
-			orientation_ptr->angle_x = 
-				pos_adjust_angle(orientation_ptr->angle_x);
+			orientation_ptr->angle_x = pos_adjust_angle(orientation_ptr->angle_x);
 			if (token_in_value_is(",", false)) {
 				if (!parse_float_in_value(&orientation_ptr->angle_z))
 					return(false);
-				orientation_ptr->angle_z = 
-					pos_adjust_angle(orientation_ptr->angle_z);
+				orientation_ptr->angle_z = pos_adjust_angle(orientation_ptr->angle_z);
 			} else
 				orientation_ptr->angle_z = 0.0f;
 		} else {
@@ -2833,8 +2791,7 @@ parse_percentage_range(pcrange *pcrange_ptr)
 	if (!parse_percentage(&pcrange_ptr->min_percentage, NULL))
 		return(false);
 	if (token_in_value_is("..", false)) {
-		if (!parse_percentage(&pcrange_ptr->max_percentage,
-			&pcrange_ptr->min_percentage))
+		if (!parse_percentage(&pcrange_ptr->max_percentage, &pcrange_ptr->min_percentage))
 			return(false);
 	} else
 		pcrange_ptr->max_percentage = pcrange_ptr->min_percentage;
@@ -2849,8 +2806,7 @@ bool
 parse_playback_mode(char *attr_value, int *playback_mode_ptr)
 {
 	start_parsing_value(TOKEN_NONE, TOKEN_NONE, attr_value, false);
-	return(parse_value(playback_mode_ptr, playback_mode_value_list,
-		PLAYBACK_MODE_VALUES, false, false) && stop_parsing_value(false));
+	return(parse_value(playback_mode_ptr, playback_mode_value_list, PLAYBACK_MODE_VALUES, false, false) && stop_parsing_value(false));
 }
 
 //------------------------------------------------------------------------------
@@ -2861,8 +2817,7 @@ parse_playback_mode(char *attr_value, int *playback_mode_ptr)
 static bool
 parse_radius(float *radius_ptr)
 {
-	if (!parse_float_in_value(radius_ptr) || 
-		!check_float_greater_than(*radius_ptr, 0.0f))
+	if (!parse_float_in_value(radius_ptr) || !check_float_greater_than(*radius_ptr, 0.0f))
 		return(false);
 	*radius_ptr *= UNITS_PER_BLOCK;
 	return(true);
@@ -2932,7 +2887,6 @@ parse_rectangle(video_rect *rect_ptr)
 static bool
 parse_relative_integer_triplet(relinteger_triplet *relinteger_ptr)
 {
-
 	// Parse the integers.
 
 	if (!token_in_value_is("(", true) || 
@@ -2946,7 +2900,6 @@ parse_relative_integer_triplet(relinteger_triplet *relinteger_ptr)
 		 &relinteger_ptr->relative_z, 0) ||
 		!token_in_value_is(")", true))
 		return(false);
-
 	return(true);
 }
 
@@ -3119,15 +3072,13 @@ parse_sprite_size(size *size_ptr)
 //------------------------------------------------------------------------------
 
 static bool
-parse_symbol(word *symbol_ptr, bool disallow_empty_block_symbol, 
-			 bool generate_error)
+parse_symbol(word *symbol_ptr, bool disallow_empty_block_symbol, bool generate_error)
 {
 	char symbol;
 
 	switch (world_ptr->map_style) {
 	case SINGLE_MAP:
-		if (string_to_single_symbol(value_string_ptr, &symbol, 
-			disallow_empty_block_symbol)) {
+		if (string_to_single_symbol(value_string_ptr, &symbol, disallow_empty_block_symbol)) {
 			*symbol_ptr = symbol;
 			value_string_ptr++;
 			return(true);
@@ -3136,8 +3087,7 @@ parse_symbol(word *symbol_ptr, bool disallow_empty_block_symbol,
 			bad_attribute_value("a valid single-character symbol", "");
 		break;
 	case DOUBLE_MAP:
-		if (string_to_double_symbol(value_string_ptr, symbol_ptr, 
-			disallow_empty_block_symbol)) {
+		if (string_to_double_symbol(value_string_ptr, symbol_ptr, disallow_empty_block_symbol)) {
 			value_string_ptr += 2;
 			return(true);
 		}
@@ -3172,8 +3122,7 @@ parse_version(unsigned int *version_ptr)
 	// error.
 
 	if (token_in_value_is(".", false)) {
-		if (!parse_integer_in_value(&version3) || 
-			!check_int_range(version3, 0, 255))
+		if (!parse_integer_in_value(&version3) || !check_int_range(version3, 0, 255))
 			return(false);
 	} else
 		version3 = 0;
@@ -3182,8 +3131,7 @@ parse_version(unsigned int *version_ptr)
 	// 255.  If the parsed value is not in the range of 1-254, this is an error.
 
 	if (token_in_value_is("b", false)) {
-		if (!parse_integer_in_value(&version4) || 
-			!check_int_range(version4, 1, 254))
+		if (!parse_integer_in_value(&version4) || !check_int_range(version4, 1, 254))
 			return(false);
 	} else
 		version4 = 255;
@@ -3231,8 +3179,7 @@ push_parse_stack(void)
 {
 	if (file_stack_ptr->parse_stack_depth == MAX_PARSE_STACK_DEPTH)
 		error("Too many nested tags");
-	return(file_stack_ptr->parse_stack_ptr = 
-		&file_stack_ptr->parse_stack[file_stack_ptr->parse_stack_depth++]);
+	return(file_stack_ptr->parse_stack_ptr = &file_stack_ptr->parse_stack[file_stack_ptr->parse_stack_depth++]);
 }
 
 //------------------------------------------------------------------------------
@@ -3245,8 +3192,7 @@ pop_parse_stack(void)
 {
 	file_stack_ptr->parse_stack_depth--;
 	if (file_stack_ptr->parse_stack_depth > 0)
-		return(file_stack_ptr->parse_stack_ptr = 
-			&file_stack_ptr->parse_stack[file_stack_ptr->parse_stack_depth - 1]);
+		return(file_stack_ptr->parse_stack_ptr = &file_stack_ptr->parse_stack[file_stack_ptr->parse_stack_depth - 1]);
 	return(file_stack_ptr->parse_stack_ptr = NULL);
 }
 
@@ -3323,8 +3269,7 @@ extract_text(string *string_ptr, const char *buffer, int length,
 			while (*end_ch_ptr != ';') {
 				if (*end_ch_ptr == '\0') {
 					DELARRAY(new_buffer, char, length + 1);
-					error(file_token_line_no, "Character or entity reference "
-						"is missing a closing semicolon");
+					error(file_token_line_no, "Character or entity reference is missing a closing semicolon");
 				}
 				end_ch_ptr++;
 			}
@@ -3350,8 +3295,7 @@ extract_text(string *string_ptr, const char *buffer, int length,
 
 				if (*end_ch_ptr != '\0' || ch_value < 0x20 || ch_value > 0x7e) {
 					DELARRAY(new_buffer, char, length + 1);
-					error(file_token_line_no, "<I>&%s;</I> is not a valid "
-						"character reference", entity_name);
+					error(file_token_line_no, "<I>&%s;</I> is not a valid character reference", entity_name);
 				}
 
 				// Store the literal character in the new buffer.
@@ -3373,8 +3317,7 @@ extract_text(string *string_ptr, const char *buffer, int length,
 				}
 				if (entity_ref_ptr->name == NULL) {
 					DELARRAY(new_buffer, char, length + 1);
-					error(file_token_line_no, "<I>&%s;</I> is an undefined "
-						"entity reference", entity_name);
+					error(file_token_line_no, "<I>&%s;</I> is an undefined entity reference", entity_name);
 				}
 			}
 		}
@@ -3425,8 +3368,7 @@ extract_token(void)
 		string_length = end_string_ptr - file_buffer_ptr;
 		if (string_length > 0) {
 			file_token = TOKEN_CHARACTER_DATA;
-			extract_text(&file_token_string, file_buffer_ptr, string_length,
-				false);
+			extract_text(&file_token_string, file_buffer_ptr, string_length, false);
 			file_stack_ptr->file_buffer_ptr = end_string_ptr;
 			return;
 		}
@@ -3461,8 +3403,7 @@ extract_token(void)
 			file_stack_ptr->line_no++;
 		symbol_def_ptr = xml_symbol_table;
 		while (symbol_def_ptr->name != NULL) {
-			if (!strncmp(symbol_ptr, symbol_def_ptr->name, 
-				strlen(symbol_def_ptr->name)))
+			if (!strncmp(symbol_ptr, symbol_def_ptr->name, strlen(symbol_def_ptr->name)))
 				break;
 			symbol_def_ptr++;
 		}
@@ -3506,16 +3447,14 @@ extract_token(void)
 				ch = *++end_string_ptr;
 			}
 			if (ch != quote_ch)
-				error(file_token_line_no, "String is missing closing quotation "
-					"mark");
+				error(file_token_line_no, "String is missing closing quotation mark");
 			quote_ptr = end_string_ptr;
 
 			// Back up over any trailing white space in string.
 
 			do
 				ch = *--end_string_ptr;
-			while (end_string_ptr >= file_buffer_ptr && 
-				(ch == ' ' || ch == '\t'));
+			while (end_string_ptr >= file_buffer_ptr && (ch == ' ' || ch == '\t'));
 			end_string_ptr++;
 
 			// Return a string token consisting of the characters between the
@@ -3523,8 +3462,7 @@ extract_token(void)
 
 			file_token = TOKEN_STRING;
 			string_length = end_string_ptr - file_buffer_ptr;
-			extract_text(&file_token_string, file_buffer_ptr, string_length,
-				true);
+			extract_text(&file_token_string, file_buffer_ptr, string_length, true);
 			file_buffer_ptr = quote_ptr + 1;
 			break;
 
@@ -3538,8 +3476,7 @@ extract_token(void)
 			// A comment cannot occur inside of another tag.
 
 			if (inside_tag)
-				error(file_token_line_no, "Comment tag cannot appear inside of "
-					"another tag");
+				error(file_token_line_no, "Comment tag cannot appear inside of another tag");
 
 			// Locate the end of the comment.  Note that "--" by itself is an
 			// illegal combination inside of a comment.
@@ -3550,8 +3487,7 @@ extract_token(void)
 				if (!strncmp(end_string_ptr, "-->", 3))
 					break;
 				if (!strncmp(end_string_ptr, "--", 2))
-					error(file_token_line_no, "Comment tag cannot contain "
-						"\"--\"");
+					error(file_token_line_no, "Comment tag cannot contain \"--\"");
 				end_string_ptr++;
 			}
 			if (*end_string_ptr == '\0')
@@ -3562,8 +3498,7 @@ extract_token(void)
 
 			file_token = TOKEN_COMMENT;
 			string_length = end_string_ptr - file_buffer_ptr;
-			extract_text(&file_token_string, file_buffer_ptr, string_length,
-				false);
+			extract_text(&file_token_string, file_buffer_ptr, string_length, false);
 			file_buffer_ptr = end_string_ptr + 3;
 			break;
 
@@ -3591,8 +3526,7 @@ extract_token(void)
 		else {
 			ch = *++ident_ptr;
 			while (ch != '\0') {
-				if (!isalnum(ch) && ch != '_' && ch != ':' && ch != '-' && 
-					ch != '.') {
+				if (!isalnum(ch) && ch != '_' && ch != ':' && ch != '-' && ch != '.') {
 					invalid_identifier = true;
 					break;
 				}
@@ -3600,8 +3534,7 @@ extract_token(void)
 			}
 		}
 		if (invalid_identifier) 
-			error(file_token_line_no, "<I>%s</I> was not expected here",
-				file_token_string);
+			error(file_token_line_no, "<I>%s</I> was not expected here", file_token_string);
 	}
 
 	// Update the file buffer pointer in the top file.
@@ -3677,18 +3610,15 @@ parse_attribute(void)
 	// Parse the attribute name identifier.
 	
 	if (file_token != TOKEN_IDENTIFIER)
-		error(file_token_line_no, "Expected an attribute name rather than "
-			"<I>%s</I>", file_token_string);
+		error(file_token_line_no, "Expected an attribute name rather than <I>%s</I>", file_token_string);
 	attr_name = file_token_string;
 
 	// Parse the equals sign symbol, followed by the attribute value string.
 
 	if (read_token() != TOKEN_EQUALS_SIGN)
-		error(file_token_line_no, "Expected <I>=</I> rather than <I>%s</I>", 
-			file_token_string);
+		error(file_token_line_no, "Expected <I>=</I> rather than <I>%s</I>", file_token_string);
 	if (read_token() != TOKEN_STRING)
-		error(file_token_line_no, "Expected an attribute value string rather "
-			"than <I>%s</I>", file_token_string);
+		error(file_token_line_no, "Expected an attribute value string rather than <I>%s</I>", file_token_string);
 
 	// Create an attribute, and initialise it with the parsed token and value,
 	// then return a pointer to it.
@@ -3758,8 +3688,7 @@ parse_nested_entity_list(const char *end_tag_name)
 
 		case TOKEN_CHARACTER_DATA:
 		case TOKEN_COMMENT:
-			entity_ptr = create_entity(token == TOKEN_CHARACTER_DATA ? TEXT_ENTITY : COMMENT_ENTITY,  
-				file_token_line_no, file_token_string, NULL);
+			entity_ptr = create_entity(token == TOKEN_CHARACTER_DATA ? TEXT_ENTITY : COMMENT_ENTITY, file_token_line_no, file_token_string, NULL);
 			break;
 			
 		// If the token is an open tag symbol, parse the tag and create a 
@@ -3769,8 +3698,7 @@ parse_nested_entity_list(const char *end_tag_name)
 		case TOKEN_OPEN_TAG:
 			entity_ptr = parse_tag(&is_start_tag);
 			if (is_start_tag)
-				entity_ptr->nested_entity_list = 
-					parse_nested_entity_list(entity_ptr->text);
+				entity_ptr->nested_entity_list = parse_nested_entity_list(entity_ptr->text);
 			break;
 
 		// If the token is an open end tag symbol, the next token must be an 
@@ -3780,29 +3708,24 @@ parse_nested_entity_list(const char *end_tag_name)
 
 		case TOKEN_OPEN_END_TAG:
 			if (read_token() != TOKEN_IDENTIFIER)
-				error(file_token_line_no, "Expected a tag name rather than "
-					"<I>%s</I>", file_token_string);
-			if ((strict_XML_compliance && strcmp(file_token_string, 
-				end_tag_name)) || (!strict_XML_compliance && 
-				_stricmp(file_token_string, end_tag_name)) || 
+				error(file_token_line_no, "Expected a tag name rather than <I>%s</I>", file_token_string);
+			if ((strict_XML_compliance && strcmp(file_token_string, end_tag_name)) ||
+				(!strict_XML_compliance && _stricmp(file_token_string, end_tag_name)) || 
 				read_token() != TOKEN_CLOSE_TAG)
-				error(file_token_line_no, "Expected <I>&lt;/%s&gt;</I> rather "
-					"than <I>&lt;/%s&gt;</I>", end_tag_name, file_token_string);
+				error(file_token_line_no, "Expected <I>&lt;/%s&gt;</I> rather than <I>&lt;/%s&gt;</I>", end_tag_name, file_token_string);
 			return(entity_list);
 
 		// If we've come to the end of the file, and there is no end token
 		// name specified, then this is an error.
 
 		case TOKEN_NONE:
-			error(file_token_line_no, "Expected <I>&lt;/%s&gt;</I> rather than "
-				"the end of the file", end_tag_name);
+			error(file_token_line_no, "Expected <I>&lt;/%s&gt;</I> rather than the end of the file", end_tag_name);
 			break;
 
 		// Any other token is invalid.
 
 		default:
-			error(file_token_line_no, "Expected a tag or text rather than "
-				"<I>%s</I>", file_token_string);
+			error(file_token_line_no, "Expected a tag or text rather than <I>%s</I>", file_token_string);
 		}
 
 		// Add the entity to the end of the entity list.
@@ -3834,8 +3757,7 @@ parse_tag(bool *is_start_tag)
 	// Read the tag name identifier, and remember the line it was on.
 
 	if (read_token() != TOKEN_IDENTIFIER)
-		error(file_token_line_no, "Expected a tag name rather than <I>%s</I>", 
-			file_token_string);
+		error(file_token_line_no, "Expected a tag name rather than <I>%s</I>", file_token_string);
 	tag_name = file_token_string;
 	tag_line_no = file_token_line_no;
 
@@ -3844,8 +3766,7 @@ parse_tag(bool *is_start_tag)
 	read_token();
 	attr_list = NULL;
 	last_attr_ptr = NULL;
-	while (file_token != TOKEN_CLOSE_TAG && 
-		file_token != TOKEN_CLOSE_SINGLE_TAG) {
+	while (file_token != TOKEN_CLOSE_TAG && file_token != TOKEN_CLOSE_SINGLE_TAG) {
 		attr_ptr = parse_attribute();
 		if (last_attr_ptr) {
 			last_attr_ptr->next_attr_ptr = attr_ptr;
@@ -3911,8 +3832,7 @@ parse_start_tag(int start_tag_token)
 
 		case TOKEN_CHARACTER_DATA:
 			if (not_all_whitespace(file_token_string))
-				warning(file_token_line_no, "Text before <I>&lt;%s&gt;</I> "
-					"is not permitted", get_name(start_tag_token));
+				warning(file_token_line_no, "Text before <I>&lt;%s&gt;</I> is not permitted", get_name(start_tag_token));
 			break;
 
 		// If the token is a comment, skip over it.
@@ -3926,26 +3846,20 @@ parse_start_tag(int start_tag_token)
 
 		case TOKEN_OPEN_TAG:
 			entity_ptr = parse_tag(&is_start_tag);
-			if (!is_start_tag || 
-				(tag_token = get_token(entity_ptr->text)) == TOKEN_NONE ||
-				tag_token != start_tag_token)
-				error(entity_ptr->line_no, "Expected <I>&lt;%s&gt;</I> rather "
-					"than <I>&lt;%s&gt;</I>", get_name(start_tag_token), 
-					entity_ptr->text);
+			if (!is_start_tag || (tag_token = get_token(entity_ptr->text)) == TOKEN_NONE || tag_token != start_tag_token)
+				error(entity_ptr->line_no, "Expected <I>&lt;%s&gt;</I> rather than <I>&lt;%s&gt;</I>", get_name(start_tag_token), entity_ptr->text);
 			return(entity_ptr);
 
 		// If we've come to the end of the file, this is an error.
 
 		case TOKEN_NONE:
-			error(file_token_line_no, "Did not see <I>&lt;%s&gt;</I>", 
-				get_name(start_tag_token));
+			error(file_token_line_no, "Did not see <I>&lt;%s&gt;</I>", get_name(start_tag_token));
 			break;
 
 		// Any other token is invalid.
 
 		default:
-			error(file_token_line_no, "Expected <I>&lt;%s&gt;</I> rather than "
-				"<I>%s</I>", file_token_string);
+			error(file_token_line_no, "Expected <I>&lt;%s&gt;</I> rather than <I>%s</I>", file_token_string);
 		}
 	}
 }
@@ -3962,12 +3876,10 @@ parse_attribute_value(int value_type, void *value_ptr)
 	switch (value_type) {
 
 	case VALUE_ACTION_TRIGGER:
-		return(parse_value((int *)value_ptr, action_trigger_value_list, 
-			ACTION_TRIGGER_VALUES, false, true));
+		return(parse_value((int *)value_ptr, action_trigger_value_list, ACTION_TRIGGER_VALUES, false, true));
 
 	case VALUE_ALIGNMENT:
-		return(parse_value((int *)value_ptr, alignment_value_list,
-			ALIGNMENT_VALUES - 1, false, true));
+		return(parse_value((int *)value_ptr, alignment_value_list, ALIGNMENT_VALUES - 1, false, true));
 
 	case VALUE_ANGLES:
 		return(parse_scale((float_triplet *)value_ptr));  
@@ -3976,8 +3888,7 @@ parse_attribute_value(int value_type, void *value_ptr)
 		return(parse_block_reference((blockref *)value_ptr));
 
 	case VALUE_BLOCK_TYPE:
-		return(parse_value((int *)value_ptr, block_type_value_list, 
-			BLOCK_TYPE_VALUES, false, true));
+		return(parse_value((int *)value_ptr, block_type_value_list, BLOCK_TYPE_VALUES, false, true));
 
 	case VALUE_BOOLEAN:
 		return(parse_boolean((bool *)value_ptr));
@@ -3998,12 +3909,10 @@ parse_attribute_value(int value_type, void *value_ptr)
 		return(parse_double_symbol((word *)value_ptr));
 
 	case VALUE_EXIT_TRIGGER:
-		return(parse_value((int *)value_ptr, exit_trigger_value_list, 
-			EXIT_TRIGGER_VALUES, true, true));
+		return(parse_value((int *)value_ptr, exit_trigger_value_list, EXIT_TRIGGER_VALUES, true, true));
 
 	case VALUE_FOG_STYLE:
-		return(parse_value((int *)value_ptr, fog_style_value_list, 
-			FOG_STYLE_VALUES, false, true));
+		return(parse_value((int *)value_ptr, fog_style_value_list, FOG_STYLE_VALUES, false, true));
 
 	case VALUE_FLOAT:
 		return(parse_float_in_value((float *)value_ptr));
@@ -4021,8 +3930,7 @@ parse_attribute_value(int value_type, void *value_ptr)
 		return(parse_integer_range((intrange *)value_ptr));
 
 	case VALUE_IMAGEMAP_TRIGGER:
-		return(parse_value((int *)value_ptr, imagemap_trigger_value_list, 
-			IMAGEMAP_TRIGGER_VALUES, false, true));
+		return(parse_value((int *)value_ptr, imagemap_trigger_value_list, IMAGEMAP_TRIGGER_VALUES, false, true));
 
 	case VALUE_KEY_CODE:
 		return(parse_key_code((int *)value_ptr, true));
@@ -4034,8 +3942,7 @@ parse_attribute_value(int value_type, void *value_ptr)
 		return(parse_map_dimensions((mapcoords *)value_ptr));
 
 	case VALUE_MAP_STYLE:
-		return(parse_value((int *)value_ptr, map_style_value_list, 
-			MAP_STYLE_VALUES, false, true));
+		return(parse_value((int *)value_ptr, map_style_value_list, MAP_STYLE_VALUES, false, true));
 
 	case VALUE_NAME:
 		return(parse_name_in_value((string *)value_ptr, false, false));
@@ -4056,24 +3963,19 @@ parse_attribute_value(int value_type, void *value_ptr)
 		return(parse_percentage((float *)value_ptr, NULL));
 
 	case VALUE_PLACEMENT:
-		return(parse_value((int *)value_ptr, alignment_value_list, 
-			ALIGNMENT_VALUES, false, true));
+		return(parse_value((int *)value_ptr, alignment_value_list, ALIGNMENT_VALUES, false, true));
 
 	case VALUE_PLAYBACK_MODE:
-		return(parse_value((int *)value_ptr, playback_mode_value_list, 
-			PLAYBACK_MODE_VALUES, false, true));
+		return(parse_value((int *)value_ptr, playback_mode_value_list, PLAYBACK_MODE_VALUES, false, true));
 
 	case VALUE_POINT_LIGHT_STYLE:
-		return(parse_value((int *)value_ptr, point_light_style_value_list,
-			POINT_LIGHT_STYLE_VALUES, false, true));
+		return(parse_value((int *)value_ptr, point_light_style_value_list, POINT_LIGHT_STYLE_VALUES, false, true));
 
 	case VALUE_POPUP_TRIGGER:
-		return(parse_value((int *)value_ptr, popup_trigger_value_list, 
-			POPUP_TRIGGER_VALUES, true, true));
+		return(parse_value((int *)value_ptr, popup_trigger_value_list, POPUP_TRIGGER_VALUES, true, true));
 
 	case VALUE_PROJECTION:
-		return(parse_value((int *)value_ptr, projection_value_list, 
-			PROJECTION_VALUES, false, true));
+		return(parse_value((int *)value_ptr, projection_value_list, PROJECTION_VALUES, false, true));
 
 	case VALUE_RADIUS:
 		return(parse_radius((float *)value_ptr));
@@ -4098,15 +4000,13 @@ parse_attribute_value(int value_type, void *value_ptr)
 		return(parse_RGB((RGBcolour *)value_ptr));
 
 	case VALUE_RIPPLE_STYLE:
-		return(parse_value((int *)value_ptr, ripple_style_value_list, 
-			RIPPLE_STYLE_VALUES, false, true));
+		return(parse_value((int *)value_ptr, ripple_style_value_list, RIPPLE_STYLE_VALUES, false, true));
 
 	case VALUE_SCALE:
 		return(parse_scale((float_triplet *)value_ptr));
 	
 	case VALUE_SHAPE:
-		return(parse_value((int *)value_ptr, shape_value_list, SHAPE_VALUES, 
-			false, true));
+		return(parse_value((int *)value_ptr, shape_value_list, SHAPE_VALUES, false, true));
 
 	case VALUE_SINGLE_SYMBOL:
 		return(parse_single_symbol((char *)value_ptr));
@@ -4115,8 +4015,7 @@ parse_attribute_value(int value_type, void *value_ptr)
 		return(parse_size((size *)value_ptr));
 
 	case VALUE_SPOT_LIGHT_STYLE:
-		return(parse_value((int *)value_ptr, spot_light_style_value_list, 
-			SPOT_LIGHT_STYLE_VALUES, false, true));
+		return(parse_value((int *)value_ptr, spot_light_style_value_list, SPOT_LIGHT_STYLE_VALUES, false, true));
 
 	case VALUE_SPRITE_SIZE:
 		return(parse_sprite_size((size *)value_ptr));
@@ -4130,12 +4029,10 @@ parse_attribute_value(int value_type, void *value_ptr)
 		return(parse_symbol((word *)value_ptr, true, true));
 
 	case VALUE_TEXTURE_STYLE:
-		return(parse_value((int *)value_ptr, texture_style_value_list, 
-			TEXTURE_STYLE_VALUES, false, true));
+		return(parse_value((int *)value_ptr, texture_style_value_list, TEXTURE_STYLE_VALUES, false, true));
 
 	case VALUE_VALIGNMENT:
-		return(parse_value((int *)value_ptr, vertical_alignment_value_list, 
-			VERTICAL_ALIGNMENT_VALUES, false, true));
+		return(parse_value((int *)value_ptr, vertical_alignment_value_list, VERTICAL_ALIGNMENT_VALUES, false, true));
 
 	case VALUE_VERSION:
 		return(parse_version((unsigned int *)value_ptr));
@@ -4178,14 +4075,10 @@ parse_attribute_list(attr_def *attr_def_list, int attributes)
 			for (index = 0; index < attributes; index++) {
 				if (attr_token == attr_def_ptr->token) {
 					if (parsed_attribute[index])
-						warning("Duplicate <I>%s</I> attribute encountered",
-							attr_ptr->name);
+						warning("Duplicate <I>%s</I> attribute encountered", attr_ptr->name);
 					else {
-						start_parsing_value(tag_token, attr_token, 
-							attr_ptr->value, attr_def_ptr->required);
-						if (parse_attribute_value(attr_def_ptr->value_type, 
-							attr_def_ptr->value_ptr) && 
-							stop_parsing_value(true))
+						start_parsing_value(tag_token, attr_token, attr_ptr->value, attr_def_ptr->required);
+						if (parse_attribute_value(attr_def_ptr->value_type, attr_def_ptr->value_ptr) && stop_parsing_value(true))
 							parsed_attribute[index] = true;
 					}
 					break;
@@ -4194,8 +4087,7 @@ parse_attribute_list(attr_def *attr_def_list, int attributes)
 			}
 		}
 		if (index == attributes)
-			warning("The <I>%s</I> tag does not have <I>%s</I> as an attribute", 
-				entity_ptr->text, attr_ptr->name);
+			warning("The <I>%s</I> tag does not have <I>%s</I> as an attribute", entity_ptr->text, attr_ptr->name);
 		attr_ptr = attr_ptr->next_attr_ptr;
 	}
 
@@ -4204,8 +4096,7 @@ parse_attribute_list(attr_def *attr_def_list, int attributes)
 	attr_def_ptr = attr_def_list;
 	for (index = 0; index < attributes; index++) {
 		if (attr_def_ptr->required && !parsed_attribute[index])
-			error("The <I>%s</I> attribute is missing from the <I>%s</I> tag", 
-				get_name(attr_def_ptr->token), entity_ptr->text);
+			error("The <I>%s</I> attribute is missing from the <I>%s</I> tag", get_name(attr_def_ptr->token), entity_ptr->text);
 		attr_def_ptr++;
 	}
 }
@@ -4295,8 +4186,7 @@ entity_list_to_string(entity *entity_list)
 //------------------------------------------------------------------------------
 
 void
-parse_start_of_document(int start_tag_token, attr_def *attr_def_list,
-						int attributes)
+parse_start_of_document(int start_tag_token, attr_def *attr_def_list, int attributes)
 {
 	parse_stack_element *parse_stack_ptr;
 	entity *entity_ptr;
@@ -4330,8 +4220,7 @@ parse_rest_of_document(bool strict_XML_compliance_flag)
 {
 	strict_XML_compliance = strict_XML_compliance_flag;
 	entity *entity_ptr = file_stack_ptr->parse_stack_ptr->entity_list;
-	entity_ptr->nested_entity_list = 
-		parse_nested_entity_list(entity_ptr->text);
+	entity_ptr->nested_entity_list = parse_nested_entity_list(entity_ptr->text);
 }
 
 //------------------------------------------------------------------------------
@@ -4341,8 +4230,7 @@ parse_rest_of_document(bool strict_XML_compliance_flag)
 void
 start_parsing_nested_tags()
 {
-	entity *nested_entity_list = 
-		file_stack_ptr->parse_stack_ptr->curr_entity_ptr->nested_entity_list;
+	entity *nested_entity_list = file_stack_ptr->parse_stack_ptr->curr_entity_ptr->nested_entity_list;
 	parse_stack_element *parse_stack_ptr = push_parse_stack();
 	parse_stack_ptr->entity_list = nested_entity_list;
 	parse_stack_ptr->curr_entity_ptr = NULL;
@@ -4357,8 +4245,7 @@ start_parsing_nested_tags()
 //------------------------------------------------------------------------------
 
 bool
-parse_next_nested_tag(int start_tag_token, tag_def *tag_def_list, 
-					  bool allow_text, int *tag_token)
+parse_next_nested_tag(int start_tag_token, tag_def *tag_def_list, bool allow_text, int *tag_token)
 {
 	tag_def *tag_def_ptr;
 	parse_stack_element *parse_stack_ptr;
@@ -4397,8 +4284,7 @@ parse_next_nested_tag(int start_tag_token, tag_def *tag_def_list,
 				*tag_token = TOKEN_CHARACTER_DATA;
 				return(true);
 			} else if (not_all_whitespace(entity_ptr->text)) 
-				warning(entity_ptr->line_no, "Text is not allowed inside the "
-					"<I>%s</I> tag", get_name(start_tag_token));
+				warning(entity_ptr->line_no, "Text is not allowed inside the <I>%s</I> tag", get_name(start_tag_token));
 			break;
 
 		// If this is a tag entity...
@@ -4409,8 +4295,7 @@ parse_next_nested_tag(int start_tag_token, tag_def *tag_def_list,
 			// token, generate a warning.
 
 			if ((*tag_token = get_token(entity_ptr->text)) == TOKEN_NONE)
-				warning(entity_ptr->line_no, "Unrecognised tag name <I>%s</I>", 
-					entity_ptr->text);
+				warning(entity_ptr->line_no, "Unrecognised tag name <I>%s</I>", entity_ptr->text);
 
 			// Otherwise attempt to match the tag entity against the tag
 			// definition list.
@@ -4421,25 +4306,19 @@ parse_next_nested_tag(int start_tag_token, tag_def *tag_def_list,
 					if (*tag_token == tag_def_ptr->token) {
 						parse_stack_ptr->curr_entity_ptr = entity_ptr;
 
-						// If the tag entity has a nested entity list but 
-						// shouldn't, generate a warning.
+						// If the tag entity has a nested entity list but shouldn't, generate a warning.
 
-						if (entity_ptr->nested_entity_list != NULL && 
-							!tag_def_ptr->is_start_tag)
-							warning("The <I>%s</I> tag does not permit anything "
-								"inside of it", entity_ptr->text);
+						if (entity_ptr->nested_entity_list != NULL && !tag_def_ptr->is_start_tag)
+							warning("The <I>%s</I> tag does not permit anything inside of it", entity_ptr->text);
 
 						// Parse the attribute list, if there is one.
 
-						parse_attribute_list(tag_def_ptr->attr_def_list, 
-							tag_def_ptr->attributes);
+						parse_attribute_list(tag_def_ptr->attr_def_list, tag_def_ptr->attributes);
 						return(true);
 					}
 					tag_def_ptr++;
 				}
-				warning(entity_ptr->line_no, "The <I>%s</I> tag is not "
-					"permitted inside of the <I>%s</I> tag", entity_ptr->text,
-					get_name(start_tag_token));
+				warning(entity_ptr->line_no, "The <I>%s</I> tag is not permitted inside of the <I>%s</I> tag", entity_ptr->text, get_name(start_tag_token));
 			}
 		}
 
@@ -4533,8 +4412,7 @@ nested_text_entity(int start_tag_token, bool create_if_missing)
 	// There must be one text entity in the list, anything else is an error.
 
 	if (entity_ptr->type != TEXT_ENTITY || entity_ptr->next_entity_ptr != NULL) {
-		error(entity_ptr->line_no, "Tags are not permitted inside of "
-			"the <I>%s</I> tag", get_name(start_tag_token));
+		error(entity_ptr->line_no, "Tags are not permitted inside of the <I>%s</I> tag", get_name(start_tag_token));
 	}
 	return entity_ptr;
 }

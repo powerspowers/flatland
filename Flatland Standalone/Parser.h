@@ -44,8 +44,7 @@ init_parser(void);
 // URL and conversion functions.
 
 void
-split_URL(const char *URL, string *URL_dir, string *file_name,
-		  string *entrance_name);
+split_URL(const char *URL, string *URL_dir, string *file_name, string *entrance_name);
 
 string
 create_URL(const char *URL_dir, const char *file_name);
@@ -60,8 +59,7 @@ string
 URL_to_file_path(const char *URL);
 
 void
-parse_identifier(const char *identifier, string &style_name, 
-				 string &object_name);
+parse_identifier(const char *identifier, string &style_name, string &object_name);
 
 bool
 not_single_symbol(char ch, bool disallow_dot);
@@ -70,16 +68,13 @@ bool
 not_double_symbol(char ch1, char ch2, bool disallow_dot_dot);
 
 bool
-string_to_single_symbol(const char *string_ptr, char *symbol_ptr,
-						bool disallow_dot);
+string_to_single_symbol(const char *string_ptr, char *symbol_ptr, bool disallow_dot);
 
 bool
-string_to_double_symbol(const char *string_ptr, word *symbol_ptr,
-						bool disallow_dot_dot);
+string_to_double_symbol(const char *string_ptr, word *symbol_ptr, bool disallow_dot_dot);
 
 bool
-string_to_symbol(const char *string_ptr, word *symbol_ptr, 
-				 bool disallow_dot_dot);
+string_to_symbol(const char *string_ptr, word *symbol_ptr, bool disallow_dot_dot);
 
 string
 version_number_to_string(unsigned int version_number);
@@ -199,8 +194,7 @@ entity *
 create_entity(int type, int line_no, string text, attr *attr_list);
 
 void
-parse_start_of_document(int start_tag_token, attr_def *attr_def_list,
-						int attributes);
+parse_start_of_document(int start_tag_token, attr_def *attr_def_list, int attributes);
 
 void
 parse_rest_of_document(bool strict_XML_compliance);
@@ -209,8 +203,7 @@ void
 start_parsing_nested_tags(void);
 
 bool
-parse_next_nested_tag(int start_tag_token, tag_def *tag_def_list, 
-					  bool allow_text, int *tag_token_ptr);
+parse_next_nested_tag(int start_tag_token, tag_def *tag_def_list, bool allow_text, int *tag_token_ptr);
 
 void
 stop_parsing_nested_tags(void);
