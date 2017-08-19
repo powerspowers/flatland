@@ -2964,7 +2964,7 @@ parse_imagemap_script_tag(imagemap *imagemap_ptr)
 
 	// Parse the nested text inside the script tag as a script.
 
-	script = nested_text_to_string(TOKEN_SCRIPT);
+	script = nested_text_to_string(TOKEN_SCRIPT, true);
 	if ((trigger_ptr->script_def_ptr = create_script_def(script)) == NULL) {
 		memory_warning("trigger script");
 		delete trigger_ptr;
@@ -3334,9 +3334,17 @@ parse_action_tag(block_def *block_def_ptr, bool need_location_param)
 static void
 parse_define_tag(string &script)
 {
-	// Convert all nested tags contained with the define tag into a string.
+	// Convert all nested tags contained with the define tag into a string,
+	// remove trailing whitespace, add a newline, and then replace the entity
+	// list of the define tag with a text entity containing the string.
 
 	script = nested_tags_to_string();
+	script.remove_trailing_whitespace();
+	script += '\n';
+	entity *define_tag_entity_ptr = get_current_entity();
+	destroy_entity_list(define_tag_entity_ptr->nested_entity_list);
+	entity *text_entity_ptr = create_entity(TEXT_ENTITY, define_tag_entity_ptr->line_no, script, NULL);
+	define_tag_entity_ptr->nested_entity_list = text_entity_ptr;
 }
 
 //------------------------------------------------------------------------------
@@ -3783,7 +3791,7 @@ parse_script_tag(block_def *block_def_ptr, bool need_location_param)
 
 	// Create a script definition for this script, and store it in the trigger.
 
-	script = nested_text_to_string(TOKEN_SCRIPT);
+	script = nested_text_to_string(TOKEN_SCRIPT, true);
 	if ((trigger_ptr->script_def_ptr = create_script_def(script)) == NULL) {
 		memory_warning("trigger script");
 		delete trigger_ptr;

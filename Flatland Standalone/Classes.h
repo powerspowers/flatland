@@ -297,11 +297,9 @@ enum mtype { EXIT_METHOD, AMBIENT_LIGHT_METHOD };
 // has a variable length.
 //------------------------------------------------------------------------------
 
-class string {
-private:
-
-public:
+struct string {
 	char *text;
+
 	string();
 	string(char new_char);
 	string(char *new_text);
@@ -316,6 +314,7 @@ public:
 	string operator +(char add_char);
 	string operator +(const char *add_text);
 	void truncate(unsigned int new_length);
+	void remove_trailing_whitespace();
 	void copy(const char *new_text, unsigned int new_length);
 	void append(const char *add_text, unsigned int add_length);
 	void write(FILE *fp);

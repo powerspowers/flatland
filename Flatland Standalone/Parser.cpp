@@ -4198,16 +4198,17 @@ entity_list_to_string(entity *entity_list, bool add_formatting)
 				attr_ptr = attr_ptr->next_attr_ptr;
 			}
 
-			// Convert the nested entity list, if it exists, followed by an
-			// end tag.  Otherwise just display an empty-element tag.
+			// Convert the nested entity list, if it exists, followed by an end tag.  Otherwise just display an empty-element tag.
 
 			if (entity_ptr->nested_entity_list != NULL) {
 				text += ">";
-				if (add_formatting) {
+				bool got_define_tag = !_stricmp(entity_ptr->text, "define");
+				bool got_script_tag = !_stricmp(entity_ptr->text, "script");
+				if (add_formatting && !got_define_tag && !got_script_tag) {
 					text += '\n';
 				}
 				indent_level++;
-				text += entity_list_to_string(entity_ptr->nested_entity_list, add_formatting);
+				text += entity_list_to_string(entity_ptr->nested_entity_list, got_define_tag ? false : add_formatting);
 				indent_level--;
 				if (add_formatting) {
 					text += get_indentation();
@@ -4479,15 +4480,19 @@ nested_text_entity(int start_tag_token, bool create_if_missing)
 }
 
 //------------------------------------------------------------------------------
-// Return nested text.  Throws an error if there are also nested tags
-// present.
+// Return nested text.  Trailing whitespace is removed and a newline added, if
+// requested. Throws an error if there are also nested tags present.
 //------------------------------------------------------------------------------
 
 string
-nested_text_to_string(int start_tag_token)
+nested_text_to_string(int start_tag_token, bool remove_trailing_whitespace)
 {
 	entity *entity_ptr = nested_text_entity(start_tag_token);
 	if (entity_ptr) {
+		if (remove_trailing_whitespace) {
+			entity_ptr->text.remove_trailing_whitespace();
+			entity_ptr->text += '\n';
+		}
 		return entity_ptr->text;
 	}
 	return "";

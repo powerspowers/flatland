@@ -207,6 +207,19 @@ string::truncate(unsigned int new_length)
 	}
 }
 
+void
+string::remove_trailing_whitespace()
+{
+	// Search backwards from the end of the string to find the first non-whitespace character,
+	// then truncate the string at that point.
+
+	int len = strlen(text);
+	while (len > 0 && (text[len - 1] == ' ' || text[len - 1] == '\t' || text[len - 1] == '\n')) {
+		len--;
+	}
+	truncate(len);
+}
+
 // Method to copy a fixed number of characters from a string.  It is assumed
 // that the specified length is not greater than the string.
 
