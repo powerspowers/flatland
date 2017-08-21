@@ -104,7 +104,7 @@ block *
 add_movable_block(block_def *block_def_ptr, square *square_ptr, vertex translation);
 
 void
-remove_fixed_block(square *square_ptr);
+remove_block_from_square(square *square_ptr);
 
 void
 remove_movable_block(block *block_ptr);

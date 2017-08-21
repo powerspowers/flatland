@@ -2103,21 +2103,17 @@ execute_replace_action(trigger *trigger_ptr, action *action_ptr)
 	vertex translation;
 	bool removed_movable_block;
 
-	// Get the location of the trigger square, if it is set (movable blocks
-	// do not have a trigger square).  Otherwise use the square the movable
-	// block is closest to as the trigger square.
+	// Get the location of the trigger square, if it is set (movable blocks do not have a trigger square).  
+	// Otherwise use the square the movable block is closest to as the trigger square.
 
 	trigger_square_ptr = trigger_ptr->square_ptr;
 	block_ptr = trigger_ptr->block_ptr;
 	if (trigger_square_ptr != NULL)
-		world_ptr->get_square_location(trigger_square_ptr, 
-			&trigger_column, &trigger_row, &trigger_level);
+		world_ptr->get_square_location(trigger_square_ptr, &trigger_column, &trigger_row, &trigger_level);
 	else {
 		translation = block_ptr->translation;
-		translation.get_map_position(&trigger_column, &trigger_row,
-			&trigger_level);
-		trigger_square_ptr = world_ptr->get_square_ptr(trigger_column, 
-			trigger_row, trigger_level);
+		translation.get_map_position(&trigger_column, &trigger_row, &trigger_level);
+		trigger_square_ptr = world_ptr->get_square_ptr(trigger_column, trigger_row, trigger_level);
 	}
 
 	// If the trigger square is also the target square, use it.
@@ -2139,8 +2135,7 @@ execute_replace_action(trigger *trigger_ptr, action *action_ptr)
 		target_location_ptr = &action_ptr->target;
 		target_column = target_location_ptr->column;
 		if (target_location_ptr->relative_column) {
-			target_column = (trigger_column + target_column) % 
-				world_ptr->columns;
+			target_column = (trigger_column + target_column) % world_ptr->columns;
 			if (target_column < 0)
 				target_column += world_ptr->columns;
 		} else {
@@ -2158,23 +2153,20 @@ execute_replace_action(trigger *trigger_ptr, action *action_ptr)
 			target_row--;
 		}
 
-		// Set the target level.  If the target uses a relative coordinate for
-		// the level and a ground level exists, make sure the ground level is
-		// never selected.  Also make sure the top empty level is never
-		// selected.
+		// Set the target level.  If the target uses a relative coordinate for the level and a 
+		// ground level exists, make sure the ground level is never selected.  Also make sure
+		// the top empty level is never selected.
 
 		target_level = target_location_ptr->level;
 		if (target_location_ptr->relative_level) {
 			if (world_ptr->ground_level_exists) {
-				target_level = ((trigger_level - 1) + target_level) %
-					(world_ptr->levels - 2);
+				target_level = ((trigger_level - 1) + target_level) % (world_ptr->levels - 2);
 				if (target_level < 0)
 					target_level += (world_ptr->levels - 1);
 				else
 					target_level++;
 			} else {
-				target_level = (trigger_level + target_level) %
-					(world_ptr->levels - 1);
+				target_level = (trigger_level + target_level) % (world_ptr->levels - 1);
 				if (target_level < 0)
 					target_level += (world_ptr->levels - 1);
 			}
@@ -2184,20 +2176,17 @@ execute_replace_action(trigger *trigger_ptr, action *action_ptr)
 
 		// Get a pointer to the target square.
 
-		target_square_ptr = world_ptr->get_square_ptr(target_column,
-			target_row, target_level);
+		target_square_ptr = world_ptr->get_square_ptr(target_column, target_row, target_level);
 	}
 
-	// Remove the old block.  If the trigger square is the target square, and
-	// the block is movable, then we must remove the movable block.  Otherwise
-	// we must remove the block on the target square.
+	// Remove the old block.  If the trigger square is the target square, and the block is movable,
+	// then we must remove the movable block.  Otherwise we must remove the block on the target square.
 
-	if (action_ptr->target_is_trigger && block_ptr != NULL && 
-		block_ptr->block_def_ptr->movable) {
+	if (action_ptr->target_is_trigger && block_ptr != NULL && block_ptr->block_def_ptr->movable) {
 		remove_movable_block(block_ptr);
 		removed_movable_block = true;
 	} else {
-		remove_fixed_block(target_square_ptr);
+		remove_block_from_square(target_square_ptr);
 		removed_movable_block = false;
 	}
 
@@ -2256,8 +2245,7 @@ execute_replace_action(trigger *trigger_ptr, action *action_ptr)
 
 		// Get a pointer to the block and block definition, if there is one.
 
-		block_ptr = world_ptr->get_block_ptr(source_column, 
-			source_row, source_level);
+		block_ptr = world_ptr->get_block_ptr(source_column, source_row, source_level);
 		if (block_ptr != NULL)
 			block_def_ptr = block_ptr->block_def_ptr;
 		else
@@ -3093,8 +3081,7 @@ render_next_frame(void)
 	builder_vertex.rotate_y(player_viewpoint.turn_angle);
 	builder_vertex += player_viewpoint.position;
 	builder_vertex.get_map_position(&column, &row, &level);
-	if (column >= 0 && column < world_ptr->columns && 
-		row >= 0 && row < world_ptr->rows &&
+	if (column >= 0 && column < world_ptr->columns && row >= 0 && row < world_ptr->rows &&
 		level >= (world_ptr->ground_level_exists? 1 : 0) && level < world_ptr->levels - 1) {
 		builder_square_ptr = world_ptr->get_square_ptr(column, row, level);
 	} else {
@@ -3166,7 +3153,7 @@ render_next_frame(void)
 			// doesn't have an entrance or the selected block definition allows an entrance.
 
 			if (block_def_ptr && (!square_has_entrance(builder_square_ptr) || block_def_ptr->allow_entrance)) {
-				remove_fixed_block(builder_square_ptr);
+				remove_block_from_square(builder_square_ptr);
 				if (block_def_ptr->movable) {
 					vertex translation;
 					translation.set_map_translation(column, row, level);
@@ -3177,10 +3164,11 @@ render_next_frame(void)
 			}
 		} 
 		
-		// If the right mouse button was clicked, remove the block on the builder square.
+		// If the right mouse button was clicked, remove the block on the builder square, 
+		// which is either a fixed or movable block.
 
 		else if (right_mouse_was_clicked) {
-			remove_fixed_block(builder_square_ptr);
+			remove_block_from_square(builder_square_ptr);
 		}
 	}
 
@@ -3262,19 +3250,15 @@ render_next_frame(void)
 	square_ptr = world_ptr->get_square_ptr(player_column, player_row, player_level);
 	exit_ptr = NULL;
 	if (square_ptr != NULL) {
-		if (square_ptr->exit_ptr != NULL && 
-			(square_ptr->exit_ptr->trigger_flags & STEP_ON)) {
+		if (square_ptr->exit_ptr != NULL && (square_ptr->exit_ptr->trigger_flags & STEP_ON)) {
 			exit_ptr = square_ptr->exit_ptr;
-		} else if ((block_ptr = square_ptr->block_ptr) != NULL &&
-			block_ptr->exit_ptr != NULL && 
-			(block_ptr->exit_ptr->trigger_flags & STEP_ON)) {
+		} else if ((block_ptr = square_ptr->block_ptr) != NULL && block_ptr->exit_ptr != NULL && (block_ptr->exit_ptr->trigger_flags & STEP_ON)) {
 			exit_ptr = block_ptr->exit_ptr;
 		} else {
 			block_ptr = movable_block_list;
 			while (block_ptr != NULL) {
 				block_ptr->translation.get_map_position(&column, &row, &level);
-				if (column == player_column && row == player_row &&
-					level == player_level && block_ptr->exit_ptr != NULL &&
+				if (column == player_column && row == player_row && level == player_level && block_ptr->exit_ptr != NULL &&
 					(block_ptr->exit_ptr->trigger_flags & STEP_ON)) {
 					exit_ptr = block_ptr->exit_ptr;
 					break;

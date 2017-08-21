@@ -2049,8 +2049,7 @@ map_simkin_object::method(const skString& method, skRValueArray& arguments, skRV
 			level = arguments[2].intValue() - 1;
  			if (world_ptr->ground_level_exists)
 				level++;
-			if ((square_ptr = world_ptr->get_square_ptr(column, row, level)) 
-				!= NULL && (block_ptr = square_ptr->block_ptr) != NULL)
+			if ((square_ptr = world_ptr->get_square_ptr(column, row, level)) != NULL && (block_ptr = square_ptr->block_ptr) != NULL)
 				returnValue = get_block_simkin_object(block_ptr);
 			else {
 				skRValue value;
@@ -2066,8 +2065,7 @@ map_simkin_object::method(const skString& method, skRValueArray& arguments, skRV
 			level = arguments[2].intValue() - 1;
  			if (world_ptr->ground_level_exists)
 				level++;
-			if ((square_ptr = world_ptr->get_square_ptr(column, row, level)) 
-				!= NULL && (block_ptr = square_ptr->block_ptr) != NULL)
+			if ((square_ptr = world_ptr->get_square_ptr(column, row, level)) != NULL && (block_ptr = square_ptr->block_ptr) != NULL)
 				returnValue = get_block_simkin_object(block_ptr);
 
 			// Otherwise step through the movable block list, and return the
@@ -2077,8 +2075,7 @@ map_simkin_object::method(const skString& method, skRValueArray& arguments, skRV
 			else {
 				block_ptr = movable_block_list;
 				while (block_ptr != NULL) {
-					block_ptr->translation.get_map_position(&block_column, 
-						&block_row, &block_level);
+					block_ptr->translation.get_map_position(&block_column, &block_row, &block_level);
 					if (block_column == column && block_row == row &&
 						block_level == level) {
 						returnValue = get_block_simkin_object(block_ptr);
@@ -2211,14 +2208,12 @@ map_simkin_object::method(const skString& method, skRValueArray& arguments, skRV
 
 			// Remove the current block from this location.
 
-			remove_fixed_block(square_ptr);
+			remove_block_from_square(square_ptr);
 
-			// If the symbol is valid, create a new block based upon the
-			// block definition with that symbol, and add it to the map
-			// at the same location.
+			// If the symbol is valid, create a new block based upon the block definition with that symbol, 
+			// and add it to the map at the same location.
 
-			if (string_to_symbol(symbol_str, &symbol, false) &&
-				(block_def_ptr = symbol_to_block_def(symbol)) != NULL) {
+			if (string_to_symbol(symbol_str, &symbol, false) && (block_def_ptr = symbol_to_block_def(symbol)) != NULL) {
 				if (block_def_ptr->movable) {
 					translation.set_map_translation(column, row, level);
 					add_movable_block(block_def_ptr, square_ptr, translation);
@@ -2259,19 +2254,16 @@ map_simkin_object::method(const skString& method, skRValueArray& arguments, skRV
 
 		// Get the squares at the source and target locations.
 
-		source_square_ptr = world_ptr->get_square_ptr(source_column, source_row,
-			source_level);
-		target_square_ptr = world_ptr->get_square_ptr(target_column, target_row,
-			target_level);
+		source_square_ptr = world_ptr->get_square_ptr(source_column, source_row, source_level);
+		target_square_ptr = world_ptr->get_square_ptr(target_column, target_row, target_level);
 
 		// If the target location was invalid, then simply remove the block
 		// at the source location (assuming it was valid and there is a block
 		// there, otherwise there is nothing to do).
 
 		if (target_square_ptr == NULL) {
-			if (source_square_ptr != NULL && 
-				source_square_ptr->block_ptr != NULL)
-				remove_fixed_block(source_square_ptr);
+			if (source_square_ptr != NULL && source_square_ptr->block_ptr != NULL)
+				remove_block_from_square(source_square_ptr);
 		}
 
 		// If the target location was valid...
@@ -2281,8 +2273,7 @@ map_simkin_object::method(const skString& method, skRValueArray& arguments, skRV
 			// If the source location is valid and contains a block, remove the
 			// block from the square without actually deleting it.
 
-			if (source_square_ptr != NULL && 
-				source_square_ptr->block_ptr != NULL) {
+			if (source_square_ptr != NULL && source_square_ptr->block_ptr != NULL) {
 				block_ptr = source_square_ptr->block_ptr;
 				source_square_ptr->block_ptr = NULL;
 
@@ -2293,8 +2284,7 @@ map_simkin_object::method(const skString& method, skRValueArray& arguments, skRV
 				// If the player is standing on the source square, set a flag 
 				// indicating that the player block has been replaced.
 
-				if (player_column == source_column && 
-					player_row == source_row && player_level == source_level)
+				if (player_column == source_column && player_row == source_row && player_level == source_level)
 					player_block_replaced = true;
 
 				// If this block has a light list, calculate the bounding box
@@ -2302,11 +2292,9 @@ map_simkin_object::method(const skString& method, skRValueArray& arguments, skRV
 				// lists for all blocks inside this bounding box.
 
 				if (block_ptr->light_list != NULL) {
-					compute_light_list_bounding_box(block_ptr->light_list, 
-						block_ptr->translation, min_column, min_row, min_level,
+					compute_light_list_bounding_box(block_ptr->light_list, block_ptr->translation, min_column, min_row, min_level,
 						max_column, max_row, max_level);
-					reset_active_lights(min_column, min_row, min_level, 
-						max_column, max_row, max_level);
+					reset_active_lights(min_column, min_row, min_level,  max_column, max_row, max_level);
 				}
 			}
 
@@ -2316,12 +2304,11 @@ map_simkin_object::method(const skString& method, skRValueArray& arguments, skRV
 			else
 				block_ptr = NULL;
 
-			// Remove any fixed block that may exist at the target location.
+			// Remove any block that may exist at the target location.
 
-			remove_fixed_block(target_square_ptr);
+			remove_block_from_square(target_square_ptr);
 
-			// Now place the block from the source square onto the target
-			// square, if there is one.
+			// Now place the block from the source square onto the target square, if there is one.
 
 			if (block_ptr != NULL) {
 				target_square_ptr->block_ptr = block_ptr;
@@ -2338,20 +2325,17 @@ map_simkin_object::method(const skString& method, skRValueArray& arguments, skRV
 
 				// Update the block's translation.
 
-				translation.set_map_translation(target_column, target_row, 
-					target_level);
+				translation.set_map_translation(target_column, target_row, target_level);
 				block_ptr->translation = translation;
 
 				// Compute the active polygons surrounding the block.
 
-				compute_active_polygons(block_ptr, target_column, target_row,
-					target_level, true);
+				compute_active_polygons(block_ptr, target_column, target_row, target_level, true);
 
 				// If the player is standing on the target square, set a flag 
 				// indicating that the player block has been replaced.
 
-				if (player_column == target_column && 
-					player_row == target_row && player_level == target_level)
+				if (player_column == target_column && player_row == target_row && player_level == target_level)
 					player_block_replaced = true;
 
 				// If this block has a light list, calculate the bounding box
@@ -2359,11 +2343,9 @@ map_simkin_object::method(const skString& method, skRValueArray& arguments, skRV
 				// lists for all blocks inside this bounding box.
 
 				if (block_ptr->light_list != NULL) {
-					compute_light_list_bounding_box(block_ptr->light_list, 
-						block_ptr->translation, min_column, min_row, min_level,
+					compute_light_list_bounding_box(block_ptr->light_list, block_ptr->translation, min_column, min_row, min_level,
 						max_column, max_row, max_level);
-					reset_active_lights(min_column, min_row, min_level, 
-						max_column, max_row, max_level);
+					reset_active_lights(min_column, min_row, min_level, max_column, max_row, max_level);
 				}
 			}
 		}

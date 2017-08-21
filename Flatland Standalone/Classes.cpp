@@ -2013,8 +2013,7 @@ entrance::~entrance()
 trigger::trigger()
 {
 	trigger_flag = CLICK_ON;
-	position.set(UNITS_PER_HALF_BLOCK, UNITS_PER_HALF_BLOCK, 
-		UNITS_PER_HALF_BLOCK);
+	position.set(UNITS_PER_HALF_BLOCK, UNITS_PER_HALF_BLOCK, UNITS_PER_HALF_BLOCK);
 	square_ptr = NULL;
 	block_ptr = NULL;
 	action_list = NULL;
@@ -2746,8 +2745,7 @@ block_def::block_def()
 	root_polygon_ref = 0;
 	BSP_tree = NULL;
 	block_orientation.set(0.0f, 0.0f, 0.0f);
-	block_origin.set(UNITS_PER_HALF_BLOCK, UNITS_PER_HALF_BLOCK,
-		UNITS_PER_HALF_BLOCK);
+	block_origin.set(UNITS_PER_HALF_BLOCK, UNITS_PER_HALF_BLOCK, UNITS_PER_HALF_BLOCK);
 	sprite_angle = 0.0;
 	degrees_per_ms = 0.0;
 	sprite_alignment = BOTTOM;

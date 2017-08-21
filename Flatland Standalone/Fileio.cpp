@@ -4088,8 +4088,7 @@ parse_next_body_tag(int tag_token, bool allow_import_tag)
 		// Store the pointer to the square in the entrance.
 
 		if (entrance_ptr != NULL) {
-			square_ptr = world_ptr->get_square_ptr(entrance_location.column,
-				entrance_location.row, entrance_location.level);
+			square_ptr = world_ptr->get_square_ptr(entrance_location.column, entrance_location.row, entrance_location.level);
 			entrance_ptr->square_ptr = square_ptr;
 			entrance_ptr->block_ptr = NULL;
 		}
@@ -4181,18 +4180,16 @@ parse_next_body_tag(int tag_token, bool allow_import_tag)
 			popup_ptr->position.set_map_position(popup_location.column, 
 				popup_location.row, popup_location.level);
 
-			// Store the pointer to the square in the popup
+			// Store the pointer to the square in the popup.
 
-			square_ptr = world_ptr->get_square_ptr(popup_location.column,
-				popup_location.row, popup_location.level);
+			square_ptr = world_ptr->get_square_ptr(popup_location.column, popup_location.row, popup_location.level);
 			popup_ptr->square_ptr = square_ptr;
 			popup_ptr->block_ptr = NULL;
 
 			// Add the popup to the end of the square's popup list.
 
 			if (square_ptr->last_popup_ptr != NULL)
-				square_ptr->last_popup_ptr->next_square_popup_ptr = 
-					popup_ptr;
+				square_ptr->last_popup_ptr->next_square_popup_ptr = popup_ptr;
 			else
 				square_ptr->popup_list = popup_ptr;
 			square_ptr->last_popup_ptr = popup_ptr;
@@ -4242,8 +4239,7 @@ parse_next_body_tag(int tag_token, bool allow_import_tag)
 			// it in the trigger, if available.
 
 			if (got_location_param) {
-				square_ptr = world_ptr->get_square_ptr(action_location.column,
-					action_location.row, action_location.level);
+				square_ptr = world_ptr->get_square_ptr(action_location.column, action_location.row, action_location.level);
 				trigger_ptr->square_ptr = square_ptr;
 			} else
 				trigger_ptr->square_ptr = NULL;
@@ -4255,9 +4251,7 @@ parse_next_body_tag(int tag_token, bool allow_import_tag)
 				trigger_ptr->trigger_flag == STEP_OUT ||
 				trigger_ptr->trigger_flag == PROXIMITY ||
 				trigger_ptr->trigger_flag == LOCATION)
-				add_trigger_to_global_list(trigger_ptr, 
-					action_location.column, action_location.row,
-					action_location.level);
+				add_trigger_to_global_list(trigger_ptr, action_location.column, action_location.row, action_location.level);
 			else if (trigger_ptr->trigger_flag == TIMER ||
 				trigger_ptr->trigger_flag == KEY_DOWN ||
 				trigger_ptr->trigger_flag == KEY_UP ||

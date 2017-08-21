@@ -2116,8 +2116,7 @@ render_block_on_square(int column, int row, int level)
 	// Get a pointer to the square and its block.  If the location is invalid,
 	// or there is no block on the squarem, there is nothing to render.
 
-	if ((square_ptr = world_ptr->get_square_ptr(column, row, level)) == NULL ||
-		(block_ptr = square_ptr->block_ptr) == NULL) {
+	if ((square_ptr = world_ptr->get_square_ptr(column, row, level)) == NULL || (block_ptr = square_ptr->block_ptr) == NULL) {
 		return;
 	}
 

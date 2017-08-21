@@ -1645,7 +1645,6 @@ square_has_entrance(square *square_ptr)
 	return(false);
 }
 
-
 //------------------------------------------------------------------------------
 // Add an action to the global list of clock actions.
 //------------------------------------------------------------------------------
@@ -1717,8 +1716,7 @@ remove_clock_action_by_type(action *action_ptr, int type)
 //------------------------------------------------------------------------------
 
 block *
-add_fixed_block(block_def *block_def_ptr, square *square_ptr,
-				bool update_active_polygons)
+add_fixed_block(block_def *block_def_ptr, square *square_ptr, bool update_active_polygons)
 {
 	int column, row, level;
 	vertex translation;
@@ -1784,14 +1782,14 @@ add_movable_block(block_def *block_def_ptr, square *square_ptr, vertex translati
 	block *block_ptr;
 	trigger * trigger_ptr;
 
-	// Set the current block symbol for the square where the movable block starts at.
+	// Create a block from the given block definition, at the given map position.
 
+	block_ptr = create_new_block(block_def_ptr, square_ptr, translation);
+
+	// Set the movable block pointer and block symbol for the square where the movable block starts at.
+
+	square_ptr->movable_block_ptr = block_ptr;
 	square_ptr->curr_block_symbol = world_ptr->map_style == SINGLE_MAP ? block_def_ptr->single_symbol : block_def_ptr->double_symbol;
-
-	// Create a block from the given block definition, at the given map
-	// position.
-
-	block_ptr = create_new_block(block_def_ptr, NULL, translation);
 
 	// Add the block to the movable block list.
 
@@ -1814,11 +1812,11 @@ add_movable_block(block_def *block_def_ptr, square *square_ptr, vertex translati
 }
 
 //------------------------------------------------------------------------------
-// Remove a fixed block from the given square.
+// Remove a fixed or movable block from the given square.
 //------------------------------------------------------------------------------
 
 void
-remove_fixed_block(square *square_ptr)
+remove_block_from_square(square *square_ptr)
 {
 	block *block_ptr;
 	int column, row, level;
@@ -1827,7 +1825,13 @@ remove_fixed_block(square *square_ptr)
 	int min_column, min_row, min_level;
 	int max_column, max_row, max_level;
 
-	// If there is no block on the square, there is nothing to do.
+	// If there is a movable block on the square, remove it.
+
+	if (square_ptr->movable_block_ptr) {
+		remove_movable_block(square_ptr->movable_block_ptr);
+	}
+
+	// If there is no fixed block on the square, there is nothing else to do.
 
 	block_ptr = square_ptr->block_ptr;
 	if (block_ptr == NULL)
@@ -1888,7 +1892,8 @@ remove_fixed_block(square *square_ptr)
 	block_def_ptr = block_ptr->block_def_ptr;
 	block_def_ptr->del_block(block_ptr);
 
-	// Clear the pointer to the block.
+	// Clear the pointer to the block, and the current block symbol, on the
+	// square.
 
 	square_ptr->block_ptr = NULL;
 	square_ptr->curr_block_symbol = NULL_BLOCK_SYMBOL;
@@ -1907,17 +1912,14 @@ remove_movable_block(block *block_ptr)
 	int min_column, min_row, min_level;
 	int max_column, max_row, max_level;
 
-	// If this block has a light list, calculate the bounding box emcompassing
-	// all these lights, and reset the active light lists for all blocks inside
+	// If this block has a light list, calculate the bounding box emcompassing all these lights, and reset the active light lists for all blocks inside
 	// this bounding box.
 
 	if (block_ptr->light_list != NULL) {
-		compute_light_list_bounding_box(block_ptr->light_list, 
-			block_ptr->translation, min_column, min_row, min_level, max_column,
-			max_row, max_level);
-		reset_active_lights(min_column, min_row, min_level, max_column, max_row,
-			max_level);
+		compute_light_list_bounding_box(block_ptr->light_list, block_ptr->translation, min_column, min_row, min_level, max_column, max_row, max_level);
+		reset_active_lights(min_column, min_row, min_level, max_column, max_row, max_level);
 	}
+
 	// If this block has a sound list, stop all sounds in that list.
 
 	if (block_ptr->sound_list != NULL)
@@ -1946,9 +1948,15 @@ remove_movable_block(block *block_ptr)
 	else
 		prev_block_ptr->next_block_ptr = curr_block_ptr->next_block_ptr;
 
-	// check to see if there are any clock actions to remove
+	// Check to see if there are any clock actions to remove.
 
 	remove_clock_action_by_block(block_ptr);
+
+	// Clear the pointer to the movable block on the square it is linked to, as well as the current block symbol.
+
+	square *square_ptr = block_ptr->square_ptr;
+	square_ptr->movable_block_ptr = NULL;
+	square_ptr->curr_block_symbol = NULL_BLOCK_SYMBOL;
 
 	// Delete the block.
 
