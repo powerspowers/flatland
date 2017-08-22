@@ -4588,10 +4588,12 @@ parse_spot_file(char *spot_URL, char *spot_file_path)
 
 	// Set the scale of the spot.
 
+	spot_scaling_factor = 1.0f;
 	units_per_block = UNITS_PER_BLOCK;
 	units_per_half_block = UNITS_PER_HALF_BLOCK;
 	texels_per_unit = TEXELS_PER_UNIT;
 	if (parsed_attribute[SPOT_SCALE]) {
+		spot_scaling_factor = spot_scale;
 		units_per_block *= spot_scale;
 		units_per_half_block *= spot_scale;
 		texels_per_unit /= spot_scale;

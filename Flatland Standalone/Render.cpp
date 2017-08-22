@@ -3418,9 +3418,11 @@ render_block_as_bitmap(block *block_ptr)
 	curr_block_type = block_def_ptr->type;
 
 	// Transform each vertex by the player position and orientation, storing them in a global list.
+	// We also need to scale the vertices to counteract the spot scale.
 
 	for (int vertex_no = 0; vertex_no < curr_block_ptr->vertices; vertex_no++) {
-		transform_vertex(&curr_block_ptr->vertex_list[vertex_no], &block_tvertex_list[vertex_no]);
+		vertex scaled_vertex = curr_block_ptr->vertex_list[vertex_no] / spot_scaling_factor;
+		transform_vertex(&scaled_vertex, &block_tvertex_list[vertex_no]);
 	}
 
 	// If the block is a sprite, render the first polygon at a zero angle.
@@ -3491,6 +3493,15 @@ render_builder_icons_for_blockset(blockset *blockset_ptr)
 void
 render_builder_icons(void)
 {
+	// Reset the spot scale temporarily.
+
+	float saved_units_per_block = units_per_block;
+	float saved_units_per_half_block = units_per_half_block;
+	float saved_texels_per_unit = texels_per_unit;
+	units_per_block = UNITS_PER_BLOCK;
+	units_per_half_block = UNITS_PER_HALF_BLOCK;
+	texels_per_unit = TEXELS_PER_UNIT;
+
 	// Set the "rendering block as bitmap" flag, which disables certain
 	// functionality during the rendering we don't need, select the builder
 	// render taget, and set the viewport to the size of a builder block icon.
@@ -3548,4 +3559,10 @@ render_builder_icons(void)
 	select_main_render_target();
 	rendering_block_as_bitmap = false;
 	set_viewport(window_width, window_height);
+
+	// Restore the spot scale.
+
+	units_per_block = saved_units_per_block;
+	units_per_half_block = saved_units_per_half_block;
+	texels_per_unit = saved_texels_per_unit;
 }

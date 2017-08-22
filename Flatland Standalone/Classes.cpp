@@ -4178,6 +4178,7 @@ square::square()
 {
 	curr_block_symbol = NULL_BLOCK_SYMBOL;
 	block_ptr = NULL;
+	movable_block_ptr = NULL;
 	exit_ptr = NULL;
 	popup_trigger_flags = 0;
 	popup_list = NULL;

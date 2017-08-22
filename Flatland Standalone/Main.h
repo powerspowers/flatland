@@ -10,6 +10,7 @@
 
 // Scaled units per block, units per half block, and texels per unit.
 
+extern float spot_scaling_factor;
 extern float units_per_block;
 extern float units_per_half_block;
 extern float texels_per_unit;
