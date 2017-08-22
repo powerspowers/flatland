@@ -337,6 +337,9 @@ square *builder_square_ptr;
 // Local variable definitions.
 //------------------------------------------------------------------------------
 
+static int prev_reported_frames_rendered;
+static float reported_elapsed_time;
+
 // Time that player window was last refreshed.
 
 static int last_refresh_time_ms;
@@ -2927,17 +2930,28 @@ render_next_frame(void)
 	block *block_ptr;
 	float old_visible_radius;
 
-	// Update the current time in milliseconds, and compute the elapsed time in
-	// seconds.
+	// Update the current time in milliseconds, and compute the elapsed time in seconds.
 
 	if (frames_rendered > 0) {
 		prev_time_ms = curr_time_ms;
 		curr_time_ms = get_time_ms();
 		elapsed_time = (float)(curr_time_ms - prev_time_ms) / 1000.0f;
+		reported_elapsed_time += elapsed_time;
 	} else {
 		curr_time_ms = get_time_ms();
 		clocktimer_time_ms = curr_time_ms;
 		elapsed_time = 0.0f;
+		reported_elapsed_time = 0.0f;
+		prev_reported_frames_rendered = 0;
+	}
+
+	// Every second that has elapsed, update the frames per second on the status bar.
+
+	if (reported_elapsed_time >= 1.0f) {
+		int reported_frames_rendered = frames_rendered - prev_reported_frames_rendered;
+		set_status_text(3, "%d fps", (int)(reported_frames_rendered / reported_elapsed_time));
+		prev_reported_frames_rendered = frames_rendered;
+		reported_elapsed_time = 0.0f;
 	}
 
 	// Get the current mouse position.

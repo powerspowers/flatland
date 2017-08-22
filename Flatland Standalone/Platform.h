@@ -465,7 +465,7 @@ void
 set_title(char *format, ...);
 
 void
-set_status_text(char *format, ...);
+set_status_text(int status_box_index, char *format, ...);
 
 // URL functions (called by the player thread only).
 

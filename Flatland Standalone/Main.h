@@ -191,7 +191,7 @@ extern float player_step_height;
 // Start and current time, and number of frames rendered.
 
 extern int start_time_ms, curr_time_ms;
-extern int frames_rendered;
+extern int frames_rendered, prev_frames_rendered;
 
 // Flag to turn the renderer on or off.
 

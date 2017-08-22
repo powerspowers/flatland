@@ -696,10 +696,10 @@ toggle_fly_mode(bool key_down)
 	if (key_down) {
 		if (fly_mode.get()) {
 			fly_mode.set(false);
-			set_status_text("");
+			set_status_text(1, "Fly mode: OFF");
 		} else {
 			fly_mode.set(true);
-			set_status_text("Fly mode");
+			set_status_text(1, "Fly mode: ON");
 		}
 	}
 }
@@ -1409,6 +1409,11 @@ run_app(void *instance_handle, int show_command, char *spot_file_path)
 	if (!create_player_window()) {
 		return false;
 	}
+
+	// Initialize the status text.
+
+	set_status_text(1, "Fly mode: OFF");
+	set_status_text(2, "3D acceleration: %s", hardware_acceleration ? "ON" : "OFF");
 
 	// Open the spot at the provided file path on the command line, or the splash spot if the command line is empty.
 

@@ -2139,6 +2139,24 @@ get_save_file_name(char *title, char *filter, char *initial_dir_path)
 }
 
 //------------------------------------------------------------------------------
+// Update the sizes of the status bar boxes.
+//------------------------------------------------------------------------------
+
+static void
+resize_status_bar()
+{
+	RECT window_rect;
+	INT right_edges[4];
+
+	GetClientRect(app_window_handle, &window_rect);
+	right_edges[0] = window_rect.right - 280;
+	right_edges[1] = window_rect.right - 190;
+	right_edges[2] = window_rect.right - 70;
+	right_edges[3] = window_rect.right;
+	SendMessage(status_bar_handle, SB_SETPARTS, 4, (LPARAM)right_edges);
+}
+
+//------------------------------------------------------------------------------
 // Application window procedure.
 //------------------------------------------------------------------------------
 
@@ -2206,9 +2224,12 @@ LRESULT CALLBACK app_window_proc(HWND hWnd, UINT message, WPARAM wParam, LPARAM 
 		}
 		break;
 	case WM_SIZE:
-		SendMessage(status_bar_handle, WM_SIZE, wParam, lParam);
-		if (wParam == SIZE_MAXIMIZED || wParam == SIZE_RESTORED) {
-			resize_main_window();
+		{
+			SendMessage(status_bar_handle, WM_SIZE, wParam, lParam);
+			resize_status_bar();
+			if (wParam == SIZE_MAXIMIZED || wParam == SIZE_RESTORED) {
+				resize_main_window();
+			}
 		}
 		break;
 	case WM_CAPTURECHANGED:
@@ -2247,8 +2268,6 @@ start_up_platform_API(void *instance_handle, int show_command, void (*quit_callb
 	char buffer[_MAX_PATH];
 	char *app_name;
 	WNDCLASS window_class;
-	RECT window_rect;
-	INT right_edges[2];
 	int index;
 	FILE *fp;
 
@@ -2302,10 +2321,7 @@ start_up_platform_API(void *instance_handle, int show_command, void (*quit_callb
 	if (!status_bar_handle) {
 		return FALSE;
 	}
-	GetClientRect(app_window_handle, &window_rect);
-	right_edges[0] = window_rect.right - 75;
-	right_edges[1] = window_rect.right;
-	SendMessage(status_bar_handle, SB_SETPARTS, 2, (LPARAM)right_edges);
+	resize_status_bar();
 
 	// Find the path to the executable, and strip out the file name.
 
@@ -8124,7 +8140,7 @@ set_title(char *format, ...)
 //------------------------------------------------------------------------------
 
 void
-set_status_text(char *format, ...)
+set_status_text(int status_box_index, char *format, ...)
 {
 	va_list arg_ptr;
 	char status_text[BUFSIZ];
@@ -8137,7 +8153,7 @@ set_status_text(char *format, ...)
 
 	// Draw the title on the status bar.
 
-	SendMessage(status_bar_handle, SB_SETTEXT, 1, (LPARAM)(char *)status_text);
+	SendMessage(status_bar_handle, SB_SETTEXT, status_box_index, (LPARAM)(char *)status_text);
 }
 
 //------------------------------------------------------------------------------
