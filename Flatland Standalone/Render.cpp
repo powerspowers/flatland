@@ -1633,6 +1633,10 @@ render_polygon(polygon *polygon_ptr, float turn_angle)
 		//*mp* from the polygon set the part pointer
 		curr_selected_part_ptr = polygon_ptr->polygon_def_ptr->part_ptr;
 	}
+
+	// Count this polygon as rendered.
+
+	polygons_rendered++;
 }
 
 //------------------------------------------------------------------------------

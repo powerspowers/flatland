@@ -211,6 +211,7 @@ float player_step_height;
 
 int start_time_ms, curr_time_ms, clocktimer_time_ms;
 int frames_rendered;
+int polygons_rendered;
 
 // Current mouse position.
 
@@ -957,6 +958,7 @@ start_up_spot(void)
 	curr_time_ms = start_time_ms;
 	clocktimer_time_ms = 0;
 	frames_rendered = 0;
+	polygons_rendered = 0;
 	player_viewpoint_set = true;
 	player_fall_delta = 0.0f;
 
@@ -2945,12 +2947,16 @@ render_next_frame(void)
 		prev_reported_frames_rendered = 0;
 	}
 
-	// Every second that has elapsed, update the frames per second on the status bar.
+	// Every second that has elapsed, update the frames per second and polygons per
+	// frame on the status bar.
 
 	if (reported_elapsed_time >= 1.0f) {
 		int reported_frames_rendered = frames_rendered - prev_reported_frames_rendered;
-		set_status_text(3, "%d fps", (int)(reported_frames_rendered / reported_elapsed_time));
+		int fps = (int)(reported_frames_rendered / reported_elapsed_time);
+		set_status_text(3, "%d fps", fps);
+		set_status_text(4, "%d polyons/frame", (int)(polygons_rendered / fps));
 		prev_reported_frames_rendered = frames_rendered;
+		polygons_rendered = 0;
 		reported_elapsed_time = 0.0f;
 	}
 
@@ -3833,11 +3839,6 @@ handle_spot_events(void)
 void
 player_thread(void *arg_list)
 {
-	// Decrease the priority level on this thread, to ensure that the browser
-	// and the rest of the system remains responsive.
-
-	decrease_thread_priority();
-
 	// Perform global initialisation and signal the plugin thread as to whether
 	// it succeeded or failure.  If it failed, the player thread will exit.
 

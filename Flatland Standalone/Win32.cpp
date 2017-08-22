@@ -2146,14 +2146,15 @@ static void
 resize_status_bar()
 {
 	RECT window_rect;
-	INT right_edges[4];
+	INT right_edges[5];
 
 	GetClientRect(app_window_handle, &window_rect);
-	right_edges[0] = window_rect.right - 280;
-	right_edges[1] = window_rect.right - 190;
-	right_edges[2] = window_rect.right - 70;
-	right_edges[3] = window_rect.right;
-	SendMessage(status_bar_handle, SB_SETPARTS, 4, (LPARAM)right_edges);
+	right_edges[0] = window_rect.right - 400;
+	right_edges[1] = window_rect.right - 310;
+	right_edges[2] = window_rect.right - 190;
+	right_edges[3] = window_rect.right - 130;
+	right_edges[4] = window_rect.right;
+	SendMessage(status_bar_handle, SB_SETPARTS, 5, (LPARAM)right_edges);
 }
 
 //------------------------------------------------------------------------------
