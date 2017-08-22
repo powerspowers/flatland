@@ -28,6 +28,12 @@
 // Global variable definitions.
 //------------------------------------------------------------------------------
 
+// Scaled units per block, units per half block, and texels per unit.
+
+float units_per_block;
+float units_per_half_block;
+float texels_per_unit;
+
 // Minimum blockset update period.
 
 int min_blockset_update_period;
@@ -772,12 +778,10 @@ teleport(const char *entrance_name)
 	// polygonal model, put the player on top of the block's bounding box.
 	// Otherwise put them at the bottom of the block.
 
-	if (block_ptr != NULL && block_ptr->polygons > 0 && block_ptr->solid && 
-		block_ptr->col_mesh_ptr != NULL)
-		player_viewpoint.position.y = block_ptr->translation.y +
-			block_ptr->col_mesh_ptr->maxBox.y;
+	if (block_ptr != NULL && block_ptr->polygons > 0 && block_ptr->solid && block_ptr->col_mesh_ptr != NULL)
+		player_viewpoint.position.y = block_ptr->translation.y + block_ptr->col_mesh_ptr->maxBox.y;
 	 else
-		player_viewpoint.position.y -= UNITS_PER_HALF_BLOCK;
+		player_viewpoint.position.y -= units_per_half_block;
 
 	// Set the last position to this one so that the user starts fresh from this location.
 
@@ -897,8 +901,7 @@ start_up_spot(void)
 	// full spot URL. Then recreate the spot URL without the entrance name.
 
 	full_spot_URL = curr_URL;
-	split_URL(full_spot_URL, &spot_URL_dir, &spot_file_name, 
-		&curr_spot_entrance);
+	split_URL(full_spot_URL, &spot_URL_dir, &spot_file_name, &curr_spot_entrance);
 	curr_spot_URL = create_URL(spot_URL_dir, spot_file_name);
 
 	// Parse the spot, then remove the spot file if we are being hosted by the
@@ -2367,13 +2370,13 @@ execute_orbit_action(action *action_ptr,int time_diff)
 	
 	block_ptr->translation.z = center_ptr->translation.z +
 							(float)(sin(RAD((float)(action_ptr->temp) / 1000.0f)) * 
-							action_ptr->spin_angles.z / TEXELS_PER_UNIT);
+							action_ptr->spin_angles.z / texels_per_unit);
 	block_ptr->translation.x = center_ptr->translation.x +
 							(float)(sin(RAD((float)(action_ptr->temp) / 1000.0f) + 90.0f) *
-							action_ptr->spin_angles.x / TEXELS_PER_UNIT);
+							action_ptr->spin_angles.x / texels_per_unit);
 	block_ptr->translation.y = center_ptr->translation.y +
 							(float)(sin(RAD((float)(action_ptr->temp) / 1000.0f) + 180.0f) * 
-							action_ptr->spin_angles.y / TEXELS_PER_UNIT);
+							action_ptr->spin_angles.y / texels_per_unit);
 }
 
 //------------------------------------------------------------------------------
@@ -2434,9 +2437,9 @@ execute_move_action(action *action_ptr, int time_diff)
 			action_ptr->totalz -= movez;
 	}
 
-	block_ptr->translation.x += movex / TEXELS_PER_UNIT;
-	block_ptr->translation.y += movey / TEXELS_PER_UNIT;
-	block_ptr->translation.z += movez / TEXELS_PER_UNIT;
+	block_ptr->translation.x += movex / texels_per_unit;
+	block_ptr->translation.y += movey / texels_per_unit;
+	block_ptr->translation.z += movez / texels_per_unit;
 		
 	if (done == 3) {				
 		try {
@@ -3001,7 +3004,7 @@ render_next_frame(void)
 
 	set_master_intensity(master_brightness.get());
 	old_visible_radius = visible_radius;
-	visible_radius = (float)visible_block_radius.get() * UNITS_PER_BLOCK;
+	visible_radius = (float)visible_block_radius.get() * units_per_block;
 
 	// Remove the first key event off the queue, provided it isn't empty, and
 	// update it's key down state.  Otherwise there is no current key event.
@@ -3096,7 +3099,7 @@ render_next_frame(void)
 	// which square it lands in, which becomes the builder square if its on the map.
 
 	player_viewpoint.position.y += player_dimensions.y;
-	vertex builder_vertex(0.0f, 0.0f, UNITS_PER_BLOCK * 2.0f);
+	vertex builder_vertex(0.0f, 0.0f, units_per_block * 2.0f);
 	builder_vertex.rotate_x(player_viewpoint.look_angle);
 	builder_vertex.rotate_y(player_viewpoint.turn_angle);
 	builder_vertex += player_viewpoint.position;
@@ -3564,7 +3567,7 @@ init_player_window(void)
 {
 	// Reset the visible radius.
 
-	visible_radius = (float)visible_block_radius.get() * UNITS_PER_BLOCK;
+	visible_radius = (float)visible_block_radius.get() * units_per_block;
 
 	// Initialise free span list and the span buffer.
 

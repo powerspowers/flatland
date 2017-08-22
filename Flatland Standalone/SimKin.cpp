@@ -151,11 +151,11 @@ vertex_simkin_object::getValueAt(const skRValue& array_index, const skString& at
 	// of the vertex in texel units, without the block translation.
 
 	if (attribute == "x")
-		value = vertex_ptr->x * TEXELS_PER_UNIT;
+		value = vertex_ptr->x * texels_per_unit;
 	else if (attribute == "y")
-		value = vertex_ptr->y * TEXELS_PER_UNIT;
+		value = vertex_ptr->y * texels_per_unit;
 	else if (attribute == "z")
-		value = vertex_ptr->z * TEXELS_PER_UNIT;
+		value = vertex_ptr->z * texels_per_unit;
 	else
 		return(false);
 
@@ -203,7 +203,7 @@ vertex_simkin_object::setValueAt(const skRValue& array_index, const skString& at
 	// If the attribute is "x", "y", or "z", set the approapiate coordinate of
 	// the vertex from texel units, with the block translation included.
 
-	vertex_coord = value.floatValue() / TEXELS_PER_UNIT;
+	vertex_coord = value.floatValue() / texels_per_unit;
 	if (attribute == "x")
 		vertex_ptr->x = vertex_coord;
 	else if (attribute == "y")
@@ -259,9 +259,9 @@ vertex_simkin_object::method(const skString& method, skRValueArray& arguments, s
 		if (vertex_index < 0 || vertex_index >= vertices)
 			return(false);
 		vertex_ptr = &vertex_list[vertex_index];
-		vertex_ptr->x = arguments[1].floatValue() / TEXELS_PER_UNIT;
-		vertex_ptr->y = arguments[2].floatValue() / TEXELS_PER_UNIT;
-		vertex_ptr->z = arguments[3].floatValue() / TEXELS_PER_UNIT;
+		vertex_ptr->x = arguments[1].floatValue() / texels_per_unit;
+		vertex_ptr->y = arguments[2].floatValue() / texels_per_unit;
+		vertex_ptr->z = arguments[3].floatValue() / texels_per_unit;
 
 		// Update the block, if there is one associated with this vertex array.
 
@@ -282,11 +282,11 @@ vertex_simkin_object::method(const skString& method, skRValueArray& arguments, s
 				continue;
 			vertex_ptr = &vertex_list[vertex_index];
 			vertex_ptr->x = arguments[2 + vertex_no * 4].floatValue() / 
-				TEXELS_PER_UNIT;
+				texels_per_unit;
 			vertex_ptr->y = arguments[3 + vertex_no * 4].floatValue() / 
-				TEXELS_PER_UNIT;
+				texels_per_unit;
 			vertex_ptr->z = arguments[4 + vertex_no * 4].floatValue() / 
-				TEXELS_PER_UNIT;
+				texels_per_unit;
 		}
 
 		// Update the block, if there is one associated with this vertex array.
@@ -431,11 +431,11 @@ get_block_value(block *block_ptr, const skString& field,
 		else if (attribute == "level")
 			value = level + 1;
 		else if (attribute == "x")
-			value = block_ptr->translation.x * TEXELS_PER_UNIT;
+			value = block_ptr->translation.x * texels_per_unit;
 		else if (attribute == "y")
-			value = block_ptr->translation.y * TEXELS_PER_UNIT;
+			value = block_ptr->translation.y * texels_per_unit;
 		else if (attribute == "z")
-			value = block_ptr->translation.z * TEXELS_PER_UNIT;
+			value = block_ptr->translation.z * texels_per_unit;
 		else
 			return(false);
 	}
@@ -446,11 +446,11 @@ get_block_value(block *block_ptr, const skString& field,
 
 	else if (field == "origin" && block_def_ptr->type == STRUCTURAL_BLOCK) {
 		if (attribute == "x")
-			value = block_ptr->block_origin.x * TEXELS_PER_UNIT;
+			value = block_ptr->block_origin.x * texels_per_unit;
 		else if (attribute == "y")
-			value = block_ptr->block_origin.y * TEXELS_PER_UNIT;
+			value = block_ptr->block_origin.y * texels_per_unit;
 		else if (attribute == "z")
-			value = block_ptr->block_origin.z * TEXELS_PER_UNIT;
+			value = block_ptr->block_origin.z * texels_per_unit;
 		else
 			return(false);
 	}
@@ -461,17 +461,17 @@ get_block_value(block *block_ptr, const skString& field,
 
 	else if (field == "bbox" && col_mesh_ptr != NULL) {
 		if (attribute == "min_x")
-			value = col_mesh_ptr->minBox.x * TEXELS_PER_UNIT;
+			value = col_mesh_ptr->minBox.x * texels_per_unit;
 		else if (attribute == "min_y")
-			value = col_mesh_ptr->minBox.y * TEXELS_PER_UNIT;
+			value = col_mesh_ptr->minBox.y * texels_per_unit;
 		else if (attribute == "min_z")
-			value = col_mesh_ptr->minBox.z * TEXELS_PER_UNIT;
+			value = col_mesh_ptr->minBox.z * texels_per_unit;
 		else if (attribute == "max_x")
-			value = col_mesh_ptr->maxBox.x * TEXELS_PER_UNIT;
+			value = col_mesh_ptr->maxBox.x * texels_per_unit;
 		else if (attribute == "max_y")
-			value = col_mesh_ptr->maxBox.y * TEXELS_PER_UNIT;
+			value = col_mesh_ptr->maxBox.y * texels_per_unit;
 		else if (attribute == "max_z")
-			value = col_mesh_ptr->maxBox.z * TEXELS_PER_UNIT;
+			value = col_mesh_ptr->maxBox.z * texels_per_unit;
 		else
 			return(false);
 	}
@@ -553,11 +553,11 @@ set_block_value(block *block_ptr, const skString& field,
 		// Now update the specified attribute.
 
 		if (attribute == "x")
-			block_ptr->translation.x = value.floatValue() / TEXELS_PER_UNIT;
+			block_ptr->translation.x = value.floatValue() / texels_per_unit;
 		else if (attribute == "y")
-			block_ptr->translation.y = value.floatValue() / TEXELS_PER_UNIT;
+			block_ptr->translation.y = value.floatValue() / texels_per_unit;
 		else if (attribute == "z")
-			block_ptr->translation.z = value.floatValue() / TEXELS_PER_UNIT;
+			block_ptr->translation.z = value.floatValue() / texels_per_unit;
 		else
 			return(false);
 
@@ -588,11 +588,11 @@ set_block_value(block *block_ptr, const skString& field,
 	else if (field == "origin" && block_def_ptr->type == STRUCTURAL_BLOCK
 		&& block_def_ptr->movable) {
 		if (attribute == "x")
-			block_ptr->block_origin.x = value.floatValue() / TEXELS_PER_UNIT;
+			block_ptr->block_origin.x = value.floatValue() / texels_per_unit;
 		else if (attribute == "y")
-			block_ptr->block_origin.y = value.floatValue() / TEXELS_PER_UNIT;
+			block_ptr->block_origin.y = value.floatValue() / texels_per_unit;
 		else if (attribute == "z")
-			block_ptr->block_origin.z = value.floatValue() / TEXELS_PER_UNIT;
+			block_ptr->block_origin.z = value.floatValue() / texels_per_unit;
 		else
 			return(false);
 	}
@@ -2505,11 +2505,11 @@ player_simkin_object::getValue(const skString& field, const skString& attribute,
 		else if (attribute == "level")
 			value = level + 1;
 		else if (attribute == "x")
-			value = player_viewpoint.position.x * TEXELS_PER_UNIT;
+			value = player_viewpoint.position.x * texels_per_unit;
 		else if (attribute == "y")
-			value = player_viewpoint.position.y * TEXELS_PER_UNIT;
+			value = player_viewpoint.position.y * texels_per_unit;
 		else if (attribute == "z")
-			value = player_viewpoint.position.z * TEXELS_PER_UNIT;
+			value = player_viewpoint.position.z * texels_per_unit;
 		else
 			return(false);
 	}
@@ -2531,11 +2531,11 @@ player_simkin_object::getValue(const skString& field, const skString& attribute,
 
 	else if (field == "camera") {
 		if (attribute == "x")
-			value = player_camera_offset.dx * TEXELS_PER_UNIT;
+			value = player_camera_offset.dx * texels_per_unit;
 		else if (attribute == "y")
-			value = player_camera_offset.dy * TEXELS_PER_UNIT;
+			value = player_camera_offset.dy * texels_per_unit;
 		else if (attribute == "z")
-			value = player_camera_offset.dz * TEXELS_PER_UNIT;
+			value = player_camera_offset.dz * texels_per_unit;
 		else
 			return(false);
 	}
@@ -2545,11 +2545,11 @@ player_simkin_object::getValue(const skString& field, const skString& attribute,
 
 	else if (field == "camera") {
 		if (attribute == "x")
-			value = player_camera_offset.dx * TEXELS_PER_UNIT;
+			value = player_camera_offset.dx * texels_per_unit;
 		else if (attribute == "y")
-			value = player_camera_offset.dy * TEXELS_PER_UNIT;
+			value = player_camera_offset.dy * texels_per_unit;
 		else if (attribute == "z")
-			value = player_camera_offset.dz * TEXELS_PER_UNIT;
+			value = player_camera_offset.dz * texels_per_unit;
 		else
 			return(false);
 	}
@@ -2559,11 +2559,11 @@ player_simkin_object::getValue(const skString& field, const skString& attribute,
 
 	else if (field == "size") {
 		if (attribute == "x")
-			value = player_dimensions.x * TEXELS_PER_UNIT;
+			value = player_dimensions.x * texels_per_unit;
 		else if (attribute == "y")
-			value = player_dimensions.y * TEXELS_PER_UNIT;
+			value = player_dimensions.y * texels_per_unit;
 		else if (attribute == "z")
-			value = player_dimensions.z * TEXELS_PER_UNIT;
+			value = player_dimensions.z * texels_per_unit;
 		else
 			return(false);
 	}
@@ -2584,13 +2584,13 @@ player_simkin_object::setValue(const skString& field, const skString& attribute,
 	if (field == "location") {
 		if (attribute == "x")
 			player_viewpoint.position.x = value.floatValue() / 
-				TEXELS_PER_UNIT;
+				texels_per_unit;
 		else if (attribute == "y")
 			player_viewpoint.position.y = value.floatValue() / 
-				TEXELS_PER_UNIT;
+				texels_per_unit;
 		else if (attribute == "z")
 			player_viewpoint.position.z = value.floatValue() / 
-				TEXELS_PER_UNIT;
+				texels_per_unit;
 		else
 			return(false);
 	}
@@ -2615,11 +2615,11 @@ player_simkin_object::setValue(const skString& field, const skString& attribute,
 
 	else if (field == "camera") {
 		if (attribute == "x")
-			player_camera_offset.dx = value.floatValue() / TEXELS_PER_UNIT;
+			player_camera_offset.dx = value.floatValue() / texels_per_unit;
 		else if (attribute == "y")
-			player_camera_offset.dy = value.floatValue() / TEXELS_PER_UNIT;
+			player_camera_offset.dy = value.floatValue() / texels_per_unit;
 		else if (attribute == "z")
-			player_camera_offset.dz = value.floatValue() / TEXELS_PER_UNIT;
+			player_camera_offset.dz = value.floatValue() / texels_per_unit;
 		else
 			return(false);
 	}
@@ -2629,11 +2629,11 @@ player_simkin_object::setValue(const skString& field, const skString& attribute,
 
 	else if (field == "size" && player_block_ptr == NULL) {
 		if (attribute == "x")
-			player_dimensions.x = value.floatValue() / TEXELS_PER_UNIT;
+			player_dimensions.x = value.floatValue() / texels_per_unit;
 		else if (attribute == "y")
-			player_dimensions.y = value.floatValue() / TEXELS_PER_UNIT;
+			player_dimensions.y = value.floatValue() / texels_per_unit;
 		else if (attribute == "z")
-			player_dimensions.z = value.floatValue() / TEXELS_PER_UNIT;
+			player_dimensions.z = value.floatValue() / texels_per_unit;
 		else
 			return(false);
 

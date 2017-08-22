@@ -1049,11 +1049,11 @@ float	COL_getShadowHeight(COL_MESH **colMeshes_pp, VEC3 *pos_p, int numMeshes,
 	// than one block below the player.
 
 	downBox.maxDim.x = aaBox_p->maxDim.x;
-	downBox.maxDim.y = aaBox_p->maxDim.y + UNITS_PER_HALF_BLOCK;
+	downBox.maxDim.y = aaBox_p->maxDim.y + units_per_half_block;
 	downBox.maxDim.z = aaBox_p->maxDim.z;
 
 	downBox.offsToCentre.x = aaBox_p->offsToCentre.x;
-	downBox.offsToCentre.y = -(UNITS_PER_BLOCK - downBox.maxDim.y); 
+	downBox.offsToCentre.y = -(units_per_block - downBox.maxDim.y); 
 	downBox.offsToCentre.z = aaBox_p->offsToCentre.z;
 
 	VEC_set(&centreDownBox, x, y, z);
@@ -1062,7 +1062,7 @@ float	COL_getShadowHeight(COL_MESH **colMeshes_pp, VEC3 *pos_p, int numMeshes,
 	// Make the default shadow height be one block below the player's
 	// collision box.
 
-	nearestY = y - UNITS_PER_BLOCK;
+	nearestY = y - units_per_block;
 
  	for (j=0; j<numMeshes; j++)
 	{

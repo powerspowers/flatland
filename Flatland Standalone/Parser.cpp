@@ -2822,7 +2822,7 @@ parse_radius(float *radius_ptr)
 {
 	if (!parse_float_in_value(radius_ptr) || !check_float_greater_than(*radius_ptr, 0.0f))
 		return(false);
-	*radius_ptr *= UNITS_PER_BLOCK;
+	*radius_ptr *= units_per_block;
 	return(true);
 }
 
@@ -3162,9 +3162,9 @@ parse_vertex_coordinates(vertex_entry *vertex_entry_ptr)
 		!parse_float_in_value(&vertex_entry_ptr->z) ||
 		!token_in_value_is(")", true))
 		return(false);
-	vertex_entry_ptr->x /= TEXELS_PER_UNIT;
-	vertex_entry_ptr->y /= TEXELS_PER_UNIT;
-	vertex_entry_ptr->z /= TEXELS_PER_UNIT;
+	vertex_entry_ptr->x /= texels_per_unit;
+	vertex_entry_ptr->y /= texels_per_unit;
+	vertex_entry_ptr->z /= texels_per_unit;
 	return(true);
 }
 
@@ -4748,7 +4748,7 @@ delay_range_to_string(delayrange delay_range)
 string
 radius_to_string(float radius)
 {
-	sprintf(attribute_string, "%g", radius / UNITS_PER_BLOCK);
+	sprintf(attribute_string, "%g", radius / units_per_block);
 	return attribute_string;
 }
 
@@ -4799,7 +4799,7 @@ map_coords_to_string(mapcoords map_coords)
 string
 vertex_to_string(vertex v)
 {
-	sprintf(attribute_string, "(%g, %g, %g)", v.x * TEXELS_PER_UNIT, v.y * TEXELS_PER_UNIT, v.z * TEXELS_PER_UNIT);
+	sprintf(attribute_string, "(%g, %g, %g)", v.x * texels_per_unit, v.y * texels_per_unit, v.z * texels_per_unit);
 	return attribute_string;
 }
 

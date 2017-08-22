@@ -693,9 +693,9 @@ vertex::set(float set_x, float set_y, float set_z)
 void
 vertex::set_map_position(int column, int row, int level)
 {
-	x = ((float)column + 0.5f) * UNITS_PER_BLOCK;
-	y = ((float)level + 0.5f) * UNITS_PER_BLOCK;
-	z = ((float)(world_ptr->rows - row - 1) + 0.5f) * UNITS_PER_BLOCK;
+	x = ((float)column + 0.5f) * units_per_block;
+	y = ((float)level + 0.5f) * units_per_block;
+	z = ((float)(world_ptr->rows - row - 1) + 0.5f) * units_per_block;
 }
 
 // Method to set a translation to a map position.
@@ -703,9 +703,9 @@ vertex::set_map_position(int column, int row, int level)
 void
 vertex::set_map_translation(int column, int row, int level)
 {
-	x = (float)column * UNITS_PER_BLOCK;
-	y = (float)level * UNITS_PER_BLOCK;
-	z = (float)(world_ptr->rows - row - 1) * UNITS_PER_BLOCK;
+	x = (float)column * units_per_block;
+	y = (float)level * units_per_block;
+	z = (float)(world_ptr->rows - row - 1) * units_per_block;
 }
 
 // Method to return the scaled map position the vertex is in.  Note that we
@@ -715,9 +715,9 @@ vertex::set_map_translation(int column, int row, int level)
 void
 vertex::get_map_position(int *column_ptr, int *row_ptr, int *level_ptr)
 {
-	*column_ptr = INT(x / UNITS_PER_BLOCK);
-	*row_ptr = world_ptr->rows - INT(z / UNITS_PER_BLOCK) - 1;
-	*level_ptr = INT(y / UNITS_PER_BLOCK);
+	*column_ptr = INT(x / units_per_block);
+	*row_ptr = world_ptr->rows - INT(z / units_per_block) - 1;
+	*level_ptr = INT(y / units_per_block);
 }
 
 // Method to return the map level the vertex is in.
@@ -725,7 +725,7 @@ vertex::get_map_position(int *column_ptr, int *row_ptr, int *level_ptr)
 int
 vertex::get_map_level(void)
 {
-	return(INT(y / UNITS_PER_BLOCK));
+	return(INT(y / units_per_block));
 }
 
 // Operator to add a vertex.
@@ -1778,8 +1778,7 @@ video_texture::~video_texture()
 light::light()
 {
 	style = STATIC_POINT_LIGHT;
-	position.set(UNITS_PER_HALF_BLOCK, UNITS_PER_HALF_BLOCK, 
-		UNITS_PER_HALF_BLOCK);
+	position.set(units_per_half_block, units_per_half_block, units_per_half_block);
 	dir.set(0.0f, 0.0f, 1.0f);
 	colour.set_RGB(255,255,255);
 	intensity_range.min_percentage = 1.0f;
@@ -1964,9 +1963,9 @@ sound::sound()
 	ambient = false;
 	wave_ptr = NULL;
 	sound_buffer_ptr = NULL;
-	position.x = UNITS_PER_HALF_BLOCK;
-	position.y = UNITS_PER_HALF_BLOCK;
-	position.z = UNITS_PER_HALF_BLOCK;
+	position.x = units_per_half_block;
+	position.y = units_per_half_block;
+	position.z = units_per_half_block;
 	volume = 1.0f;
 	radius = 0.0f;
 	playback_mode = LOOPED_PLAY;
@@ -2013,7 +2012,7 @@ entrance::~entrance()
 trigger::trigger()
 {
 	trigger_flag = CLICK_ON;
-	position.set(UNITS_PER_HALF_BLOCK, UNITS_PER_HALF_BLOCK, UNITS_PER_HALF_BLOCK);
+	position.set(units_per_half_block, units_per_half_block, units_per_half_block);
 	square_ptr = NULL;
 	block_ptr = NULL;
 	action_list = NULL;
@@ -2283,12 +2282,12 @@ popup::popup()
 	trigger_flags = PROXIMITY;
 	visible_flags = 0;
 	always_visible = false;
-	position.x = UNITS_PER_HALF_BLOCK;
-	position.y = UNITS_PER_HALF_BLOCK;
-	position.z = UNITS_PER_HALF_BLOCK;
+	position.x = units_per_half_block;
+	position.y = units_per_half_block;
+	position.z = units_per_half_block;
 	window_alignment = CENTRE;
-	radius = UNITS_PER_BLOCK;
-	radius_squared = UNITS_PER_BLOCK * UNITS_PER_BLOCK;
+	radius = units_per_block;
+	radius_squared = units_per_block * units_per_block;
 	brightness = 1.0f;
 	brightness_index = 0;
 	colour.set_RGB(0, 0, 0);
@@ -2475,35 +2474,35 @@ polygon_def::project_texture(vertex *vertex_list, int projection)
 		switch (projection) {
 		case UP:
 			u = vertex_ptr->x;
-			v = UNITS_PER_BLOCK - vertex_ptr->z;
+			v = units_per_block - vertex_ptr->z;
 			break;
 		case DOWN:
 			u = vertex_ptr->x;
 			v = vertex_ptr->z;
 			break;
 		case NORTH:
-			u = UNITS_PER_BLOCK - vertex_ptr->x;
-			v = UNITS_PER_BLOCK - vertex_ptr->y;
+			u = units_per_block - vertex_ptr->x;
+			v = units_per_block - vertex_ptr->y;
 			break;
 		case SOUTH:
 			u = vertex_ptr->x;
-			v = UNITS_PER_BLOCK - vertex_ptr->y;
+			v = units_per_block - vertex_ptr->y;
 			break;
 		case EAST:
 			u = vertex_ptr->z;
-			v = UNITS_PER_BLOCK - vertex_ptr->y;
+			v = units_per_block - vertex_ptr->y;
 			break;
 		case WEST:
-			u = UNITS_PER_BLOCK - vertex_ptr->z;
-			v = UNITS_PER_BLOCK - vertex_ptr->y;
+			u = units_per_block - vertex_ptr->z;
+			v = units_per_block - vertex_ptr->y;
 		}
 
 		// Save the texture coordinates in the vertex definition
 		// structure, converted to normalised coordinates between 0 and 1.
 
 		vertex_def_ptr = &vertex_def_list[index];
-		vertex_def_ptr->u = u / UNITS_PER_BLOCK;
-		vertex_def_ptr->v = v / UNITS_PER_BLOCK;
+		vertex_def_ptr->u = u / units_per_block;
+		vertex_def_ptr->v = v / units_per_block;
 	}
 }
 
@@ -2628,7 +2627,7 @@ polygon::compute_normal_vector(vertex *vertex_list)
 	switch (direction) {
 	case NORTH:
 		for (vertex_no = 0; vertex_no < vertices; vertex_no++)
-			if (FNE((VERTEX_PTR(vertex_no))->z, UNITS_PER_BLOCK)) {
+			if (FNE((VERTEX_PTR(vertex_no))->z, units_per_block)) {
 				side = false;
 				break;
 			}
@@ -2642,7 +2641,7 @@ polygon::compute_normal_vector(vertex *vertex_list)
 		break;
 	case EAST:
 		for (vertex_no = 0; vertex_no < vertices; vertex_no++)
-			if (FNE((VERTEX_PTR(vertex_no))->x, UNITS_PER_BLOCK)) {
+			if (FNE((VERTEX_PTR(vertex_no))->x, units_per_block)) {
 				side = false;
 				break;
 			}
@@ -2656,7 +2655,7 @@ polygon::compute_normal_vector(vertex *vertex_list)
 		break;
 	case UP:
 		for (vertex_no = 0; vertex_no < vertices; vertex_no++)
-			if (FNE((VERTEX_PTR(vertex_no))->y, UNITS_PER_BLOCK)) {
+			if (FNE((VERTEX_PTR(vertex_no))->y, units_per_block)) {
 				side = false;
 				break;
 			}
@@ -2745,7 +2744,7 @@ block_def::block_def()
 	root_polygon_ref = 0;
 	BSP_tree = NULL;
 	block_orientation.set(0.0f, 0.0f, 0.0f);
-	block_origin.set(UNITS_PER_HALF_BLOCK, UNITS_PER_HALF_BLOCK, UNITS_PER_HALF_BLOCK);
+	block_origin.set(units_per_half_block, units_per_half_block, units_per_half_block);
 	sprite_angle = 0.0;
 	degrees_per_ms = 0.0;
 	sprite_alignment = BOTTOM;
@@ -4229,7 +4228,7 @@ world::world()
 	ground_level_exists = false;
 	square_map = NULL;
 	level_entity_list = NULL;
-	audio_scale = 2.0f / UNITS_PER_BLOCK;
+	audio_scale = 2.0f / units_per_block;
 }
 
 // Default destructor deletes the square map and level entity list, if they exist.

@@ -1352,7 +1352,7 @@ render_polygon(polygon *polygon_ptr, float turn_angle)
 	texture *texture_ptr;
 	pixmap *pixmap_ptr;
 	float sy, end_sy;
-	vertex centre(UNITS_PER_HALF_BLOCK, UNITS_PER_HALF_BLOCK, UNITS_PER_HALF_BLOCK);
+	vertex centre(units_per_half_block, units_per_half_block, units_per_half_block);
 
 	// If the polygon is trivially invisible (inactive, zero faces or facing
 	// away from the camera), then don't render it.
@@ -1828,12 +1828,12 @@ render_wireframe_square(square *square_ptr)
 	// Calculate this square's bounding box.
 
 	world_ptr->get_square_location(square_ptr, &column, &row, &level);
-	min_x = column * UNITS_PER_BLOCK;
-	min_y = level * UNITS_PER_BLOCK;
-	min_z = (world_ptr->rows - row - 1) * UNITS_PER_BLOCK;
-	max_x = min_x + UNITS_PER_BLOCK;
-	max_y = min_y + UNITS_PER_BLOCK;
-	max_z = min_z + UNITS_PER_BLOCK;
+	min_x = column * units_per_block;
+	min_y = level * units_per_block;
+	min_z = (world_ptr->rows - row - 1) * units_per_block;
+	max_x = min_x + units_per_block;
+	max_y = min_y + units_per_block;
+	max_z = min_z + units_per_block;
 
 	// Create the corner vertices of the bounding box, and transform them.
 
@@ -1922,8 +1922,7 @@ render_block(square *square_ptr, block *block_ptr, bool movable)
 {
 	block_def *block_def_ptr;
 	vertex temp_vertex;
-	vertex centre(UNITS_PER_HALF_BLOCK, UNITS_PER_HALF_BLOCK, 
-		UNITS_PER_HALF_BLOCK);
+	vertex centre(units_per_half_block, units_per_half_block, units_per_half_block);
 
 	// If the block is outside the frustum, ignore it.
 
@@ -1951,9 +1950,9 @@ render_block(square *square_ptr, block *block_ptr, bool movable)
 
 	// Determine the centre of the block.
 
-	block_centre.x = block_translation.x + UNITS_PER_HALF_BLOCK;
-	block_centre.y = block_translation.y + UNITS_PER_HALF_BLOCK;
-	block_centre.z = block_translation.z + UNITS_PER_HALF_BLOCK;
+	block_centre.x = block_translation.x + units_per_half_block;
+	block_centre.y = block_translation.y + units_per_half_block;
+	block_centre.z = block_translation.z + units_per_half_block;
 
 	// Locate the active lights closest to the centre of the block. It would be
 	// more accurate to do this for every polygon, but that increases 
@@ -2185,24 +2184,22 @@ render_blocks_on_map(int min_column, int min_row, int min_level,
 static void
 render_player_block(void)
 {
-	vertex centre(UNITS_PER_HALF_BLOCK, UNITS_PER_HALF_BLOCK,
-		UNITS_PER_HALF_BLOCK);
+	vertex centre(units_per_half_block, units_per_half_block, units_per_half_block);
 
 	// Determine the translation and centre of the block.  We need to compensate
 	// for the fact that the player block needs to be centered on the player
 	// position in the X and Z direction, and placed at ground level in the Y
 	// direction.
 
-	block_translation.x = player_viewpoint.position.x - UNITS_PER_HALF_BLOCK;
+	block_translation.x = player_viewpoint.position.x - units_per_half_block;
 	block_translation.y = player_viewpoint.position.y - player_dimensions.y;
-	block_translation.z = player_viewpoint.position.z - UNITS_PER_HALF_BLOCK;
+	block_translation.z = player_viewpoint.position.z - units_per_half_block;
 	block_centre = block_translation + centre;
 
 	// Set the active lights for the player block.
 
 	if (player_block_ptr->set_active_lights) {
-		set_active_lights(player_block_ptr->active_light_list, 
-			&player_viewpoint.position);
+		set_active_lights(player_block_ptr->active_light_list, &player_viewpoint.position);
 		player_block_ptr->set_active_lights = false;
 	}
 	
@@ -3504,7 +3501,7 @@ render_builder_icons(void)
 
 	// Set the player viewpoint.
 
-	player_viewpoint.position.set(-UNITS_PER_HALF_BLOCK, UNITS_PER_BLOCK, -UNITS_PER_HALF_BLOCK);
+	player_viewpoint.position.set(-units_per_half_block, units_per_block, -units_per_half_block);
 	player_viewpoint.look_angle = 22.5f;
 	player_viewpoint.turn_angle = 45.0f;
 
@@ -3532,7 +3529,7 @@ render_builder_icons(void)
 
 	// Determine the centre of the block.
 
-	block_centre.set(UNITS_PER_HALF_BLOCK, UNITS_PER_HALF_BLOCK, UNITS_PER_HALF_BLOCK);
+	block_centre.set(units_per_half_block, units_per_half_block, units_per_half_block);
 
 	// Render the builder icons for each blockset, including the custom one.
 

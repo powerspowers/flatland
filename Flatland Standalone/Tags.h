@@ -901,11 +901,14 @@ static attr_def sound_attr_list[SOUND_ATTRIBUTES] = {
 
 // SPOT tag (spot file only).
 
-#define SPOT_ATTRIBUTES	1
+#define SPOT_ATTRIBUTES	2
 #define SPOT_VERSION	0
+#define SPOT_SCALE		1
 static int spot_version;
+static float spot_scale;
 static attr_def spot_attr_list[SPOT_ATTRIBUTES] = {
-	{TOKEN_VERSION, VALUE_VERSION, &spot_version, false}
+	{TOKEN_VERSION, VALUE_VERSION, &spot_version, false},
+	{TOKEN_SCALE, VALUE_FLOAT, &spot_scale, false}
 };
 
 // SPOT_LIGHT tag (block and spot files).

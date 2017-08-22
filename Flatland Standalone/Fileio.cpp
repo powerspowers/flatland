@@ -2418,9 +2418,9 @@ parse_action_ripple_tag(block_def *block_def_ptr)
 	// Set the force values.
 
 	if (parsed_attribute[RIPPLE_FORCE]){
-		action_ptr->force = ripple_force / TEXELS_PER_UNIT;
+		action_ptr->force = ripple_force / texels_per_unit;
 	} else {
-		action_ptr->force = 15.0 / TEXELS_PER_UNIT;
+		action_ptr->force = 15.0f / texels_per_unit;
 	}
 
 	// Set the droprate value.
@@ -2428,7 +2428,7 @@ parse_action_ripple_tag(block_def *block_def_ptr)
 	if (parsed_attribute[RIPPLE_DROPRATE]){
 		action_ptr->droprate = ripple_droprate;
 	} else {
-		action_ptr->droprate = (float)0.25;
+		action_ptr->droprate = 0.25f;
 	}
 
 	// Set the damp value.
@@ -2436,7 +2436,7 @@ parse_action_ripple_tag(block_def *block_def_ptr)
 	if (parsed_attribute[RIPPLE_DAMP]){
 		action_ptr->damp = ripple_damp;
 	} else {
-		action_ptr->damp = (float)0.85;
+		action_ptr->damp = 0.85f;
 	}
 
 	// Make two arrays to handle the timestep of forces for rippling.
@@ -3181,7 +3181,7 @@ parse_action_tag(block_def *block_def_ptr, bool need_location_param)
 	if (parsed_attribute[ACTION_RADIUS]) {
 		trigger_ptr->radius = action_radius;
 	} else {
-		trigger_ptr->radius = UNITS_PER_BLOCK;
+		trigger_ptr->radius = units_per_block;
 	}
 	trigger_ptr->radius_squared = trigger_ptr->radius * trigger_ptr->radius;
 
@@ -3730,7 +3730,7 @@ parse_script_tag(block_def *block_def_ptr, bool need_location_param)
 	if (parsed_attribute[ACTION_RADIUS])
 		trigger_ptr->radius_squared = action_radius * action_radius;
 	else
-		trigger_ptr->radius_squared = UNITS_PER_BLOCK * UNITS_PER_BLOCK;
+		trigger_ptr->radius_squared = units_per_block * units_per_block;
 
 	// If the delay parameter was given, set the delay range of the trigger.
 
@@ -4528,7 +4528,8 @@ parse_spot_file(char *spot_URL, char *spot_file_path)
 	// Make the current blockset list the old blockset list, and create a new
 	// blockset list.
 
-	old_blockset_list_ptr = blockset_list_ptr;
+	// XXX -- For now, don't cache blocksets, to support different spot scales.
+	old_blockset_list_ptr = NULL; //blockset_list_ptr;
 	NEW(blockset_list_ptr, blockset_list);
 	if (blockset_list_ptr == NULL)
 		memory_error("block set list");
@@ -4584,6 +4585,17 @@ parse_spot_file(char *spot_URL, char *spot_file_path)
 		spot_XML_compliance = true;
 	else
 		spot_XML_compliance = false;
+
+	// Set the scale of the spot.
+
+	units_per_block = UNITS_PER_BLOCK;
+	units_per_half_block = UNITS_PER_HALF_BLOCK;
+	texels_per_unit = TEXELS_PER_UNIT;
+	if (parsed_attribute[SPOT_SCALE]) {
+		units_per_block *= spot_scale;
+		units_per_half_block *= spot_scale;
+		texels_per_unit /= spot_scale;
+	}
 
 	// Parse the contents of the spot tag.
 

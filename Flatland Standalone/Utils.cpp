@@ -901,8 +901,8 @@ init_sprite_polygon(block *block_ptr, polygon *polygon_ptr, part *part_ptr)
 	// If the block definition defines a size, use it.
 
 	if (size_ptr->width > 0 && size_ptr->height > 0) {
-		size_x = (float)size_ptr->width / TEXELS_PER_UNIT;
-		size_y = (float)size_ptr->height / TEXELS_PER_UNIT;
+		size_x = (float)size_ptr->width / texels_per_unit;
+		size_y = (float)size_ptr->height / texels_per_unit;
 	}
 
 	// If the sprite has a texture, use the size of the texture as the size of
@@ -911,11 +911,11 @@ init_sprite_polygon(block *block_ptr, polygon *polygon_ptr, part *part_ptr)
 	else {
 		texture_ptr = part_ptr->texture_ptr;
 		if (texture_ptr != NULL) {
-			size_x = (float)texture_ptr->width / TEXELS_PER_UNIT;
-			size_y = (float)texture_ptr->height / TEXELS_PER_UNIT;
+			size_x = (float)texture_ptr->width / texels_per_unit;
+			size_y = (float)texture_ptr->height / texels_per_unit;
 		} else {
-			size_x = UNITS_PER_BLOCK;
-			size_y = UNITS_PER_BLOCK;
+			size_x = units_per_block;
+			size_y = units_per_block;
 		}
 	}
 
@@ -928,10 +928,10 @@ init_sprite_polygon(block *block_ptr, polygon *polygon_ptr, part *part_ptr)
 
 	switch (block_def_ptr->sprite_alignment) {
 	case TOP:
-		y_offset = UNITS_PER_BLOCK - half_size_y;
+		y_offset = units_per_block - half_size_y;
 		break;
 	case CENTRE:
-		y_offset = UNITS_PER_HALF_BLOCK;
+		y_offset = units_per_half_block;
 		break;
 	case BOTTOM:
 		y_offset = half_size_y;
@@ -948,30 +948,30 @@ init_sprite_polygon(block *block_ptr, polygon *polygon_ptr, part *part_ptr)
 
 	vertex_ptr = &vertex_list[0];
 	vertex_def_ptr = &vertex_def_list[0];
-	vertex_ptr->x = UNITS_PER_HALF_BLOCK + half_size_x;
+	vertex_ptr->x = units_per_half_block + half_size_x;
 	vertex_ptr->y = y_offset + half_size_y;
-	vertex_ptr->z = UNITS_PER_HALF_BLOCK;
+	vertex_ptr->z = units_per_half_block;
 	vertex_def_ptr->u = 0.0f;
 	vertex_def_ptr->v = 0.0f;
 	vertex_ptr = &vertex_list[1];
 	vertex_def_ptr = &vertex_def_list[1];
-	vertex_ptr->x = UNITS_PER_HALF_BLOCK - half_size_x;
+	vertex_ptr->x = units_per_half_block - half_size_x;
 	vertex_ptr->y = y_offset + half_size_y;
-	vertex_ptr->z = UNITS_PER_HALF_BLOCK;
+	vertex_ptr->z = units_per_half_block;
 	vertex_def_ptr->u = 1.0f;
 	vertex_def_ptr->v = 0.0f;
 	vertex_ptr = &vertex_list[2];
 	vertex_def_ptr = &vertex_def_list[2];
-	vertex_ptr->x = UNITS_PER_HALF_BLOCK - half_size_x;
+	vertex_ptr->x = units_per_half_block - half_size_x;
 	vertex_ptr->y = y_offset - half_size_y;
-	vertex_ptr->z = UNITS_PER_HALF_BLOCK;
+	vertex_ptr->z = units_per_half_block;
 	vertex_def_ptr->u = 1.0f;
 	vertex_def_ptr->v = 1.0f;
 	vertex_ptr = &vertex_list[3];
 	vertex_def_ptr = &vertex_def_list[3];
-	vertex_ptr->x = UNITS_PER_HALF_BLOCK + half_size_x;
+	vertex_ptr->x = units_per_half_block + half_size_x;
 	vertex_ptr->y = y_offset - half_size_y;
-	vertex_ptr->z = UNITS_PER_HALF_BLOCK;
+	vertex_ptr->z = units_per_half_block;
 	vertex_def_ptr->u = 0.0f;
 	vertex_def_ptr->v = 1.0f;
 
@@ -1147,17 +1147,17 @@ create_new_block(block_def *block_def_ptr, square *square_ptr,
 
 	// Check if the block has a POSITION param change and adjust the block to match
 	if (block_def_ptr->position.relative_x)
-		block_ptr->translation.x += ((float)block_def_ptr->position.x / TEXELS_PER_UNIT);
+		block_ptr->translation.x += ((float)block_def_ptr->position.x / texels_per_unit);
 	else
-		block_ptr->translation.x = ((float)block_def_ptr->position.x / TEXELS_PER_UNIT);
+		block_ptr->translation.x = ((float)block_def_ptr->position.x / texels_per_unit);
 	if (block_def_ptr->position.relative_y)
-		block_ptr->translation.y += ((float)block_def_ptr->position.y / TEXELS_PER_UNIT);
+		block_ptr->translation.y += ((float)block_def_ptr->position.y / texels_per_unit);
 	else
-		block_ptr->translation.y = ((float)block_def_ptr->position.y / TEXELS_PER_UNIT);
+		block_ptr->translation.y = ((float)block_def_ptr->position.y / texels_per_unit);
 	if (block_def_ptr->position.relative_z)
-		block_ptr->translation.z += ((float)block_def_ptr->position.z / TEXELS_PER_UNIT);
+		block_ptr->translation.z += ((float)block_def_ptr->position.z / texels_per_unit);
 	else
-		block_ptr->translation.z = ((float)block_def_ptr->position.z / TEXELS_PER_UNIT);
+		block_ptr->translation.z = ((float)block_def_ptr->position.z / texels_per_unit);
 
 	// Return a pointer to the new block.
 
@@ -2169,10 +2169,10 @@ create_ground_block_def(void)
 	// bounding cube.
 
 	vertex_list = ground_block_def_ptr->vertex_list;
-	vertex_list[0].set(0.0, UNITS_PER_BLOCK, UNITS_PER_BLOCK);
-	vertex_list[1].set(UNITS_PER_BLOCK, UNITS_PER_BLOCK, UNITS_PER_BLOCK);
-	vertex_list[2].set(UNITS_PER_BLOCK, UNITS_PER_BLOCK, 0.0);
-	vertex_list[3].set(0.0, UNITS_PER_BLOCK, 0.0);
+	vertex_list[0].set(0.0, units_per_block, units_per_block);
+	vertex_list[1].set(units_per_block, units_per_block, units_per_block);
+	vertex_list[2].set(units_per_block, units_per_block, 0.0);
+	vertex_list[3].set(0.0, units_per_block, 0.0);
 
 	// Create the polygon list with one polygon.
 
