@@ -849,10 +849,8 @@ create_BSP_node(int polygon_ref, block_def *block_def_ptr)
 	if (BSP_node_ptr == NULL)
 		memory_error("BSP node");
 	BSP_node_ptr->polygon_no = polygon_ref - 1;
-	BSP_node_ptr->front_node_ptr = 
-		create_BSP_node(polygon_def_ptr->front_polygon_ref, block_def_ptr);
-	BSP_node_ptr->rear_node_ptr = 
-		create_BSP_node(polygon_def_ptr->rear_polygon_ref, block_def_ptr);
+	BSP_node_ptr->front_node_ptr = create_BSP_node(polygon_def_ptr->front_polygon_ref, block_def_ptr);
+	BSP_node_ptr->rear_node_ptr = create_BSP_node(polygon_def_ptr->rear_polygon_ref, block_def_ptr);
 
 	// Return this BSP node.
 
