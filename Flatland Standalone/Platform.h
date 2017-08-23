@@ -6,7 +6,7 @@
 
 // Version string.
 
-#define ROVER_VERSION_NUMBER	0x03060013
+#define ROVER_VERSION_NUMBER	0x03060014
 
 // Option window control IDs.
 
@@ -268,13 +268,10 @@ open_URL_in_default_app(const char *URL);
 bool
 download_URL_to_file(const char *URL, char *file_path_buffer, bool no_cache);
 
-// Open file and URL dialogs.
+// Open file dialog.
 
 bool
 open_file_dialog(char *file_path_buffer, int buffer_size);
-
-bool
-open_URL_dialog(string *URL_ptr);
 
 // Light window functions.
 
@@ -456,7 +453,7 @@ RGB_to_texture_pixel(RGBcolour colour);
 byte
 get_standard_palette_index(RGBcolour colour_ptr);
 
-// Task bar functions (called by the player thread only).
+// App window functions (called by the player thread only).
 
 const char *
 get_title(void);
@@ -466,6 +463,9 @@ set_title(char *format, ...);
 
 void
 set_status_text(int status_box_index, char *format, ...);
+
+void
+set_spot_URL(string spot_URL);
 
 // URL functions (called by the player thread only).
 

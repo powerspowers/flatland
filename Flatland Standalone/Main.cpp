@@ -905,6 +905,11 @@ start_up_spot(void)
 	split_URL(full_spot_URL, &spot_URL_dir, &spot_file_name, &curr_spot_entrance);
 	curr_spot_URL = create_URL(spot_URL_dir, spot_file_name);
 
+	// Show the full spot URL in the edit box, or the current spot URL if
+	// the spot entrance is "default".
+
+	set_spot_URL(!_stricmp(curr_spot_entrance, "default") ? curr_spot_URL : full_spot_URL);
+
 	// Parse the spot, then remove the spot file if we are being hosted by the
 	// Rover ActiveX control (since it is only a temporary file).  This is done
 	// in a try block because any errors will be  thrown.
@@ -2958,7 +2963,7 @@ render_next_frame(void)
 		int reported_frames_rendered = frames_rendered - prev_reported_frames_rendered;
 		int fps = (int)(reported_frames_rendered / reported_elapsed_time);
 		set_status_text(3, "%d fps", fps);
-		set_status_text(4, "%d polyons/frame", (int)(polygons_rendered / fps));
+		set_status_text(4, "%d polygons/frame", (int)(polygons_rendered / fps));
 		prev_reported_frames_rendered = frames_rendered;
 		polygons_rendered = 0;
 		reported_elapsed_time = 0.0f;

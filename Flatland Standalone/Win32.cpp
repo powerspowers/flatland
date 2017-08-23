@@ -592,8 +592,13 @@ static unsigned long streaming_thread_handle;
 
 // App window data.
 
+#define SPOT_URL_LABEL_WIDTH	100
+#define SPOT_URL_BAR_HEIGHT		20
+
 static HINSTANCE app_instance_handle;
 static HWND app_window_handle;
+static HWND spot_URL_label_handle;
+static HWND spot_URL_edit_box_handle;
 static HWND status_bar_handle;
 static void (*quit_callback_ptr)();
 
@@ -2083,7 +2088,8 @@ exception_filter(EXCEPTION_POINTERS *exception_ptr)
 // About box dialog procedure.
 //------------------------------------------------------------------------------
 
-INT_PTR CALLBACK about_box_dialog_proc(HWND hDlg, UINT message, WPARAM wParam, LPARAM lParam)
+static INT_PTR CALLBACK 
+about_box_dialog_proc(HWND hDlg, UINT message, WPARAM wParam, LPARAM lParam)
 {
 	UNREFERENCED_PARAMETER(lParam);
 	switch (message)
@@ -2143,17 +2149,15 @@ get_save_file_name(char *title, char *filter, char *initial_dir_path)
 //------------------------------------------------------------------------------
 
 static void
-resize_status_bar()
+resize_status_bar(RECT &app_window_rect)
 {
-	RECT window_rect;
 	INT right_edges[5];
 
-	GetClientRect(app_window_handle, &window_rect);
-	right_edges[0] = window_rect.right - 400;
-	right_edges[1] = window_rect.right - 310;
-	right_edges[2] = window_rect.right - 190;
-	right_edges[3] = window_rect.right - 130;
-	right_edges[4] = window_rect.right;
+	right_edges[0] = app_window_rect.right - 400;
+	right_edges[1] = app_window_rect.right - 310;
+	right_edges[2] = app_window_rect.right - 190;
+	right_edges[3] = app_window_rect.right - 130;
+	right_edges[4] = app_window_rect.right;
 	SendMessage(status_bar_handle, SB_SETPARTS, 5, (LPARAM)right_edges);
 }
 
@@ -2175,13 +2179,6 @@ LRESULT CALLBACK app_window_proc(HWND hWnd, UINT message, WPARAM wParam, LPARAM 
 				break;
 			case ID_HELP_VIEWHELP:
 				open_help_window();
-				break;
-			case ID_FILE_OPENSPOTURL:
-				{
-					if (open_URL_dialog(&spot_URL_to_load)) {
-						spot_load_requested.send_event(true);
-					}
-				}
 				break;
 			case ID_FILE_OPENSPOTFILE:
 				{	
@@ -2226,8 +2223,11 @@ LRESULT CALLBACK app_window_proc(HWND hWnd, UINT message, WPARAM wParam, LPARAM 
 		break;
 	case WM_SIZE:
 		{
+			RECT app_window_rect;
+			GetClientRect(app_window_handle, &app_window_rect);
 			SendMessage(status_bar_handle, WM_SIZE, wParam, lParam);
-			resize_status_bar();
+			resize_status_bar(app_window_rect);
+			MoveWindow(spot_URL_edit_box_handle, SPOT_URL_LABEL_WIDTH, 0, app_window_rect.right - SPOT_URL_LABEL_WIDTH, SPOT_URL_BAR_HEIGHT, TRUE);
 			if (wParam == SIZE_MAXIMIZED || wParam == SIZE_RESTORED) {
 				resize_main_window();
 			}
@@ -2257,6 +2257,32 @@ LRESULT CALLBACK app_window_proc(HWND hWnd, UINT message, WPARAM wParam, LPARAM 
 }
 
 //------------------------------------------------------------------------------
+// Spot URL edit box window procedure.
+//------------------------------------------------------------------------------
+
+static WNDPROC old_spot_URL_edit_box_window_proc;
+
+static LRESULT CALLBACK 
+spot_URL_edit_box_window_proc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
+{
+	switch (msg)
+	{
+	case WM_KEYDOWN:
+		if (wParam == VK_RETURN) {
+			char buffer[_MAX_PATH + 1];
+			int size = Edit_GetLine(hwnd, 0, buffer, _MAX_PATH);
+			buffer[size] = '\0';
+			spot_URL_to_load = buffer;
+			spot_load_requested.send_event(true);
+			break;
+		}
+	default:
+		return CallWindowProc(old_spot_URL_edit_box_window_proc, hwnd, msg, wParam, lParam);
+	}
+	return 0;
+}
+
+//------------------------------------------------------------------------------
 // Start up the platform API.
 //------------------------------------------------------------------------------
 
@@ -2269,6 +2295,8 @@ start_up_platform_API(void *instance_handle, int show_command, void (*quit_callb
 	char buffer[_MAX_PATH];
 	char *app_name;
 	WNDCLASS window_class;
+	RECT app_window_rect;
+	NONCLIENTMETRICS ncm;
 	int index;
 	FILE *fp;
 
@@ -2314,6 +2342,32 @@ start_up_platform_API(void *instance_handle, int show_command, void (*quit_callb
 		return FALSE;
 	}
 
+	// Create the spot URL label and edit box.
+
+	spot_URL_label_handle = CreateWindow("STATIC", "Spot URL or path: ", WS_CHILD | WS_VISIBLE | SS_RIGHT | SS_CENTERIMAGE, 
+		0, 0, SPOT_URL_LABEL_WIDTH, SPOT_URL_BAR_HEIGHT, app_window_handle, NULL, app_instance_handle, NULL);
+	if (!spot_URL_label_handle) {
+		return FALSE;
+	}
+	GetClientRect(app_window_handle, &app_window_rect);
+	spot_URL_edit_box_handle = CreateWindow("EDIT", NULL, WS_CHILD | WS_VISIBLE | WS_BORDER | ES_LEFT | ES_AUTOHSCROLL, 
+		SPOT_URL_LABEL_WIDTH, 0, app_window_rect.right - SPOT_URL_LABEL_WIDTH, SPOT_URL_BAR_HEIGHT, app_window_handle, NULL, app_instance_handle, NULL);
+	if (!spot_URL_edit_box_handle) {
+		return FALSE;
+	}
+
+	// Use the same font for the spot URL label and edit box as used by dialog boxes.
+
+	ncm.cbSize = sizeof(ncm);
+	SystemParametersInfo(SPI_GETNONCLIENTMETRICS, ncm.cbSize, &ncm, 0);
+	HFONT dialog_font_handle = CreateFontIndirect(&(ncm.lfMessageFont));
+	SendMessage(spot_URL_label_handle, WM_SETFONT, (WPARAM)dialog_font_handle, MAKELPARAM(FALSE, 0));
+	SendMessage(spot_URL_edit_box_handle, WM_SETFONT, (WPARAM)dialog_font_handle, MAKELPARAM(FALSE, 0));
+
+	// Subclass the spot URL edit box so that I can capture the enter key and trigger a spot load.
+
+	old_spot_URL_edit_box_window_proc = (WNDPROC)SetWindowLongPtr(spot_URL_edit_box_handle, GWLP_WNDPROC, (LONG_PTR)spot_URL_edit_box_window_proc);
+
 	// Add a status bar at the bottom of the main application window, with two parts: a large left
 	// part that holds a title, and a small right part that holds a mode.
 
@@ -2322,7 +2376,7 @@ start_up_platform_API(void *instance_handle, int show_command, void (*quit_callb
 	if (!status_bar_handle) {
 		return FALSE;
 	}
-	resize_status_bar();
+	resize_status_bar(app_window_rect);
 
 	// Find the path to the executable, and strip out the file name.
 
@@ -3189,14 +3243,15 @@ calculate_main_window_rect(RECT *rect_ptr)
 	RECT app_window_rect;
 	RECT status_bar_rect;
 
-	// Determine the size of the parent window and status bar, and use them to
-	// calculate the desired size of the main window.
+	// The main window needs to be the same width as the app window, but it
+	// needs to left room above for the spot URL label and edit box, and
+	// below for the status bar.
 
 	GetClientRect(app_window_handle, &app_window_rect);
 	GetClientRect(status_bar_handle, &status_bar_rect);
 	rect_ptr->left = 0;
 	rect_ptr->right = app_window_rect.right;
-	rect_ptr->top = 0;
+	rect_ptr->top = SPOT_URL_BAR_HEIGHT;
 	rect_ptr->bottom = app_window_rect.bottom - status_bar_rect.bottom;
 }
 
@@ -3790,7 +3845,7 @@ download_URL_to_file(const char *URL, char *file_path_buffer, bool no_cache)
 }
 
 //==============================================================================
-// Open file and URL dialogs.
+// Open file dialog.
 //==============================================================================
 
 bool
@@ -3821,59 +3876,6 @@ open_file_dialog(char *file_path_buffer, int buffer_size)
 	// Show the open file dialog.
 
 	return GetOpenFileName(&ofn) == TRUE;
-}
-
-//------------------------------------------------------------------------------
-// Function to handle open URL events.
-//------------------------------------------------------------------------------
-
-static char spot_URL[256];
-
-static BOOL CALLBACK
-handle_open_URL_event(HWND window_handle, UINT message, WPARAM wParam,
-	LPARAM lParam)
-{
-	switch (message) {
-	case WM_COMMAND:
-		switch (HIWORD(wParam)) {
-		case BN_CLICKED:
-			switch (LOWORD(wParam)) {
-			case IDOK:
-				GetDlgItemText(window_handle, IDC_SPOTURL, spot_URL, 256);
-				EndDialog(window_handle, TRUE);
-				break;
-			case IDCANCEL:
-				EndDialog(window_handle, FALSE);
-				break;
-			}
-		}
-		return(TRUE);
-	default:
-		return(FALSE);
-	}
-}
-
-//------------------------------------------------------------------------------
-// Get a URL.
-//------------------------------------------------------------------------------
-
-bool
-open_URL_dialog(string *URL_ptr)
-{
-	// Bring up a dialog box that requests a spot URL.
-
-	if (DialogBox(app_instance_handle, MAKEINTRESOURCE(IDD_OPENSPOTURL),
-		app_window_handle, handle_open_URL_event)) {
-		char *trimmed_spot_URL = spot_URL;
-		while (*trimmed_spot_URL != 0 && *trimmed_spot_URL == ' ') {
-			trimmed_spot_URL++;
-		}
-		if (*trimmed_spot_URL != '\0') {
-			*URL_ptr = trimmed_spot_URL;
-			return(true);
-		}
-	}
-	return(false);
 }
 
 //==============================================================================
@@ -8155,6 +8157,16 @@ set_status_text(int status_box_index, char *format, ...)
 	// Draw the title on the status bar.
 
 	SendMessage(status_bar_handle, SB_SETTEXT, status_box_index, (LPARAM)(char *)status_text);
+}
+
+//------------------------------------------------------------------------------
+// Set the spot URL in the edit box.
+//------------------------------------------------------------------------------
+
+void
+set_spot_URL(string spot_URL)
+{
+	SendMessage(spot_URL_edit_box_handle, WM_SETTEXT, 0, (LPARAM)(char *)spot_URL);
 }
 
 //------------------------------------------------------------------------------
