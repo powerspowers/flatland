@@ -17,6 +17,7 @@
 #include "Parser.h"
 #include "Platform.h"
 #include "Plugin.h"
+#include "Render.h"
 #include "Spans.h"
 #include "Utils.h"
 
@@ -129,6 +130,14 @@ static float curr_orb_width, curr_orb_height;
 
 static bool rendering_block_as_bitmap;
 
+// Values saved during rendering of blocks as bitmaps.
+
+static float saved_units_per_block;
+static float saved_units_per_half_block;
+static float saved_texels_per_unit;
+static viewpoint saved_player_viewpoint;
+static vertex saved_camera_position;
+
 //------------------------------------------------------------------------------
 // Initialise the renderer.
 //------------------------------------------------------------------------------
@@ -139,6 +148,7 @@ init_renderer(void)
 	block_tvertex_list = NULL;
 	vertex_colour_list = NULL;
 	temp_spoint_list = NULL;
+	rendering_block_as_bitmap = false;
 }
 
 //------------------------------------------------------------------------------
@@ -3472,35 +3482,41 @@ render_block_as_bitmap(block *block_ptr)
 // doesn't yet have one.
 //------------------------------------------------------------------------------
 
-static void
+void
 render_builder_icons_for_blockset(blockset *blockset_ptr)
 {
 	block_def *block_def_ptr = blockset_ptr->block_def_list;
 	while (block_def_ptr) {
-		block *block_ptr = block_def_ptr->create_simplified_block();
 		if (block_def_ptr->icon_bitmap_ptr == NULL) {
+			block *block_ptr = block_def_ptr->create_simplified_block();
 			block_def_ptr->icon_bitmap_ptr = render_block_as_bitmap(block_ptr);
+			delete block_ptr;
 		}
-		delete block_ptr;
 		block_def_ptr = block_def_ptr->next_block_def_ptr;
 	}
+	blockset_ptr->created_builder_icons = true;
 }
 
 //------------------------------------------------------------------------------
-// Render the builder icons for every block definition in every blockset.
+// Activate the builder render target for rendering builder icons.
 //------------------------------------------------------------------------------
 
 void
-render_builder_icons(void)
+activate_builder_render_target()
 {
 	// Reset the spot scale temporarily.
 
-	float saved_units_per_block = units_per_block;
-	float saved_units_per_half_block = units_per_half_block;
-	float saved_texels_per_unit = texels_per_unit;
+	saved_units_per_block = units_per_block;
+	saved_units_per_half_block = units_per_half_block;
+	saved_texels_per_unit = texels_per_unit;
 	units_per_block = UNITS_PER_BLOCK;
 	units_per_half_block = UNITS_PER_HALF_BLOCK;
 	texels_per_unit = TEXELS_PER_UNIT;
+
+	// Save the current player viewpoint and camera position.
+
+	saved_player_viewpoint = player_viewpoint;
+	saved_camera_position = camera_position;
 
 	// Set the "rendering block as bitmap" flag, which disables certain
 	// functionality during the rendering we don't need, select the builder
@@ -3531,26 +3547,15 @@ render_builder_icons(void)
 	camera_position.rotate_x(player_viewpoint.look_angle);
 	camera_position.rotate_y(player_viewpoint.turn_angle);
 	camera_position += player_viewpoint.position;
+}
 
-	// Don't bother translating the block, which means the relative camera position
-	// is the same as the absolute camera position.
+//------------------------------------------------------------------------------
+// Deactivate the builder render target.
+//------------------------------------------------------------------------------
 
-	block_translation.set(0.0f, 0.0f, 0.0f);
-	relative_camera_position = camera_position;
-
-	// Determine the centre of the block.
-
-	block_centre.set(units_per_half_block, units_per_half_block, units_per_half_block);
-
-	// Render the builder icons for each blockset, including the custom one.
-
-	render_builder_icons_for_blockset(custom_blockset_ptr);
-	blockset *blockset_ptr = blockset_list_ptr->first_blockset_ptr;
-	while (blockset_ptr) {
-		render_builder_icons_for_blockset(blockset_ptr);
-		blockset_ptr = blockset_ptr->next_blockset_ptr;
-	}
-
+void
+deactivate_builder_render_target()
+{
 	// Recreate the image caches, select the main render target, clear the "rendering block as bitmap" flag,
 	// and set the viewport back to the size of the main window.
 
@@ -3559,6 +3564,11 @@ render_builder_icons(void)
 	select_main_render_target();
 	rendering_block_as_bitmap = false;
 	set_viewport(window_width, window_height);
+
+	// Restore the player viewpoint and camera position.
+
+	player_viewpoint = saved_player_viewpoint;
+	camera_position = saved_camera_position;
 
 	// Restore the spot scale.
 

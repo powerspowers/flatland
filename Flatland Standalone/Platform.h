@@ -136,6 +136,11 @@ extern bool main_window_ready;
 
 extern bool sound_on;
 
+// Selected cached blockset and loaded blockset (for builder window).
+
+extern cached_blockset *selected_cached_blockset_ptr;
+extern blockset *loaded_blockset_ptr;
+
 //------------------------------------------------------------------------------
 // Externally visible classes and functions.
 //------------------------------------------------------------------------------

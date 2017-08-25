@@ -2963,7 +2963,9 @@ render_next_frame(void)
 		int reported_frames_rendered = frames_rendered - prev_reported_frames_rendered;
 		int fps = (int)(reported_frames_rendered / reported_elapsed_time);
 		set_status_text(3, "%d fps", fps);
-		set_status_text(4, "%d polygons/frame", (int)(polygons_rendered / fps));
+		if (fps > 0) {
+			set_status_text(4, "%d polygons/frame", (int)(polygons_rendered / fps));
+		}
 		prev_reported_frames_rendered = frames_rendered;
 		polygons_rendered = 0;
 		reported_elapsed_time = 0.0f;
@@ -3835,6 +3837,33 @@ handle_spot_events(void)
 
 	if (window_resize_requested.event_sent() && !handle_window_resize())
 		return(false);
+
+	// If a cached blockset load is requested, handle it.  If no cached blockset has been
+	// selected, a request to render the builder icons for the custom blockset is being
+	// made.
+
+	if (cached_blockset_load_requested.event_sent()) {
+		try {
+			if (selected_cached_blockset_ptr) {
+				loaded_blockset_ptr = blockset_list_ptr->find_blockset(selected_cached_blockset_ptr->href);
+				if (loaded_blockset_ptr == NULL) {
+					loaded_blockset_ptr = parse_blockset(selected_cached_blockset_ptr->href, false);
+					blockset_list_ptr->add_blockset(loaded_blockset_ptr);
+					clean_up_renderer();
+					set_up_renderer();
+				}
+			} else {
+				loaded_blockset_ptr = custom_blockset_ptr;
+			}
+			activate_builder_render_target();
+			render_builder_icons_for_blockset(loaded_blockset_ptr);
+			deactivate_builder_render_target();
+			cached_blockset_load_completed.send_event(true);
+		}
+		catch (char *) {
+			cached_blockset_load_completed.send_event(false);
+		}
+	}
 
 	// Indicate the event loop should continue.
 	

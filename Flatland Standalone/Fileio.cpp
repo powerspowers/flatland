@@ -12,6 +12,7 @@
 #include <direct.h>
 #include <io.h>
 #include "Classes.h"
+#include "Fileio.h"
 #include "Image.h"
 #include "Light.h"
 #include "Main.h"
@@ -2039,8 +2040,8 @@ parse_base_tag(void)
 // Parse the blockset, creating a blockset object and returning a pointer to it.
 //------------------------------------------------------------------------------
 
-static blockset *
-parse_blockset(char *blockset_URL)
+blockset *
+parse_blockset(char *blockset_URL, bool show_title)
 {
 	char *file_name_ptr, *ext_ptr;
 	string blockset_name, style_file_name;
@@ -2057,13 +2058,14 @@ parse_blockset(char *blockset_URL)
 
 	// Set the title to reflect we're trying to load a blockset.
 
-	set_title("Loading %s blockset", blockset_name);
+	if (show_title) {
+		set_title("Loading %s blockset", blockset_name);
+	}
 
 	// Open the blockset.
 
 	if (!open_blockset(blockset_URL, blockset_name))
-		error("Unable to open the %s blockset with URL %s", 
-			blockset_name, blockset_URL);
+		error("Unable to open the %s blockset with URL %s", blockset_name, blockset_URL);
 
 	// Add a ".style" extension to the blockset name, and open the file in
 	// the blockset that has this name.
@@ -2071,8 +2073,7 @@ parse_blockset(char *blockset_URL)
 	style_file_name = blockset_name;
 	style_file_name += ".style";
 	if (!push_zip_file(style_file_name, true))
-		error("Unable to open %s from the %s blockset", style_file_name,
-			blockset_name);
+		error("Unable to open %s from the %s blockset", style_file_name, blockset_name);
 
 	// Create the blockset object, and initialise it's URL and name.
 
@@ -2089,8 +2090,7 @@ parse_blockset(char *blockset_URL)
 		parse_start_of_document(TOKEN_STYLE, style_attr_list, STYLE_ATTRIBUTES);
 		parse_rest_of_document(true);
 		start_parsing_nested_tags();
-		while (parse_next_nested_tag(TOKEN_STYLE, style_tag_list, false,
-			&tag_token)) 
+		while (parse_next_nested_tag(TOKEN_STYLE, style_tag_list, false, &tag_token)) 
 			switch (tag_token) {
 			case TOKEN_BLOCK:
 				parse_block_tag(blockset_ptr);
@@ -2153,11 +2153,9 @@ parse_blockset_tag(void)
 	if (blockset_list_ptr->find_blockset(blockset_href))
 		return;
 
-	// If the blockset exists in the old blockset list, move it to the new
-	// blockset list.
+	// If the blockset exists in the old blockset list, move it to the new blockset list.
 
-	if (old_blockset_list_ptr && (blockset_ptr = 
-		old_blockset_list_ptr->remove_blockset(blockset_href)) != NULL) {
+	if (old_blockset_list_ptr && (blockset_ptr = old_blockset_list_ptr->remove_blockset(blockset_href)) != NULL) {
 		blockset_list_ptr->add_blockset(blockset_ptr);
 		return;
 	}
@@ -4651,12 +4649,11 @@ parse_spot_file(char *spot_URL, char *spot_file_path)
 
 	set_up_renderer();
 
-	// Render the builder icons for all block definitions.
+	// Select the main render target.
 
-	render_builder_icons();
+	select_main_render_target();
 	
-	// Initialise various data structures of the spot based on what was just
-	// parsed.
+	// Initialise various data structures of the spot based on what was just parsed.
 
 	init_spot();
 }
@@ -5149,6 +5146,7 @@ new_cached_blockset(const char *path, const char *href, int size, time_t updated
 		cached_blockset_ptr->version = style_version;
 	else
 		cached_blockset_ptr->version = 0;
+	cached_blockset_ptr->init_display_name();
 	return(cached_blockset_ptr);
 }
 
@@ -5199,6 +5197,7 @@ load_cached_blockset_list(void)
 				cached_blockset_ptr->version = cached_blockset_version;
 			else
 				cached_blockset_ptr->version = 0;
+			cached_blockset_ptr->init_display_name();
 		}
 		stop_parsing_nested_tags();
 

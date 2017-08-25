@@ -4,7 +4,10 @@
 // All rights reserved.
 //******************************************************************************
 
-// Spot parsing function.
+// Spot parsing functions.
+
+blockset *
+parse_blockset(char *blockset_URL, bool show_title = true);
 
 void
 parse_spot_file(char *spot_URL, char *spot_file_path);

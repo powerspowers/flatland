@@ -28,4 +28,10 @@ void
 render_frame(void);
 
 void
-render_builder_icons(void);
+render_builder_icons_for_blockset(blockset *blockset_ptr);
+
+void
+activate_builder_render_target();
+
+void
+deactivate_builder_render_target();

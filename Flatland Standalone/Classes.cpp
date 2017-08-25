@@ -3466,6 +3466,7 @@ blockset::blockset()
 	last_texture_ptr = NULL;
 	first_wave_ptr = NULL;
 	last_wave_ptr = NULL;
+	created_builder_icons = false;
 	next_blockset_ptr = NULL;
 }
 
@@ -3687,6 +3688,26 @@ blockset::add_wave(wave *wave_ptr)
 }
 
 //------------------------------------------------------------------------------
+// Cached blockset class.
+//------------------------------------------------------------------------------
+
+// Initialize the display name as either the name of the blockset, or the
+// file name portion of the href, excluding the ".bset" extension.
+
+void
+cached_blockset::init_display_name()
+{
+	display_name = name;
+	if (strlen(display_name) == 0) {
+		display_name = strrchr(href, '/') + 1;
+	}
+	char *ext = strrchr(display_name, '.');
+	if (ext && !_stricmp(ext, ".bset")) {
+		display_name.truncate(ext - (char *)display_name);
+	}
+}
+
+//------------------------------------------------------------------------------
 // Blockset list class.
 //------------------------------------------------------------------------------
 
@@ -3721,19 +3742,19 @@ blockset_list::add_blockset(blockset *blockset_ptr)
 	last_blockset_ptr = blockset_ptr;
 }
 
-// Method to search for the blockset with the given URL, and return a boolean 
-// result indicating whether it was found.
+// Method to search for the blockset with the given URL, and return a
+// pointer to it if found.
 
-bool
+blockset *
 blockset_list::find_blockset(char *URL)
 {
 	blockset *blockset_ptr = first_blockset_ptr;
 	while (blockset_ptr != NULL) {
 		if (!_stricmp(blockset_ptr->URL, URL))
-			return(true);
+			return blockset_ptr;
 		blockset_ptr = blockset_ptr->next_blockset_ptr;
 	}
-	return(false);
+	return NULL;
 }
 
 // Method to search for the blockset with the given name, and return a 

@@ -57,6 +57,10 @@ extern string requested_blockset_name;
 extern semaphore<string> downloaded_URL;
 extern semaphore<string> downloaded_file_path;
 
+// Flag indicating if error log should be displayed.
+
+extern bool show_error_log;
+
 // Events sent by player thread.
 
 extern event player_thread_initialised;
@@ -64,14 +68,7 @@ extern event player_window_initialised;
 extern event URL_download_requested;
 extern event URL_cancel_requested;
 extern event player_window_shut_down;
-
-// Display error event.
-
 extern event display_error;
-extern bool show_error_log;
-
-// Events sent by plugin thread.
-
 extern event main_window_created;
 extern event main_window_resized;
 extern event URL_was_opened;
@@ -87,6 +84,8 @@ extern event pause_player_thread;
 extern event resume_player_thread;
 extern event spot_load_requested;
 extern event save_3DML_source_requested;
+extern event cached_blockset_load_requested;
+extern event cached_blockset_load_completed;
 #ifdef _DEBUG
 extern event polygon_info_requested;
 #endif

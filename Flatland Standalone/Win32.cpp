@@ -166,6 +166,11 @@ bool main_window_ready;
 
 bool sound_on;
 
+// // Selected cached blockset and loaded blockset (for builder window).
+
+cached_blockset *selected_cached_blockset_ptr;
+blockset *loaded_blockset_ptr;
+
 //==============================================================================
 // Local definitions.
 //==============================================================================
@@ -4504,9 +4509,7 @@ handle_blockset_manager_event(HWND window_handle, UINT message, WPARAM wParam,
 				// Reset the update time of the selected blocksets.
 
 				item_index = -1;
-				while ((item_index = 
-					ListView_GetNextItem(blockset_list_view_handle,
-					item_index, LVNI_SELECTED)) >= 0) {
+				while ((item_index = ListView_GetNextItem(blockset_list_view_handle, item_index, LVNI_SELECTED)) >= 0) {
 
 					// Get a pointer to the cached blockset.
 
@@ -4514,15 +4517,13 @@ handle_blockset_manager_event(HWND window_handle, UINT message, WPARAM wParam,
 					list_view_item.iItem = item_index;
 					list_view_item.iSubItem = 0;
 					ListView_GetItem(blockset_list_view_handle, &list_view_item);
-					cached_blockset_ptr = 
-						(cached_blockset *)list_view_item.lParam;
+					cached_blockset_ptr = (cached_blockset *)list_view_item.lParam;
 
 					// Reset it's update time to zero.
 
 					cached_blockset_ptr->updated = 0;
 					save_cached_blockset_list();
-					ListView_SetItemText(blockset_list_view_handle, item_index,
-						4, "Next use");
+					ListView_SetItemText(blockset_list_view_handle, item_index, 4, "Next use");
 				}
 				break;
 			case IDB_DELETE:
@@ -4530,9 +4531,7 @@ handle_blockset_manager_event(HWND window_handle, UINT message, WPARAM wParam,
 				// Delete each of the selected blocksets.
 
 				item_index = -1;
-				while ((item_index = 
-					ListView_GetNextItem(blockset_list_view_handle,
-					item_index, LVNI_SELECTED)) >= 0) {
+				while ((item_index = ListView_GetNextItem(blockset_list_view_handle, item_index, LVNI_SELECTED)) >= 0) {
 
 					// Get a pointer to the cached blockset.
 
@@ -4540,13 +4539,11 @@ handle_blockset_manager_event(HWND window_handle, UINT message, WPARAM wParam,
 					list_view_item.iItem = item_index;
 					list_view_item.iSubItem = 0;
 					ListView_GetItem(blockset_list_view_handle, &list_view_item);
-					cached_blockset_ptr = 
-						(cached_blockset *)list_view_item.lParam;
+					cached_blockset_ptr = (cached_blockset *)list_view_item.lParam;
 
 					// Create the path to the blockset in the cache.
 
-					cached_blockset_URL = create_URL(flatland_dir, 
-						(char *)cached_blockset_ptr->href + 7);
+					cached_blockset_URL = create_URL(flatland_dir, (char *)cached_blockset_ptr->href + 7);
 					cached_blockset_path = URL_to_file_path(cached_blockset_URL);
 
 					// Delete the cached blockset, updating the cache file.
@@ -4563,14 +4560,11 @@ handle_blockset_manager_event(HWND window_handle, UINT message, WPARAM wParam,
 			}
 			break;
 		case EN_CHANGE:
-			set_min_update_period(SECONDS_PER_DAY *
-				SendMessage(update_period_spin_control_handle, UDM_GETPOS, 
-					0, 0));
+			set_min_update_period(SECONDS_PER_DAY * SendMessage(update_period_spin_control_handle, UDM_GETPOS, 0, 0));
 		}
 		return(TRUE);
 	case WM_VSCROLL:
-		set_min_update_period(SECONDS_PER_DAY *
-			SendMessage(update_period_spin_control_handle, UDM_GETPOS, 0, 0));
+		set_min_update_period(SECONDS_PER_DAY * SendMessage(update_period_spin_control_handle, UDM_GETPOS, 0, 0));
 		return(TRUE);
 	HANDLE_MSG(window_handle, WM_NOTIFY, handle_blockset_list_view_event);
 	default:
@@ -4600,8 +4594,7 @@ open_blockset_manager_window(void)
 
 	// Initialise the blockset list view columns.
 
-	blockset_list_view_handle = GetDlgItem(blockset_manager_window_handle, 
-		IDC_BLOCKSETS);
+	blockset_list_view_handle = GetDlgItem(blockset_manager_window_handle, IDC_BLOCKSETS);
 	add_blockset_list_view_column("Blockset URL", 0, 325);
 	add_blockset_list_view_column("Name", 1, 75);
 	add_blockset_list_view_column("Version", 2, 50);
@@ -4615,15 +4608,12 @@ open_blockset_manager_window(void)
 
 	// Get the handles to the update and delete buttons.
 
-	blockset_update_button_handle = 
-		GetDlgItem(blockset_manager_window_handle, IDB_UPDATE);
-	blockset_delete_button_handle =
-		GetDlgItem(blockset_manager_window_handle, IDB_DELETE);
+	blockset_update_button_handle = GetDlgItem(blockset_manager_window_handle, IDB_UPDATE);
+	blockset_delete_button_handle = GetDlgItem(blockset_manager_window_handle, IDB_DELETE);
 
 	// Initialise the "days between updates" edit box and spin control.
 
-	update_period_spin_control_handle = 
-		GetDlgItem(blockset_manager_window_handle, IDC_SPIN_UPDATE_PERIOD);
+	update_period_spin_control_handle = GetDlgItem(blockset_manager_window_handle, IDC_SPIN_UPDATE_PERIOD);
 	init_spin_control(update_period_spin_control_handle,
 		GetDlgItem(blockset_manager_window_handle, IDC_EDIT_UPDATE_PERIOD),
 		3, 1, 100, min_blockset_update_period / SECONDS_PER_DAY);
@@ -4650,8 +4640,9 @@ close_blockset_manager_window(void)
 // Builder window functions.
 //==============================================================================
 
-#define MAX_COLUMNS 10
-#define MAX_ROWS	3
+#define MAX_COLUMNS				10
+#define MAX_ROWS				3
+#define CUSTOM_BLOCKSET_NAME	"--- custom ---"
 
 static HWND scrollbar_handle;
 static HWND block_icons_handle;
@@ -4661,8 +4652,6 @@ static HWND selected_block_symbol_handle;
 static HWND blocksets_combobox_handle;
 static BLENDFUNCTION opaque_blend = {AC_SRC_OVER, 0, 255, 0};
 static BLENDFUNCTION transparent_blend = {AC_SRC_OVER, 0, 127, 0};
-static string selected_blockset_name;
-
 static block_def *first_block_def_ptr;
 static HFONT block_symbol_font_handle;
 static HBRUSH grey_brush_handle;
@@ -4677,14 +4666,22 @@ static HBRUSH grey_brush_handle;
 static void
 update_builder_dialog()
 {
-	blockset *blockset_ptr;
+	blockset *blockset_ptr = NULL;
 
-	// Get a pointer to the currently selected blockset, which may be the custom blockset.
+	// If the selected cached blockset has not been loaded, or has not had its builder
+	// icons created, then request the load and/or builder icon creation and wait for it
+	// to complete.
 
-	if (!strcmp(selected_blockset_name, "--- custom ---")) {
-		blockset_ptr = custom_blockset_ptr;
+	if (selected_cached_blockset_ptr) {
+		blockset_ptr = blockset_list_ptr->find_blockset(selected_cached_blockset_ptr->href);
 	} else {
-		blockset_ptr = blockset_list_ptr->find_blockset_by_name(selected_blockset_name);
+		blockset_ptr = custom_blockset_ptr;
+	}
+	if (blockset_ptr == NULL || !blockset_ptr->created_builder_icons) {
+		cached_blockset_load_requested.send_event(true);
+		if (cached_blockset_load_completed.wait_for_event()) {
+			blockset_ptr = loaded_blockset_ptr;
+		}
 	}
 
 	// Count the number of block definitions in the selected blockset, and select the first block
@@ -4874,8 +4871,6 @@ handle_builder_event(HWND window_handle, UINT message, WPARAM wParam, LPARAM lPa
 	switch (message) {
 	case WM_INITDIALOG:
 		{
-			char name[256];
-
 			// Remember the handles to the various controls.
 
 			scrollbar_handle = GetDlgItem(window_handle, IDC_BLOCK_ICONS_SCROLLBAR);
@@ -4884,14 +4879,16 @@ handle_builder_event(HWND window_handle, UINT message, WPARAM wParam, LPARAM lPa
 			selected_block_name_handle = GetDlgItem(window_handle, IDC_SELECTED_BLOCK_NAME);
 			selected_block_symbol_handle = GetDlgItem(window_handle, IDC_SELECTED_BLOCK_SYMBOL);
 			blocksets_combobox_handle = GetDlgItem(window_handle, IDC_BLOCKSETS_COMBOBOX);
+			
+			// Increase the width of the dropdown list of the blocksets combo box.
+
+			SendMessage(blocksets_combobox_handle, CB_SETDROPPEDWIDTH, 200, 0);
 
 			// Set up the font used by the block icons and selected block icon static control.
 
 			HDC dc_handle = GetDC(block_icons_handle);
-			block_symbol_font_handle = CreateFont(-POINTS_TO_PIXELS(20), 0, 0, 0, FW_BOLD,
-				FALSE, FALSE, FALSE, DEFAULT_CHARSET, OUT_TT_PRECIS,
-				CLIP_DEFAULT_PRECIS, PROOF_QUALITY, DEFAULT_PITCH | FF_DONTCARE,
-				"MS Sans Serif");
+			block_symbol_font_handle = CreateFont(-POINTS_TO_PIXELS(20), 0, 0, 0, FW_BOLD, FALSE, FALSE, FALSE, DEFAULT_CHARSET, OUT_TT_PRECIS,
+				CLIP_DEFAULT_PRECIS, PROOF_QUALITY, DEFAULT_PITCH | FF_DONTCARE, "MS Sans Serif");
 			SendMessage(block_icons_handle, WM_SETFONT, (WPARAM)block_symbol_font_handle, 0);
 			SendMessage(selected_block_icon_handle, WM_SETFONT, (WPARAM)block_symbol_font_handle, 0);
 			ReleaseDC(block_icons_handle, dc_handle);
@@ -4900,27 +4897,44 @@ handle_builder_event(HWND window_handle, UINT message, WPARAM wParam, LPARAM lPa
 
 			grey_brush_handle = CreateSolidBrush(RGB(127, 127, 127));
 
-			// Initialize the combo box with the names of all blocksets.  Also add '--- custom ---' to
-			// represent the custom blockset, which not only stands out, but ensures it appears as the
-			// first entry.
+			// Initialize the combo box with pointers to all cached blocksets, whether they are loaded or not.
+			// We use NULL to represent the custom blockset.
 			
-			SendMessage(blocksets_combobox_handle, CB_ADDSTRING, 0, (LPARAM)"--- custom ---");
-			blockset *blockset_ptr = blockset_list_ptr->first_blockset_ptr;
-			while (blockset_ptr) {
-				SendMessage(blocksets_combobox_handle, CB_ADDSTRING, 0, (LPARAM)(char *)blockset_ptr->name);
-				blockset_ptr = blockset_ptr->next_blockset_ptr;
+			SendMessage(blocksets_combobox_handle, CB_ADDSTRING, 0, NULL);
+			cached_blockset *cached_blockset_ptr = cached_blockset_list;
+			while (cached_blockset_ptr) {
+				SendMessage(blocksets_combobox_handle, CB_ADDSTRING, 0, (LPARAM)cached_blockset_ptr);
+				cached_blockset_ptr = cached_blockset_ptr->next_cached_blockset_ptr;
 			}
 
-			// Select the first entry, and remember its name.
+			// Select the first entry (the custom blockset), and remember its name.
 
 			SendMessage(blocksets_combobox_handle, CB_SETMINVISIBLE, 10, 0);
 			SendMessage(blocksets_combobox_handle, CB_SETCURSEL, 0, 0);
-			SendMessage(blocksets_combobox_handle, WM_GETTEXT, 256, (LPARAM)name);
-			selected_blockset_name = name;
+			selected_cached_blockset_ptr = NULL;
 
 			// Update the dialog box.
 
 			update_builder_dialog();
+		}
+		return(TRUE);
+
+	case WM_MEASUREITEM:
+		if (wParam == IDC_BLOCKSETS_COMBOBOX) {
+			LPMEASUREITEMSTRUCT measure_item_ptr = (LPMEASUREITEMSTRUCT)lParam;
+			measure_item_ptr->itemWidth = 400;
+			measure_item_ptr->itemHeight = 20;
+		}
+		return(TRUE);
+
+	case WM_COMPAREITEM:
+		if (wParam == IDC_BLOCKSETS_COMBOBOX) {
+			LPCOMPAREITEMSTRUCT compare_item_ptr = (LPCOMPAREITEMSTRUCT)lParam;
+			cached_blockset *cached_blockset1_ptr = (cached_blockset *)compare_item_ptr->itemData1;
+			cached_blockset *cached_blockset2_ptr = (cached_blockset *)compare_item_ptr->itemData2;
+			string cached_blockset1_name = cached_blockset1_ptr ? cached_blockset1_ptr->display_name : CUSTOM_BLOCKSET_NAME;
+			string cached_blockset2_name = cached_blockset2_ptr ? cached_blockset2_ptr->display_name : CUSTOM_BLOCKSET_NAME;
+			return _stricmp(cached_blockset1_name, cached_blockset2_name);
 		}
 		return(TRUE);
 
@@ -4929,12 +4943,54 @@ handle_builder_event(HWND window_handle, UINT message, WPARAM wParam, LPARAM lPa
 	case WM_DRAWITEM:
 		{
 			DRAWITEMSTRUCT *draw_item_ptr = (DRAWITEMSTRUCT *)lParam;
-			switch (draw_item_ptr->CtlID) {
+			switch (wParam) {
 			case IDC_BLOCK_ICONS:
-				draw_block_icons(draw_item_ptr);
+				switch (draw_item_ptr->CtlID) {
+				case IDC_BLOCK_ICONS:
+					draw_block_icons(draw_item_ptr);
+					break;
+				case IDC_SELECTED_BLOCK_ICON:
+					draw_selected_block_icon(draw_item_ptr);
+					break;
+				}
 				break;
-			case IDC_SELECTED_BLOCK_ICON:
-				draw_selected_block_icon(draw_item_ptr);
+
+			case IDC_BLOCKSETS_COMBOBOX:
+				{
+					// If the item ID is -1, there is no actual item to draw, but there will still be a focus rectangle.
+
+					if (draw_item_ptr->itemID != -1) {
+
+						// The colors depend on whether the item is selected.
+
+						COLORREF prev_foreground_colour = SetTextColor(draw_item_ptr->hDC, 
+							GetSysColor(draw_item_ptr->itemState & ODS_SELECTED ? COLOR_HIGHLIGHTTEXT : COLOR_WINDOWTEXT));
+						COLORREF prev_background_colour = SetBkColor(draw_item_ptr->hDC, 
+							GetSysColor(draw_item_ptr->itemState & ODS_SELECTED ? COLOR_HIGHLIGHT : COLOR_WINDOW));
+
+						// Calculate the vertical and horizontal position.
+
+						TEXTMETRIC tm;
+						GetTextMetrics(draw_item_ptr->hDC, &tm);
+						int y = (draw_item_ptr->rcItem.bottom + draw_item_ptr->rcItem.top - tm.tmHeight) / 2;
+
+						// Get and display the text for the list item.
+
+						cached_blockset *cached_blockset_ptr = (cached_blockset *)SendMessage(draw_item_ptr->hwndItem, CB_GETITEMDATA, draw_item_ptr->itemID, 0);
+						string display_name = cached_blockset_ptr ? cached_blockset_ptr->display_name : CUSTOM_BLOCKSET_NAME;
+						ExtTextOut(draw_item_ptr->hDC, 5, y,ETO_CLIPPED | ETO_OPAQUE, &draw_item_ptr->rcItem, (char *)display_name, strlen(display_name), NULL);
+
+						// Restore the previous colors.
+
+						SetTextColor(draw_item_ptr->hDC, prev_foreground_colour);
+						SetBkColor(draw_item_ptr->hDC, prev_background_colour);
+					}
+
+					// If the item has the focus, draw the focus rectangle.
+
+					if (draw_item_ptr->itemState & ODS_FOCUS)
+						DrawFocusRect(draw_item_ptr->hDC, &draw_item_ptr->rcItem);
+				}
 				break;
 			}
 		}
@@ -4959,9 +5015,8 @@ handle_builder_event(HWND window_handle, UINT message, WPARAM wParam, LPARAM lPa
 			break;
 		case CBN_SELCHANGE:
 			{
-				char name[256];
-				SendMessage(blocksets_combobox_handle, WM_GETTEXT, 256, (LPARAM)name);
-				selected_blockset_name = name;
+				int selected_index = SendMessage(blocksets_combobox_handle, CB_GETCURSEL, 0, 0);
+				selected_cached_blockset_ptr = (cached_blockset *)SendMessage(blocksets_combobox_handle, CB_GETITEMDATA, selected_index, 0);
 				update_builder_dialog();
 				InvalidateRect(window_handle, NULL, TRUE);
 			}
@@ -5012,9 +5067,7 @@ open_builder_window()
 
 	// Create the builder window.
 
-	builder_window_handle = CreateDialog(app_instance_handle,
-		MAKEINTRESOURCE(IDD_BUILDER), app_window_handle,
-		handle_builder_event);
+	builder_window_handle = CreateDialog(app_instance_handle, MAKEINTRESOURCE(IDD_BUILDER), app_window_handle, handle_builder_event);
 
 	// Show the builder window.
 

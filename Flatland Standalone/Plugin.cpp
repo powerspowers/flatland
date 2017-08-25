@@ -56,21 +56,18 @@ string requested_blockset_name;			// Set if requesting a blockset.
 semaphore<string> downloaded_URL;
 semaphore<string> downloaded_file_path;
 
-// Events sent by player thread.
+// Flag indicating if error log should be displayed.
+
+bool show_error_log;
+
+// Events.
 
 event player_thread_initialised;
 event player_window_initialised;
 event URL_download_requested;
 event URL_cancel_requested;
 event player_window_shut_down;
-
-// Display error event.
-
 event display_error;
-bool show_error_log;
-
-// Events sent by plugin thread.
-
 event main_window_created;
 event main_window_resized;
 event URL_was_opened;
@@ -86,12 +83,13 @@ event pause_player_thread;
 event resume_player_thread;
 event spot_load_requested;
 event save_3DML_source_requested;
+event cached_blockset_load_requested;
+event cached_blockset_load_completed;
 #ifdef _DEBUG
 event polygon_info_requested;
 #endif
 
-// Global variables that require synchronised access, and the semaphores that
-// protect them.
+// Global variables that require synchronised access, and the semaphores that protect them.
 
 semaphore<int> user_debug_level;
 semaphore<bool> force_software_rendering;
@@ -1316,6 +1314,8 @@ run_app(void *instance_handle, int show_command, char *spot_file_path)
 	resume_player_thread.create_event();
 	spot_load_requested.create_event();
 	save_3DML_source_requested.create_event();
+	cached_blockset_load_requested.create_event();
+	cached_blockset_load_completed.create_event();
 #ifdef _DEBUG
 	polygon_info_requested.create_event();
 #endif
@@ -1525,6 +1525,8 @@ shut_down_app()
 	resume_player_thread.destroy_event();
 	spot_load_requested.destroy_event();
 	save_3DML_source_requested.destroy_event();
+	cached_blockset_load_requested.destroy_event();
+	cached_blockset_load_completed.destroy_event();
 #ifdef _DEBUG
 	polygon_info_requested.destroy_event();
 #endif

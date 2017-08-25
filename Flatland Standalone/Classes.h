@@ -1485,6 +1485,7 @@ struct blockset {
 	texture *last_texture_ptr;					// Last texture in list.
 	wave *first_wave_ptr;						// First wave in list.
 	wave *last_wave_ptr;						// Last wave in list.
+	bool created_builder_icons;					// TRUE if builder icons were created.
 	blockset *next_blockset_ptr;				// Next blockset in list.
 
 	blockset();
@@ -1504,6 +1505,7 @@ struct blockset {
 //------------------------------------------------------------------------------
 
 struct cached_blockset {
+	string display_name;
 	string href;
 	int size;
 	time_t updated;
@@ -1511,6 +1513,8 @@ struct cached_blockset {
 	string synopsis;
 	unsigned int version;
 	cached_blockset *next_cached_blockset_ptr;
+
+	void init_display_name();
 };
 
 //------------------------------------------------------------------------------
@@ -1524,7 +1528,7 @@ struct blockset_list {
 	blockset_list();
 	~blockset_list();
 	void add_blockset(blockset *blockset_ptr);
-	bool find_blockset(char *URL);
+	blockset *find_blockset(char *URL);
 	blockset *find_blockset_by_name(char *name);
 	blockset *remove_blockset(char *URL);
 };
