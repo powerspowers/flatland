@@ -3168,8 +3168,7 @@ render_next_frame(void)
 		if (left_mouse_was_clicked && (block_def_ptr = selected_block_def_ptr.get()) != NULL) {
 
 			// If the selected block definition is hidden by another block definition in the block symbol table, and there
-			// is no exact custom duplicate available, then create one with an unused symbol assigned to it.  A create tag
-			// for this exact custom duplicate also needs to be added to the spot entity list.
+			// is no exact custom duplicate available, then create one with an unused symbol assigned to it.
 
 			word symbol = world_ptr->map_style == SINGLE_MAP ? block_def_ptr->single_symbol : block_def_ptr->double_symbol;
 			if (block_symbol_table[symbol] != block_def_ptr) {

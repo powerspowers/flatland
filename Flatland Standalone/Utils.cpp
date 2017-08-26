@@ -1240,16 +1240,6 @@ create_exact_dup_block_def(block_def *block_def_ptr)
 
 	custom_block_def_ptr->exact_duplicate = true;
 	block_def_ptr->exact_dup_block_def_ptr = custom_block_def_ptr;
-
-	// Add a create tag for the custom block definition to the spot entity list.
-
-	entity *body_tag_entity_ptr = find_tag_entity("body", spot_entity_list);
-	string block = selected_blockset_ptr.get()->name;
-	block += ':';
-	block += block_def_ptr->name;
-	entity *create_tag_entity_ptr = create_tag_entity("create", body_tag_entity_ptr->line_no, 
-		"symbol", (char *)unused_symbol, "block", block, NULL);
-	prepend_tag_entity(create_tag_entity_ptr, body_tag_entity_ptr->nested_entity_list);
 	return custom_block_def_ptr;
 }
 

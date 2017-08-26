@@ -95,6 +95,9 @@ close_zip_archive(void);
 void
 destroy_entity_list(entity *entity_list);
 
+void
+destroy_entity(entity *entity_ptr);
+
 bool
 push_file(const char *file_path, const char *file_URL, bool text_file);
 

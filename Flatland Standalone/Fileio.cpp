@@ -4714,14 +4714,34 @@ save_spot_file(const char *spot_file_path)
 		prepend_tag_entity(base_tag_entity_ptr, head_tag_entity_ptr->nested_entity_list);
 	}
 
-	// Delete all blockset tags.
+	// Delete all blockset tags from the head tag.
 
 	entity *entity_ptr = head_tag_entity_ptr->nested_entity_list;
 	entity *prev_entity_ptr = NULL;
 	while (entity_ptr) {
 		entity *next_entity_ptr = entity_ptr->next_entity_ptr;
 		if (entity_ptr->type == TAG_ENTITY && !_stricmp(entity_ptr->text, "blockset")) {
-			DEL(entity_ptr, entity);
+			destroy_entity(entity_ptr);
+			if (prev_entity_ptr) {
+				prev_entity_ptr->next_entity_ptr = next_entity_ptr;
+			} else {
+				head_tag_entity_ptr->nested_entity_list = next_entity_ptr;
+			}
+		} else {
+			prev_entity_ptr = entity_ptr;
+		}
+		entity_ptr = next_entity_ptr;
+	}
+
+	// Delete all create tags from the body tag that have no nested tags (meaning they are exact duplicates of other block definitions).
+
+	entity *body_tag_entity_ptr = find_tag_entity("body", spot_entity_list);
+	entity_ptr = body_tag_entity_ptr->nested_entity_list;
+	prev_entity_ptr = NULL;
+	while (entity_ptr) {
+		entity *next_entity_ptr = entity_ptr->next_entity_ptr;
+		if (entity_ptr->type == TAG_ENTITY && !_stricmp(entity_ptr->text, "create") && entity_ptr->nested_entity_list == NULL) {
+			destroy_entity(entity_ptr);
 			if (prev_entity_ptr) {
 				prev_entity_ptr->next_entity_ptr = next_entity_ptr;
 			} else {
@@ -4818,9 +4838,9 @@ save_spot_file(const char *spot_file_path)
 
 	delete []map_level;
 
-	// Add blockset tags for every referenced blockset.  Make sure they appear after the base tag, if present.
+	// Add blockset tags in the head tag for every referenced blockset.  Make sure they appear after the base tag, if present.
 
-	prev_entity_ptr = base_tag_entity_ptr ? base_tag_entity_ptr : NULL;
+	prev_entity_ptr = base_tag_entity_ptr;
 	blockset_ptr = blockset_list_ptr->first_blockset_ptr;
 	while (blockset_ptr) {
 		if (blockset_ptr->referenced) {
@@ -4835,6 +4855,29 @@ save_spot_file(const char *spot_file_path)
 			prev_entity_ptr = blockset_tag_entity_ptr;
 		}
 		blockset_ptr = blockset_ptr->next_blockset_ptr;
+	}
+
+	// Add create tags for every referenced exact duplicate of a block definition.
+
+	prev_entity_ptr = NULL;
+	block_def_ptr = custom_blockset_ptr->block_def_list;
+	while (block_def_ptr) {
+		if (block_def_ptr->custom && block_def_ptr->exact_duplicate && block_def_ptr->referenced) {
+			string block = block_def_ptr->blockset_ptr->name;
+			block += ':';
+			block += block_def_ptr->name;
+			entity *create_tag_entity_ptr = create_tag_entity("create", body_tag_entity_ptr->line_no, "symbol", (char *)block_def_ptr->get_symbol(), 
+				"block", (char *)block, NULL);
+			if (prev_entity_ptr) {
+				create_tag_entity_ptr->next_entity_ptr = prev_entity_ptr->next_entity_ptr;
+				prev_entity_ptr->next_entity_ptr = create_tag_entity_ptr;
+			} else {
+				create_tag_entity_ptr->next_entity_ptr = body_tag_entity_ptr->nested_entity_list;
+				body_tag_entity_ptr->nested_entity_list = create_tag_entity_ptr;
+			}
+			prev_entity_ptr = create_tag_entity_ptr;
+		}
+		block_def_ptr = block_def_ptr->next_block_def_ptr;
 	}
 
 	// Save the document represented by the spot entity list.

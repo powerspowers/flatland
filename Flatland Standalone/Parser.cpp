@@ -1161,6 +1161,27 @@ destroy_entity_list(entity *entity_list)
 }
 
 //------------------------------------------------------------------------------
+// Destroy an entity.
+//------------------------------------------------------------------------------
+
+void
+destroy_entity(entity *entity_ptr)
+{
+	// Destroy the attribute list, if it exists.
+
+	destroy_attr_list(entity_ptr->attr_list);
+
+	// Destroy the nested entity list, if it exists.
+
+	if (entity_ptr->nested_entity_list != NULL)
+		destroy_entity_list(entity_ptr->nested_entity_list);
+
+	// Destroy the entity itself.
+
+	DEL(entity_ptr, entity);
+}
+
+//------------------------------------------------------------------------------
 // Push a new entry onto the file stack, returning a pointer to the file buffer.
 //------------------------------------------------------------------------------
 
