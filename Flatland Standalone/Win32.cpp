@@ -4945,14 +4945,11 @@ handle_builder_event(HWND window_handle, UINT message, WPARAM wParam, LPARAM lPa
 			DRAWITEMSTRUCT *draw_item_ptr = (DRAWITEMSTRUCT *)lParam;
 			switch (wParam) {
 			case IDC_BLOCK_ICONS:
-				switch (draw_item_ptr->CtlID) {
-				case IDC_BLOCK_ICONS:
-					draw_block_icons(draw_item_ptr);
-					break;
-				case IDC_SELECTED_BLOCK_ICON:
-					draw_selected_block_icon(draw_item_ptr);
-					break;
-				}
+				draw_block_icons(draw_item_ptr);
+				break;
+
+			case IDC_SELECTED_BLOCK_ICON:
+				draw_selected_block_icon(draw_item_ptr);
 				break;
 
 			case IDC_BLOCKSETS_COMBOBOX:

@@ -1759,6 +1759,7 @@ parse_block_tag(blockset *blockset_ptr)
 		DEL(new_block_def_ptr, block_def);
 		error("Block defined with a duplicate name");
 	}
+	new_block_def_ptr->blockset_ptr = blockset_ptr;
 	blockset_ptr->add_block_def(new_block_def_ptr);
 }
 
@@ -2056,7 +2057,7 @@ parse_blockset(char *blockset_URL, bool show_title)
 	ext_ptr = strrchr(blockset_name, '.');
 	blockset_name.truncate(ext_ptr - (char *)blockset_name);
 
-	// Set the title to reflect we're trying to load a blockset.
+	// Set the title to reflect we're trying to load a blockset, if requested.
 
 	if (show_title) {
 		set_title("Loading %s blockset", blockset_name);
@@ -3954,25 +3955,19 @@ parse_create_tag(void)
 	// the map style.
 
 	if (string_to_single_symbol(create_block, &single_symbol, true)) {
-		if (world_ptr->map_style == DOUBLE_MAP && 
-			min_rover_version >= 0x03000000) {
-			warning("Expected a double-character symbol rather than \"%s\"",
-				create_block);
+		if (world_ptr->map_style == DOUBLE_MAP && min_rover_version >= 0x03000000) {
+			warning("Expected a double-character symbol rather than \"%s\"", create_block);
 			return;
 		} else if ((block_def_ptr = get_block_def(single_symbol)) == NULL) {
-			warning("There is no block with single symbol \"%s\"", 
-				create_block);
+			warning("There is no block with single symbol \"%s\"", create_block);
 			return;
 		}
 	} else if (string_to_double_symbol(create_block, &double_symbol, true)) {
-		if (world_ptr->map_style == SINGLE_MAP && 
-			min_rover_version >= 0x03000000) {
-			warning("Expected a single-character symbol rather than \"%s\"",
-				create_block);
+		if (world_ptr->map_style == SINGLE_MAP && min_rover_version >= 0x03000000) {
+			warning("Expected a single-character symbol rather than \"%s\"", create_block);
 			return;
 		} else if ((block_def_ptr = get_block_def(double_symbol)) == NULL) {
-			warning("There is no block with double symbol \"%s\"", 
-				create_block);
+			warning("There is no block with double symbol \"%s\"", create_block);
 			return;
 		}
 	} else if ((block_def_ptr = get_block_def(create_block)) == NULL) {
@@ -3993,13 +3988,12 @@ parse_create_tag(void)
 	// currently assigned to it, removing it from the symbol table as well.
 
 	if (custom_blockset_ptr->delete_block_def(create_symbol)) {
-		warning("Created block with duplicate symbol; this block definition "
-			"will replace the previous block definition");
+		warning("Created block with duplicate symbol; this block definition will replace the previous block definition");
 		block_symbol_table[create_symbol] = NULL;
 	}
 
 	// Copy the source block definition to the target block definition, set
-	// it's symbol, and add it to the custom blockset and symbol table.
+	// its symbol, and add it to the custom blockset and symbol table.
 
 	custom_block_def_ptr->dup_block_def(block_def_ptr);
 	custom_block_def_ptr->source_block = create_block;
@@ -4038,8 +4032,11 @@ parse_create_tag(void)
 		parse_next_create_tag(tag_token, create_tag_list, custom_block_def_ptr, true);
 	}
 	stop_parsing_nested_tags();
-	if (!found_nested_tag && block_def_ptr->custom_dup_block_def_ptr == NULL) {
-		block_def_ptr->custom_dup_block_def_ptr = custom_block_def_ptr;
+	if (!found_nested_tag) {
+		custom_block_def_ptr->exact_duplicate = true;
+		if (block_def_ptr->exact_dup_block_def_ptr == NULL) {
+			block_def_ptr->exact_dup_block_def_ptr = custom_block_def_ptr;
+		}
 	}
 }
 
@@ -4285,6 +4282,32 @@ parse_next_body_tag(int tag_token, bool allow_import_tag)
 }
 
 //------------------------------------------------------------------------------
+// Add symbols for all of the block definitions of a blockset to the block
+// symbol table.  If a symbol has already been assigned, it will not be
+// reassigned.
+//------------------------------------------------------------------------------
+
+void
+add_block_symbols(blockset *blockset_ptr)
+{
+	word block_symbol;
+
+	block_def *block_def_ptr = blockset_ptr->block_def_list;
+	while (block_def_ptr != NULL) {
+		switch (world_ptr->map_style) {
+		case SINGLE_MAP:
+			block_symbol = block_def_ptr->single_symbol;
+			break;
+		case DOUBLE_MAP:
+			block_symbol = block_def_ptr->double_symbol;
+		}
+		if (block_symbol_table[block_symbol] == NULL)
+			block_symbol_table[block_symbol] = block_def_ptr;
+		block_def_ptr = block_def_ptr->next_block_def_ptr;
+	}
+}
+
+//------------------------------------------------------------------------------
 // Parse all body tags.
 //------------------------------------------------------------------------------
 
@@ -4292,8 +4315,6 @@ static void
 parse_body_tags(void)
 {
 	blockset *blockset_ptr;
-	block_def *block_def_ptr;
-	word block_symbol;
 	int tag_token;
 
 	// If the body has been seen before, or the head tag hasn't yet been seen,
@@ -4317,19 +4338,7 @@ parse_body_tags(void)
 
 	blockset_ptr = blockset_list_ptr->first_blockset_ptr;
 	while (blockset_ptr != NULL) {
-		block_def_ptr = blockset_ptr->block_def_list;
-		while (block_def_ptr != NULL) {
-			switch (world_ptr->map_style) {
-			case SINGLE_MAP:
-				block_symbol = block_def_ptr->single_symbol;
-				break;
-			case DOUBLE_MAP:
-				block_symbol = block_def_ptr->double_symbol;
-			}
-			if (block_symbol_table[block_symbol] == NULL)
-				block_symbol_table[block_symbol] = block_def_ptr;
-			block_def_ptr = block_def_ptr->next_block_def_ptr;
-		}
+		add_block_symbols(blockset_ptr);
 		blockset_ptr = blockset_ptr->next_blockset_ptr;
 	}
 
@@ -4671,14 +4680,57 @@ save_spot_file(const char *spot_file_path)
 		return;
 	}
 
+	// Clear the referenced tag in all blocksets other than the custom one.
+
+	blockset *blockset_ptr = blockset_list_ptr->first_blockset_ptr;
+	while (blockset_ptr) {
+		blockset_ptr->referenced = false;
+		blockset_ptr = blockset_ptr->next_blockset_ptr;
+	}
+	
+	// Clear the referenced tag in all custom block definitions that are exact
+	// duplicates, and mark the non-exact-duplicates and their blocksets as
+	// referenced.
+
+	block_def *block_def_ptr = custom_blockset_ptr->block_def_list;
+	while (block_def_ptr) {
+		if (block_def_ptr->exact_duplicate) {
+			block_def_ptr->referenced = false;
+		} else {
+			block_def_ptr->referenced = true;
+			block_def_ptr->blockset_ptr->referenced = true;
+		}
+		block_def_ptr = block_def_ptr->next_block_def_ptr;
+	}
+
 	// If there is no base tag and this spot was downloaded from a URL, create a
 	// base tag with the URL of this spot so that it will continue to work correctly
 	// when loaded from the saved file.
 
 	entity *head_tag_entity_ptr = find_tag_entity("head", spot_entity_list);
-	if (!find_tag_entity("base", head_tag_entity_ptr->nested_entity_list) && !_strnicmp(spot_URL_dir, "http://", 7)) {
-		entity *base_tag_entity_ptr = create_tag_entity("base", head_tag_entity_ptr->line_no, "href", (char *)spot_URL_dir, NULL);
+	entity *base_tag_entity_ptr = find_tag_entity("base", head_tag_entity_ptr->nested_entity_list);
+	if (base_tag_entity_ptr == NULL && !_strnicmp(spot_URL_dir, "http://", 7)) {
+		base_tag_entity_ptr = create_tag_entity("base", head_tag_entity_ptr->line_no, "href", (char *)spot_URL_dir, NULL);
 		prepend_tag_entity(base_tag_entity_ptr, head_tag_entity_ptr->nested_entity_list);
+	}
+
+	// Delete all blockset tags.
+
+	entity *entity_ptr = head_tag_entity_ptr->nested_entity_list;
+	entity *prev_entity_ptr = NULL;
+	while (entity_ptr) {
+		entity *next_entity_ptr = entity_ptr->next_entity_ptr;
+		if (entity_ptr->type == TAG_ENTITY && !_stricmp(entity_ptr->text, "blockset")) {
+			DEL(entity_ptr, entity);
+			if (prev_entity_ptr) {
+				prev_entity_ptr->next_entity_ptr = next_entity_ptr;
+			} else {
+				head_tag_entity_ptr->nested_entity_list = next_entity_ptr;
+			}
+		} else {
+			prev_entity_ptr = entity_ptr;
+		}
+		entity_ptr = next_entity_ptr;
 	}
 
 	// Create a buffer for each map level.
@@ -4734,6 +4786,17 @@ save_spot_file(const char *spot_file_path)
 						*map_level_ptr++ = (char)(square_ptr->curr_block_symbol & 127);
 					}
 				}
+
+				// Look up the block definition for this symbol, and if its a custom exact duplicate mark it as
+				// referenced.  Also mark the blockset of the block definition as referenced.
+
+				block_def_ptr = block_symbol_table[square_ptr->curr_block_symbol];
+				if (block_def_ptr) {
+					if (block_def_ptr->custom && block_def_ptr->exact_duplicate) {
+						block_def_ptr->referenced = true;
+					}
+					block_def_ptr->blockset_ptr->referenced = true;
+				}
 				square_ptr++;
 			}
 			*map_level_ptr++ = '\n';
@@ -4754,6 +4817,25 @@ save_spot_file(const char *spot_file_path)
 	// Delete the map level buffer.
 
 	delete []map_level;
+
+	// Add blockset tags for every referenced blockset.  Make sure they appear after the base tag, if present.
+
+	prev_entity_ptr = base_tag_entity_ptr ? base_tag_entity_ptr : NULL;
+	blockset_ptr = blockset_list_ptr->first_blockset_ptr;
+	while (blockset_ptr) {
+		if (blockset_ptr->referenced) {
+			entity *blockset_tag_entity_ptr = create_tag_entity("blockset", head_tag_entity_ptr->line_no, "href", (char *)blockset_ptr->URL, NULL);
+			if (prev_entity_ptr) {
+				blockset_tag_entity_ptr->next_entity_ptr = prev_entity_ptr->next_entity_ptr;
+				prev_entity_ptr->next_entity_ptr = blockset_tag_entity_ptr;
+			} else {
+				blockset_tag_entity_ptr->next_entity_ptr = head_tag_entity_ptr->nested_entity_list;
+				head_tag_entity_ptr->nested_entity_list = blockset_tag_entity_ptr;
+			}
+			prev_entity_ptr = blockset_tag_entity_ptr;
+		}
+		blockset_ptr = blockset_ptr->next_blockset_ptr;
+	}
 
 	// Save the document represented by the spot entity list.
 

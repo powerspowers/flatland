@@ -1382,11 +1382,15 @@ struct animation_def {
 // Block definition class.
 //------------------------------------------------------------------------------
 
-struct block;								// Forward declaration.
+struct block;
+struct blockset;			
 
 struct block_def {
+	blockset *blockset_ptr;					// Pointer to blockset (or source blockset for custom block definition).
+	bool referenced;						// TRUE if referenced on map.
 	bool custom;							// TRUE if custom block definition.
-	block_def *custom_dup_block_def_ptr;	// Pointer to an exact custom duplicate of this block definition (if any).
+	bool exact_duplicate;					// TRUE if an exact duplicate of another block definiton.
+	block_def *exact_dup_block_def_ptr;		// Pointer to an exact duplicate of this block definition (if any).
 	string source_block;					// The name or symbol of the source block.
 	char single_symbol;						// Single-character symbol.
 	word double_symbol;						// Double-character symbol.
@@ -1455,6 +1459,8 @@ struct block_def {
 struct blockset {
 	string URL;									// URL of blockset.
 	string name;								// Name of blockset.
+	bool referenced;							// TRUE if one or more block definitions in blockset referenced on map.
+	bool created_builder_icons;					// TRUE if builder icons were created.
 	block_def *block_def_list;					// List of block definitions.
 	block_def *last_block_def_ptr;				// Pointer to last block definition.
 	string placeholder_texture_URL;				// URL of placeholder texture.
@@ -1485,7 +1491,6 @@ struct blockset {
 	texture *last_texture_ptr;					// Last texture in list.
 	wave *first_wave_ptr;						// First wave in list.
 	wave *last_wave_ptr;						// Last wave in list.
-	bool created_builder_icons;					// TRUE if builder icons were created.
 	blockset *next_blockset_ptr;				// Next blockset in list.
 
 	blockset();

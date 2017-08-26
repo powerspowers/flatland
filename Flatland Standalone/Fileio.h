@@ -6,6 +6,9 @@
 
 // Spot parsing functions.
 
+void
+add_block_symbols(blockset *blockset_ptr);
+
 blockset *
 parse_blockset(char *blockset_URL, bool show_title = true);
 

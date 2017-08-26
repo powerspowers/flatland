@@ -3173,10 +3173,10 @@ render_next_frame(void)
 
 			word symbol = world_ptr->map_style == SINGLE_MAP ? block_def_ptr->single_symbol : block_def_ptr->double_symbol;
 			if (block_symbol_table[symbol] != block_def_ptr) {
-				if (block_def_ptr->custom_dup_block_def_ptr == NULL) {
-					block_def_ptr = create_custom_dup_block_def(block_def_ptr);
+				if (block_def_ptr->exact_dup_block_def_ptr == NULL) {
+					block_def_ptr = create_exact_dup_block_def(block_def_ptr);
 				} else {
-					block_def_ptr = block_def_ptr->custom_dup_block_def_ptr;
+					block_def_ptr = block_def_ptr->exact_dup_block_def_ptr;
 				}
 			}
 
@@ -3849,6 +3849,7 @@ handle_spot_events(void)
 				if (loaded_blockset_ptr == NULL) {
 					loaded_blockset_ptr = parse_blockset(selected_cached_blockset_ptr->href, false);
 					blockset_list_ptr->add_blockset(loaded_blockset_ptr);
+					add_block_symbols(loaded_blockset_ptr);
 					clean_up_renderer();
 					set_up_renderer();
 				}

@@ -1170,7 +1170,7 @@ create_new_block(block_def *block_def_ptr, square *square_ptr,
 //------------------------------------------------------------------------------
 
 block_def *
-create_custom_dup_block_def(block_def *block_def_ptr)
+create_exact_dup_block_def(block_def *block_def_ptr)
 {
 	bool found_unused_symbol;
 	char single_symbol;
@@ -1236,10 +1236,10 @@ create_custom_dup_block_def(block_def *block_def_ptr)
 	}
 	custom_blockset_ptr->add_block_def(custom_block_def_ptr);
 
-	// Store a pointer to the custom duplicate block definition in the existing
-	// block definition.
+	// Store a pointer to the custom duplicate block definition in the existing block definition.
 
-	block_def_ptr->custom_dup_block_def_ptr = custom_block_def_ptr;
+	custom_block_def_ptr->exact_duplicate = true;
+	block_def_ptr->exact_dup_block_def_ptr = custom_block_def_ptr;
 
 	// Add a create tag for the custom block definition to the spot entity list.
 

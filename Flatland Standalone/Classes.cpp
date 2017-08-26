@@ -2714,7 +2714,8 @@ BSP_node::~BSP_node()
 block_def::block_def()
 {
 	custom = false;
-	custom_dup_block_def_ptr = NULL;
+	exact_duplicate = false;
+	exact_dup_block_def_ptr = NULL;
 	type = STRUCTURAL_BLOCK;
 	allow_entrance = false;
 	icon_bitmap_ptr = NULL;
@@ -2923,10 +2924,11 @@ block_def::dup_block_def(block_def *block_def_ptr)
 	sound *old_sound_ptr, *new_sound_ptr;
 	popup *old_popup_ptr, *new_popup_ptr;
 
-	// Set the custom flag to true, but copy the name, type, entrance flag,
+	// Set the custom flag to true, but copy the blockset, name, type, entrance flag,
 	// BSP tree pointer, solid flag and position, since they won't be changing.
 
 	custom = true;
+	blockset_ptr = block_def_ptr->blockset_ptr;
 	name = block_def_ptr->name;
 	type = block_def_ptr->type;
 	allow_entrance = block_def_ptr->allow_entrance;
@@ -3440,6 +3442,7 @@ block_def::get_symbol(void)
 
 blockset::blockset()
 {
+	created_builder_icons = false;
 	block_def_list = NULL;
 	last_block_def_ptr = NULL;
 	placeholder_texture_ptr = NULL;
@@ -3466,7 +3469,6 @@ blockset::blockset()
 	last_texture_ptr = NULL;
 	first_wave_ptr = NULL;
 	last_wave_ptr = NULL;
-	created_builder_icons = false;
 	next_blockset_ptr = NULL;
 }
 

@@ -125,7 +125,7 @@ block *
 create_new_block(block_def *block_def_ptr, square *square_ptr, vertex translation);
 
 block_def *
-create_custom_dup_block_def(block_def *block_def_ptr);
+create_exact_dup_block_def(block_def *block_def_ptr);
 
 void
 create_sprite_polygon(block_def *block_def_ptr, part *part_ptr);
