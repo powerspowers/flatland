@@ -2032,8 +2032,7 @@ parse_base_tag(void)
 	// Set the spot URL directory.
 
 	spot_URL_dir = base_href;
-	if ((length = strlen(spot_URL_dir) - 1) >= 0 && 
-		spot_URL_dir[length] != '/' && spot_URL_dir[length] != '\\')
+	if ((length = strlen(spot_URL_dir) - 1) >= 0 && spot_URL_dir[length] != '/' && spot_URL_dir[length] != '\\')
 		spot_URL_dir += "/";
 }
 
@@ -3340,7 +3339,7 @@ parse_define_tag(string &script)
 	script += '\n';
 	entity *define_tag_entity_ptr = get_current_entity();
 	destroy_entity_list(define_tag_entity_ptr->nested_entity_list);
-	entity *text_entity_ptr = create_entity(TEXT_ENTITY, define_tag_entity_ptr->line_no, script, NULL);
+	entity *text_entity_ptr = create_entity(TEXT_ENTITY, 0, script, NULL);
 	define_tag_entity_ptr->nested_entity_list = text_entity_ptr;
 }
 
@@ -3431,15 +3430,18 @@ insert_missing_level_tags(int first_level_number, int last_level_number)
 	entity *last_entity_ptr = last_body_entity_ptr;
 	while (missing_level_number <= last_level_number) {
 
-		// Create an empty level tag and insert it after the last entity.
+		// Create an empty level tag and insert it after the last body entity, or make it the first body entity if the body is currently empty.
 
-		entity *missing_level_tag_entity_ptr = create_tag_entity("level", last_entity_ptr->line_no,
-			"number", (char *)int_to_string(missing_level_number), NULL);
-		insert_tag_entity(missing_level_tag_entity_ptr, last_entity_ptr);
+		entity *missing_level_tag_entity_ptr = create_tag_entity("level", "number", (char *)int_to_string(missing_level_number), NULL);
+		if (last_body_entity_ptr) {
+			insert_tag_entity(missing_level_tag_entity_ptr, last_entity_ptr);
+		} else {
+			set_first_entity(missing_level_tag_entity_ptr);
+		}
 
 		// Create an empty nested text element in the empty level tag, then store a pointer to it for later.
 
-		entity *text_entity_ptr = create_entity(TEXT_ENTITY, missing_level_tag_entity_ptr->line_no, "", NULL);
+		entity *text_entity_ptr = create_entity(TEXT_ENTITY, 0, "", NULL);
 		missing_level_tag_entity_ptr->nested_entity_list = text_entity_ptr;
 		world_ptr->set_level_entity(missing_level_number, text_entity_ptr);
 
@@ -4496,7 +4498,7 @@ parse_head_tags(void)
 //==============================================================================
 
 void
-parse_spot_file(char *spot_URL, char *spot_file_path)
+parse_spot_file()
 {
 	FILE *fp;
 	int tag_token;
@@ -4549,27 +4551,38 @@ parse_spot_file(char *spot_URL, char *spot_file_path)
 
 	global_script = "";
 
-	// Attempt to open the spot file as a zip archive first.
+	// If there is a current spot URL...
 
-	if (open_zip_archive(spot_file_path, spot_URL)) {
+	if (strlen(curr_spot_URL) > 0) {
 
-		// Open the first file with a ".3dml" extension in the zip archive.
+		// Attempt to open the spot file as a zip archive first.
 
-		if (!push_zip_file_with_ext(".3dml", true)) {
+		if (open_zip_archive(curr_file_path, curr_spot_URL)) {
+
+			// Open the first file with a ".3dml" extension in the zip archive.
+
+			if (!push_zip_file_with_ext(".3dml", true)) {
+				close_zip_archive();
+				error("Unable to open a 3DML file inside zip file %s", curr_spot_URL);
+			}
+
+			// Close the zip archive; the spot file has already been read into a
+			// memory buffer.
+
 			close_zip_archive();
-			error("Unable to open a 3DML file inside zip file %s", spot_URL);
 		}
 
-		// Close the zip archive; the spot file has already been read into a
-		// memory buffer.
+		// Otherwise open the spot file as an ordinary text file.
 
-		close_zip_archive();
+		else if (!push_file(curr_file_path, curr_spot_URL, true))
+			error("Unable to open 3DML file %s", curr_spot_URL);
 	}
 
-	// Otherwise open the spot file as an ordinary text file.
+	// If there is not a current spot URL, we are loading a string as a new spot.
 
-	else if (!push_file(spot_file_path, spot_URL, true))
-		error("Unable to open 3DML file %s", spot_URL);
+	else if (!push_string(spot_file_contents)) {
+		error("Unable to create new spot");
+	}
 
 	// Copy the spot file to "curr_spot.txt" in the Flatland folder, making
 	// sure it's converted to MS-DOS text format.
@@ -4710,7 +4723,7 @@ save_spot_file(const char *spot_file_path)
 	entity *head_tag_entity_ptr = find_tag_entity("head", spot_entity_list);
 	entity *base_tag_entity_ptr = find_tag_entity("base", head_tag_entity_ptr->nested_entity_list);
 	if (base_tag_entity_ptr == NULL && !_strnicmp(spot_URL_dir, "http://", 7)) {
-		base_tag_entity_ptr = create_tag_entity("base", head_tag_entity_ptr->line_no, "href", (char *)spot_URL_dir, NULL);
+		base_tag_entity_ptr = create_tag_entity("base", "href", (char *)spot_URL_dir, NULL);
 		prepend_tag_entity(base_tag_entity_ptr, head_tag_entity_ptr->nested_entity_list);
 	}
 
@@ -4844,7 +4857,7 @@ save_spot_file(const char *spot_file_path)
 	blockset_ptr = blockset_list_ptr->first_blockset_ptr;
 	while (blockset_ptr) {
 		if (blockset_ptr->referenced) {
-			entity *blockset_tag_entity_ptr = create_tag_entity("blockset", head_tag_entity_ptr->line_no, "href", (char *)blockset_ptr->URL, NULL);
+			entity *blockset_tag_entity_ptr = create_tag_entity("blockset", "href", (char *)blockset_ptr->URL, NULL);
 			if (prev_entity_ptr) {
 				blockset_tag_entity_ptr->next_entity_ptr = prev_entity_ptr->next_entity_ptr;
 				prev_entity_ptr->next_entity_ptr = blockset_tag_entity_ptr;
@@ -4866,7 +4879,7 @@ save_spot_file(const char *spot_file_path)
 			string block = block_def_ptr->blockset_ptr->name;
 			block += ':';
 			block += block_def_ptr->name;
-			entity *create_tag_entity_ptr = create_tag_entity("create", body_tag_entity_ptr->line_no, "symbol", (char *)block_def_ptr->get_symbol(), 
+			entity *create_tag_entity_ptr = create_tag_entity("create", "symbol", (char *)block_def_ptr->get_symbol(), 
 				"block", (char *)block, NULL);
 			if (prev_entity_ptr) {
 				create_tag_entity_ptr->next_entity_ptr = prev_entity_ptr->next_entity_ptr;

@@ -616,6 +616,10 @@ static void (*timer_callback_ptr)(void);
 static void (*resize_callback_ptr)(void *window_handle, int width, int height);
 static void (*display_callback_ptr)(void);
 
+// New spot window data.
+
+static HWND new_spot_window_handle;
+
 // Light window data.
 
 static HWND light_window_handle;
@@ -2184,6 +2188,9 @@ LRESULT CALLBACK app_window_proc(HWND hWnd, UINT message, WPARAM wParam, LPARAM 
 				break;
 			case ID_HELP_VIEWHELP:
 				open_help_window();
+				break;
+			case ID_FILE_NEWSPOT:
+				open_new_spot_window();	
 				break;
 			case ID_FILE_OPENSPOTFILE:
 				{	
@@ -3850,6 +3857,124 @@ download_URL_to_file(const char *URL, char *file_path_buffer, bool no_cache)
 }
 
 //==============================================================================
+// New spot window.
+//==============================================================================
+
+static BOOL CALLBACK
+handle_new_spot_event(HWND window_handle, UINT message, WPARAM wParam, LPARAM lParam)
+{
+	HWND control_handle;
+
+	switch (message) {
+	case WM_INITDIALOG:
+		SendDlgItemMessage(window_handle, IDC_SPOT_COLUMNS, EM_SETLIMITTEXT, 5, 0);
+		SendDlgItemMessage(window_handle, IDC_SPOT_ROWS, EM_SETLIMITTEXT, 5, 0);
+		SendDlgItemMessage(window_handle, IDC_SPOT_LEVELS, EM_SETLIMITTEXT, 5, 0);
+		SetDlgItemText(window_handle, IDC_SPOT_COLUMNS, "10");
+		SetDlgItemText(window_handle, IDC_SPOT_ROWS, "10");
+		SetDlgItemText(window_handle, IDC_SPOT_LEVELS, "1");
+		return(TRUE);
+	case WM_DESTROY:
+		return(FALSE);
+	case WM_COMMAND:
+		control_handle = (HWND)lParam;
+		if (HIWORD(wParam) == BN_CLICKED) {
+			switch (LOWORD(wParam)) {
+			case IDOK:
+				{
+					char buffer[6];
+
+					// Get the map dimensions.  If any are <= 0, reset them to their defaults.
+
+					GetDlgItemText(window_handle, IDC_SPOT_COLUMNS, buffer, 6);
+					int columns = atoi(buffer);
+					if (columns <= 0) {
+						columns = 10;
+					}
+					GetDlgItemText(window_handle, IDC_SPOT_ROWS, buffer, 6);
+					int rows = atoi(buffer);
+					if (rows <= 0) {
+						rows = 10;
+					}
+					GetDlgItemText(window_handle, IDC_SPOT_LEVELS, buffer, 6);
+					int levels = atoi(buffer);
+					if (levels <= 0) {
+						levels = 1;
+					}
+
+					// Initialize the spot file contents with a bare-bones spot with the given dimensions, ground and sky.
+
+					spot_file_contents = "<spot version=\"";
+					spot_file_contents += version_number_to_string(ROVER_VERSION_NUMBER);
+					spot_file_contents += "\">\n\t<head>\n";
+					spot_file_contents += "\t\t<blockset href=\"http://original.flatland.com/blocksets/flatsets/basic.bset\"/>\n";
+					spot_file_contents += "\t\t<map dimensions=\"(";
+					spot_file_contents += int_to_string(columns);
+					spot_file_contents += ", ";
+					spot_file_contents += int_to_string(rows);
+					spot_file_contents += ", ";
+					spot_file_contents += int_to_string(levels);
+					spot_file_contents += ")\"/>\n";
+					spot_file_contents += "\t\t<ground/>\n\t</head>\n\t<body>\n\t</body>\n</spot>\n";
+
+					// Signal the player thread to open the spot file contents.
+
+					spot_URL_to_load = "";
+					spot_load_requested.send_event(true);
+
+					// Close the window.
+				
+					close_new_spot_window();
+					break;
+				}
+
+			case IDCANCEL:
+				close_new_spot_window();
+			}
+		}
+		return(TRUE);
+	default:
+		return(FALSE);
+	}
+}
+
+//------------------------------------------------------------------------------
+// Open the new spot window.
+//------------------------------------------------------------------------------
+
+void
+open_new_spot_window()
+{
+	// If the new spot window is already open, do nothing.
+
+	if (new_spot_window_handle != NULL)
+		return;
+
+	// Create the new spot window.
+
+	new_spot_window_handle = CreateDialog(app_instance_handle,
+		MAKEINTRESOURCE(IDD_NEW_SPOT), app_window_handle, 
+		handle_new_spot_event);
+
+	// Show the new spot window.
+
+	ShowWindow(new_spot_window_handle, SW_NORMAL);
+}
+
+//------------------------------------------------------------------------------
+// Close the new spot window.
+//------------------------------------------------------------------------------
+
+void
+close_new_spot_window(void)
+{
+	if (new_spot_window_handle) {
+		DestroyWindow(new_spot_window_handle);
+		new_spot_window_handle = NULL;
+	}
+}
+
+//==============================================================================
 // Open file dialog.
 //==============================================================================
 
@@ -3892,8 +4017,7 @@ open_file_dialog(char *file_path_buffer, int buffer_size)
 //------------------------------------------------------------------------------
 
 static BOOL CALLBACK
-handle_light_event(HWND window_handle, UINT message, WPARAM wParam,
-						   LPARAM lParam)
+handle_light_event(HWND window_handle, UINT message, WPARAM wParam, LPARAM lParam)
 {
 	int brightness;
 
@@ -3917,8 +4041,7 @@ handle_light_event(HWND window_handle, UINT message, WPARAM wParam,
 //------------------------------------------------------------------------------
 
 void
-open_light_window(float brightness, void (*light_callback)(float brightness,
-				  bool window_closed))
+open_light_window(float brightness, void (*light_callback)(float brightness, bool window_closed))
 {
 	// If the light window is already open, do nothing.
 
@@ -3971,8 +4094,7 @@ close_light_window(void)
 //------------------------------------------------------------------------------
 
 static BOOL CALLBACK
-handle_options_event(HWND window_handle, UINT message, WPARAM wParam,
-					 LPARAM lParam)
+handle_options_event(HWND window_handle, UINT message, WPARAM wParam, LPARAM lParam)
 {
 	HWND control_handle;
 
@@ -4132,8 +4254,7 @@ close_options_window(void)
 //------------------------------------------------------------------------------
 
 static BOOL CALLBACK
-handle_help_event(HWND window_handle, UINT message, WPARAM wParam,
-				  LPARAM lParam)
+handle_help_event(HWND window_handle, UINT message, WPARAM wParam, LPARAM lParam)
 {
 	HDC dc_handle;
 	int text_height;
@@ -4229,8 +4350,7 @@ close_help_window(void)
 //------------------------------------------------------------------------------
 
 static BOOL CALLBACK
-handle_about_event(HWND window_handle, UINT message, WPARAM wParam,
-				  LPARAM lParam)
+handle_about_event(HWND window_handle, UINT message, WPARAM wParam, LPARAM lParam)
 {
 	HDC dc_handle;
 	int text_height;
@@ -4315,8 +4435,7 @@ close_about_window(void)
 //------------------------------------------------------------------------------
 
 static void
-add_blockset_list_view_column(char *column_title, int column_index, 
-							  int column_width)
+add_blockset_list_view_column(char *column_title, int column_index, int column_width)
 {
 	LV_COLUMN list_view_column;
 
@@ -4379,13 +4498,11 @@ add_blockset_list_view_item(cached_blockset *cached_blockset_ptr)
 	list_view_item.stateMask = 0;
 	list_view_item.pszText = cached_blockset_ptr->href;
 	list_view_item.lParam = (LPARAM)cached_blockset_ptr;
-	item_no = ListView_InsertItem(blockset_list_view_handle, 
-		&list_view_item);
+	item_no = ListView_InsertItem(blockset_list_view_handle, &list_view_item);
 
 	// Set the name of the blockset.
 
-	ListView_SetItemText(blockset_list_view_handle, item_no, 1, 
-		cached_blockset_ptr->name);
+	ListView_SetItemText(blockset_list_view_handle, item_no, 1, cached_blockset_ptr->name);
 
 	// Set the version number of the blockset, if available.
 
@@ -4427,8 +4544,7 @@ set_min_update_period(int new_min_update_period)
 	// Reset the update time of all blocksets.
 
 	item_no = -1;
-	while ((item_no = ListView_GetNextItem(blockset_list_view_handle,
-		item_no, LVNI_ALL)) >= 0) {
+	while ((item_no = ListView_GetNextItem(blockset_list_view_handle, item_no, LVNI_ALL)) >= 0) {
 
 		// Get a pointer to the cached blockset.
 
@@ -4436,8 +4552,7 @@ set_min_update_period(int new_min_update_period)
 		list_view_item.iItem = item_no;
 		list_view_item.iSubItem = 0;
 		ListView_GetItem(blockset_list_view_handle, &list_view_item);
-		cached_blockset_ptr = 
-			(cached_blockset *)list_view_item.lParam;
+		cached_blockset_ptr = (cached_blockset *)list_view_item.lParam;
 
 		// Recalculate it's update time.
 
@@ -4450,8 +4565,7 @@ set_min_update_period(int new_min_update_period)
 //------------------------------------------------------------------------------
 
 static LRESULT
-handle_blockset_list_view_event(HWND window_handle, int control_ID,
-								NMHDR *notify_ptr)
+handle_blockset_list_view_event(HWND window_handle, int control_ID, NMHDR *notify_ptr)
 {
 	int items_selected;
 
@@ -4462,8 +4576,7 @@ handle_blockset_list_view_event(HWND window_handle, int control_ID,
 		// If the number of selected items has changed, enable or disable the
 		// update and delete buttons.
 
-		items_selected = 
-			ListView_GetSelectedCount(blockset_list_view_handle);
+		items_selected = ListView_GetSelectedCount(blockset_list_view_handle);
 		if (items_selected > 0) {
 			EnableWindow(blockset_update_button_handle, TRUE);
 			EnableWindow(blockset_delete_button_handle, TRUE);
@@ -4473,8 +4586,7 @@ handle_blockset_list_view_event(HWND window_handle, int control_ID,
 		}
 		break;
 	}
-	return(FORWARD_WM_NOTIFY(window_handle, control_ID, notify_ptr,
-		DefWindowProc));
+	return(FORWARD_WM_NOTIFY(window_handle, control_ID, notify_ptr, DefWindowProc));
 }
 
 //------------------------------------------------------------------------------

@@ -273,10 +273,16 @@ open_URL_in_default_app(const char *URL);
 bool
 download_URL_to_file(const char *URL, char *file_path_buffer, bool no_cache);
 
-// Open file dialog.
-
-bool
+bool 
 open_file_dialog(char *file_path_buffer, int buffer_size);
+
+// New spot window functions.
+
+void
+open_new_spot_window(void);
+
+void
+close_new_spot_window(void);
 
 // Light window functions.
 

@@ -56,9 +56,10 @@ extern bool low_memory;
 extern cached_blockset *cached_blockset_list;
 extern cached_blockset *last_cached_blockset_ptr;
 
-// URL of spot to load.
+// URL of new spot to load, or the spot file contents as a string.
 
 extern string spot_URL_to_load;
+extern string spot_file_contents;
 
 // The XML entity list representing the current spot.
 

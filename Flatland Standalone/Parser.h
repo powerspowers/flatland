@@ -111,7 +111,7 @@ void
 get_file_buffer(char **file_buffer_ptr, int *file_size);
 
 bool
-push_buffer(const char *buffer_ptr, int buffer_size);
+push_string(const char *text);
 
 void
 rewind_file(void);
@@ -220,6 +220,9 @@ nested_tags_to_string(void);
 entity *
 get_first_entity(void);
 
+void
+set_first_entity(entity *entity_ptr);
+
 entity *
 get_current_entity(void);
 
@@ -230,7 +233,7 @@ string
 nested_text_to_string(int start_tag_token, bool remove_trailing_whitespace = false);
 
 entity *
-create_tag_entity(string tag_name, int line_no, ...);
+create_tag_entity(string tag_name, ...);
 
 entity *
 find_tag_entity(string tag_name, entity *entity_list);

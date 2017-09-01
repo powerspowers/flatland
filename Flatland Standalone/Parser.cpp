@@ -1375,26 +1375,26 @@ get_file_buffer(char **file_buffer_ptr, int *file_size)
 }
 
 //------------------------------------------------------------------------------
-// Push a buffer onto the parser's file stack.  This "file" becomes the one
+// Push a string onto the parser's file stack.  This "file" becomes the one
 // that is being parsed.
 //------------------------------------------------------------------------------
 
 bool
-push_buffer(const char *buffer_ptr, int buffer_size)
+push_string(const char *text)
 {
-	char *file_buffer;
+	char *buffer_ptr;
 
-	// Allocate the file buffer, and copy the contents of the data buffer into
-	// it.
+	// Allocate the file buffer, and copy the contents of the data buffer into it.
 
-	NEWARRAY(file_buffer, char, buffer_size + 1);
-	if (file_buffer == NULL)
+	int buffer_size = strlen(text);
+	NEWARRAY(buffer_ptr, char, buffer_size);
+	if (buffer_ptr == NULL)
 		return(false);
-	memcpy(file_buffer, buffer_ptr, buffer_size);
+	memcpy(buffer_ptr, text, buffer_size);
 
 	// Push the file onto the file stack.
 
-	push_file_on_stack("", false, false, file_buffer, buffer_size);
+	push_file_on_stack("", false, false, buffer_ptr, buffer_size);
 	return(true);
 }
 
@@ -4453,6 +4453,16 @@ get_first_entity(void)
 }
 
 //------------------------------------------------------------------------------
+// Set the first entity of the current entity list.
+//------------------------------------------------------------------------------
+
+void
+set_first_entity(entity *entity_ptr)
+{
+	file_stack_ptr->parse_stack_ptr->entity_list = entity_ptr;
+}
+
+//------------------------------------------------------------------------------
 // Return the current entity.
 //------------------------------------------------------------------------------
 
@@ -4525,7 +4535,7 @@ nested_text_to_string(int start_tag_token, bool remove_trailing_whitespace)
 //------------------------------------------------------------------------------
 
 entity *
-create_tag_entity(string tag_name, int line_no, ...)
+create_tag_entity(string tag_name, ...)
 {
 	va_list arg_ptr;
 	attr *attr_list = NULL;
@@ -4534,7 +4544,7 @@ create_tag_entity(string tag_name, int line_no, ...)
 	// Parse the name/value pairs until a NULL pointer is reached, and create
 	// an attribute list for them.
 
-	va_start(arg_ptr, line_no);
+	va_start(arg_ptr, tag_name);
 	for (;;) {
 		char *name = va_arg(arg_ptr, char *);
 		if (name == NULL) {
@@ -4551,10 +4561,9 @@ create_tag_entity(string tag_name, int line_no, ...)
 	}
 	va_end(arg_ptr);
 
-	// Create a tag entity with the specified name, line number and attribute
-	// list.
+	// Create a tag entity with the specified name and attribute list.
 
-	return create_entity(TAG_ENTITY, line_no, tag_name, attr_list);
+	return create_entity(TAG_ENTITY, 0, tag_name, attr_list);
 }
 
 //------------------------------------------------------------------------------

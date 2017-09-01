@@ -71,9 +71,10 @@ bool low_memory;
 cached_blockset *cached_blockset_list;
 cached_blockset *last_cached_blockset_ptr;
 
-// URL of new spot to load.
+// URL of new spot to load, or the spot file contents as a string.
 
 string spot_URL_to_load;
+string spot_file_contents;
 
 // The XML entity list representing the current spot.
 
@@ -894,28 +895,41 @@ start_up_spot(void)
 	if (!start_up_simkin())
 		return(false);
 
-	// Set loading message in the title.
+	// If there is a current URL...
 
-	set_title("Loading %s", spot_file_name);
+	if (strlen(curr_URL) > 0) {
 
-	// Split the current URL into it's components, after saving it as the
-	// full spot URL. Then recreate the spot URL without the entrance name.
+		// Split the current URL into it's components, after saving it as the
+		// full spot URL. Then recreate the spot URL without the entrance name.
 
-	full_spot_URL = curr_URL;
-	split_URL(full_spot_URL, &spot_URL_dir, &spot_file_name, &curr_spot_entrance);
-	curr_spot_URL = create_URL(spot_URL_dir, spot_file_name);
+		full_spot_URL = curr_URL;
+		split_URL(full_spot_URL, &spot_URL_dir, &spot_file_name, &curr_spot_entrance);
+		curr_spot_URL = create_URL(spot_URL_dir, spot_file_name);
 
-	// Show the full spot URL in the edit box, or the current spot URL if
-	// the spot entrance is "default".
+		// Set loading message in the title.
 
-	set_spot_URL(!_stricmp(curr_spot_entrance, "default") ? curr_spot_URL : full_spot_URL);
+		set_title("Loading %s", spot_file_name);
 
-	// Parse the spot, then remove the spot file if we are being hosted by the
-	// Rover ActiveX control (since it is only a temporary file).  This is done
-	// in a try block because any errors will be  thrown.
+		// Show the full spot URL in the edit box, or the current spot URL if
+		// the spot entrance is "default".
+
+		set_spot_URL(!_stricmp(curr_spot_entrance, "default") ? curr_spot_URL : full_spot_URL);
+	}
+
+	// If there is not a current URL, we are creating a new spot.
+
+	else {
+		full_spot_URL = "";
+		curr_spot_URL = "";
+		curr_file_path = "";
+		set_title("Creating new spot");
+		set_spot_URL("");
+	}
+
+	// Parse the spot.  This is done in a try block because any errors will be thrown.
 
 	try {
-		parse_spot_file(curr_spot_URL, curr_file_path);
+		parse_spot_file();
 	}
 	catch (char *message) {
 
@@ -1206,6 +1220,32 @@ shut_down_spot(void)
 }
 
 //------------------------------------------------------------------------------
+// Load a new spot.
+//------------------------------------------------------------------------------
+
+static bool
+load_new_spot()
+{
+	// Delete the image caches, and if a spot was loaded shut it down before recreating the image caches.
+
+	delete_image_caches();
+	if (spot_loaded.get()) {
+		shut_down_spot();
+		spot_loaded.set(false);
+		set_title("No spot loaded");
+	}
+	if (!create_image_caches())
+		return(false);
+
+	// Create the image caches and start up the new spot.
+
+	if (!start_up_spot())
+		return(false);
+	spot_loaded.set(true);
+	return(true);
+}
+
+//------------------------------------------------------------------------------
 // Handle the activation of an exit.
 //------------------------------------------------------------------------------
 
@@ -1286,24 +1326,10 @@ handle_exit(const char *exit_URL, const char *exit_target, bool is_spot_URL, boo
 			// Set a flag indicating if the spot is on the web or not.
 
 			spot_on_web = !_strnicmp(curr_URL, "http://", 7);
-			
-			// Delete the image caches, and if a spot was loaded shut it down
-			// before recreating the image caches.
 
-			delete_image_caches();
-			if (spot_loaded.get()) {
-				shut_down_spot();
-				spot_loaded.set(false);
-				set_title("No spot loaded");
-			}
-			if (!create_image_caches())
-				return(false);
+			// Load the new spot.
 
-			// Create the image caches and start up the new spot.
-
-			if (!start_up_spot())
-				return(false);
-			spot_loaded.set(true);
+			return load_new_spot();
 		}
 
 		// Otherwise have the browser request that the URL be downloaded into
@@ -3948,7 +3974,14 @@ player_thread(void *arg_list)
 			// If a spot load is requested, do it.
 
 			if (spot_load_requested.event_sent()) {
-				if (!handle_exit(spot_URL_to_load, NULL, true, true)) {
+				bool loaded;
+				if (strlen(spot_URL_to_load) > 0) {
+					loaded = handle_exit(spot_URL_to_load, NULL, true, true);
+				} else {
+					curr_URL = "";
+					loaded = load_new_spot();
+				}
+				if (!loaded) {
 					shut_down_spot();
 					spot_loaded.set(false);
 					set_title("No spot loaded");
