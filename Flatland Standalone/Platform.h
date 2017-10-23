@@ -233,7 +233,7 @@ void
 set_main_window_size(int width, int height);
 
 bool
-create_main_window(void (*key_callback)(byte key_code, bool key_down),
+create_main_window(void (*key_callback)(bool key_down, byte key_code),
 				   void (*mouse_callback)(int x, int y, int button_code),
 				   void (*timer_callback)(void),
    				   void (*resize_callback)(void *window_handle, int width,

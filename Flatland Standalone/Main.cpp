@@ -3179,6 +3179,7 @@ render_next_frame(void)
 	check_for_mouse_selection();
 	left_mouse_was_clicked = left_mouse_clicked.event_sent();
 	right_mouse_was_clicked = right_mouse_clicked.event_sent();
+	bool block_palette_entry_was_selected = block_palette_entry_selected.event_sent();
 
 	// Determine the location the player is standing on.
 
@@ -3189,9 +3190,10 @@ render_next_frame(void)
 	if (build_mode.get() && builder_square_ptr) {
 		block_def *block_def_ptr;
 
-		// If the left mouse button was clicked and a block definition has been selected in the builder window...
+		// If the left mouse button was clicked or a number key was pressed...
 
-		if (left_mouse_was_clicked && (block_def_ptr = selected_block_def_ptr.get()) != NULL) {
+		if ((left_mouse_was_clicked && (block_def_ptr = selected_block_def_ptr.get()) != NULL) || 
+			(block_palette_entry_was_selected && (block_def_ptr = placeable_block_def_ptr.get()) != NULL)) {
 
 			// If the selected block definition is hidden by another block definition in the block symbol table, and there
 			// is no exact custom duplicate available, then create one with an unused symbol assigned to it.
@@ -3220,8 +3222,7 @@ render_next_frame(void)
 			}
 		} 
 		
-		// If the right mouse button was clicked, remove the block on the builder square, 
-		// which is either a fixed or movable block.
+		// If the right mouse button was clicked, remove the block on the builder square,  which is either a fixed or movable block.
 
 		else if (right_mouse_was_clicked) {
 			remove_block_from_square(builder_square_ptr);

@@ -554,6 +554,10 @@ static int frame_buffer_row_pitch;
 static int frame_buffer_depth;
 static pixel_format *frame_buffer_pixel_format_ptr;
 
+// Builder variables.
+
+static blockset *selected_blockset_ptr;
+
 // Private sound data.
 
 static LPDIRECTSOUND dsound_object_ptr;
@@ -610,7 +614,7 @@ static void (*quit_callback_ptr)();
 // Main window data.
 
 static HWND main_window_handle;
-static void (*key_callback_ptr)(byte key_code, bool key_down);
+static void (*key_callback_ptr)(bool key_down, byte key_code);
 static void (*mouse_callback_ptr)(int x, int y, int button_code);
 static void (*timer_callback_ptr)(void);
 static void (*resize_callback_ptr)(void *window_handle, int width, int height);
@@ -3110,7 +3114,7 @@ handle_key_event(HWND window_handle, UINT virtual_key, BOOL key_down,
 
 	if ((virtual_key >= 'A' && virtual_key <= 'Z') ||
 		(virtual_key >= '0' && virtual_key <= '9'))
-		(*key_callback_ptr)(virtual_key, key_down ? true : false);
+		(*key_callback_ptr)(key_down ? true : false, virtual_key);
 
 	// Otherwise convert the virtual key code to a platform independent key
 	// code, and pass it to the callback function.
@@ -3118,8 +3122,7 @@ handle_key_event(HWND window_handle, UINT virtual_key, BOOL key_down,
 	else {
 		for (index = 0; index < KEY_CODES; index++)
 			if (virtual_key == key_code_table[index].virtual_key) {
-				(*key_callback_ptr)(key_code_table[index].key_code,
-					key_down ? true : false);
+				(*key_callback_ptr)(key_down ? true : false, key_code_table[index].key_code);
 				return;
 			}
 	}
@@ -3272,7 +3275,7 @@ calculate_main_window_rect(RECT *rect_ptr)
 //------------------------------------------------------------------------------
 
 bool
-create_main_window(void (*key_callback)(byte key_code, bool key_down),
+create_main_window(void (*key_callback)(bool key_down, byte key_code),
 				   void (*mouse_callback)(int x, int y, int button_code),
 				   void (*timer_callback)(void),
 				   void (*resize_callback)(void *window_handle, int width,
@@ -4758,6 +4761,7 @@ close_blockset_manager_window(void)
 
 static HWND scrollbar_handle;
 static HWND block_icons_handle;
+static HWND block_palette_handle;
 static HWND selected_block_icon_handle;
 static HWND selected_block_name_handle;
 static HWND selected_block_symbol_handle;
@@ -4801,7 +4805,7 @@ update_builder_dialog()
 
 	int block_defs = 0;
 	selected_block_def_ptr.set(NULL);
-	selected_blockset_ptr.set(blockset_ptr);
+	selected_blockset_ptr = blockset_ptr;
 	if (blockset_ptr) {
 		block_def *block_def_ptr = blockset_ptr->block_def_list;
 		while (block_def_ptr) {
@@ -4864,7 +4868,7 @@ draw_block_icon(block_def *block_def_ptr, int x, int y, int width, int height, H
 static void
 draw_block_icons(DRAWITEMSTRUCT *draw_item_ptr)
 {
-	blockset *blockset_ptr = selected_blockset_ptr.get();
+	blockset *blockset_ptr = selected_blockset_ptr;
 	if (blockset_ptr) {
 
 		// Skip over block definitions to reach the first visible row, remembering the
@@ -4904,6 +4908,42 @@ draw_block_icons(DRAWITEMSTRUCT *draw_item_ptr)
 		}
 		DeleteDC(source_hdc);
 	}
+}
+
+//------------------------------------------------------------------------------
+// Draw the block palette.
+//------------------------------------------------------------------------------
+
+static void
+draw_block_palette(DRAWITEMSTRUCT *draw_item_ptr)
+{
+	// Clear the background of the control and select transparent background drawing.
+
+	FillRect(draw_item_ptr->hDC, &draw_item_ptr->rcItem, (HBRUSH)(COLOR_WINDOW + 1));
+	SetBkMode(draw_item_ptr->hDC, TRANSPARENT);
+
+	// Set up the source device context.
+
+	HDC source_hdc = CreateCompatibleDC(draw_item_ptr->hDC);
+
+	// Draw the icon of each block definition currently present in the palette, along with the palette index below the icon.
+
+	for (int block_palette_position = 0; block_palette_position < 10; block_palette_position++) {
+		int x = block_palette_position * 64;
+		int block_palette_index = (block_palette_position + 1) % 10;
+		block_def *block_def_ptr = block_palette_list[block_palette_index].get();
+		if (block_def_ptr != NULL) {
+			draw_block_icon(block_def_ptr, x, 0, 60, 60, source_hdc, draw_item_ptr->hDC, false);
+		}
+		RECT rect = {x, 64, x + 60, 84};
+		char palette_index_string[2];
+		sprintf(palette_index_string, "%d", block_palette_index);
+		DrawText(draw_item_ptr->hDC, palette_index_string, 1, &rect, DT_SINGLELINE | DT_CENTER | DT_VCENTER);
+	}
+
+	// Delete the source device context.
+
+	DeleteDC(source_hdc);
 }
 
 //------------------------------------------------------------------------------
@@ -4974,6 +5014,33 @@ select_block_icon()
 }
 
 //------------------------------------------------------------------------------
+// Set a block palette entry provided there is a selected block definition.
+//------------------------------------------------------------------------------
+
+static void
+set_block_palette_entry()
+{
+	POINT cursor_pos;
+
+	// Get the cursor position within the block palette static control, and calculate which palette index that represents.
+
+	GetCursorPos(&cursor_pos);
+	ScreenToClient(block_palette_handle, &cursor_pos);
+	int selected_block_palette_index = ((cursor_pos.x / 64) + 1) % 10;
+
+	// If a block definition is selected, assign it to the selected palette index.
+
+	block_def *block_def_ptr = selected_block_def_ptr.get();
+	if (block_def_ptr != NULL) {
+		block_palette_list[selected_block_palette_index].set(block_def_ptr);
+	}
+
+	// Force the builder dialog to redraw.
+
+	InvalidateRect(builder_window_handle, NULL, TRUE);
+}
+
+//------------------------------------------------------------------------------
 // Function to handle builder window events.
 //------------------------------------------------------------------------------
 
@@ -4987,6 +5054,7 @@ handle_builder_event(HWND window_handle, UINT message, WPARAM wParam, LPARAM lPa
 
 			scrollbar_handle = GetDlgItem(window_handle, IDC_BLOCK_ICONS_SCROLLBAR);
 			block_icons_handle = GetDlgItem(window_handle, IDC_BLOCK_ICONS);
+			block_palette_handle = GetDlgItem(window_handle, IDC_BLOCK_PALETTE);
 			selected_block_icon_handle = GetDlgItem(window_handle, IDC_SELECTED_BLOCK_ICON);
 			selected_block_name_handle = GetDlgItem(window_handle, IDC_SELECTED_BLOCK_NAME);
 			selected_block_symbol_handle = GetDlgItem(window_handle, IDC_SELECTED_BLOCK_SYMBOL);
@@ -5002,6 +5070,7 @@ handle_builder_event(HWND window_handle, UINT message, WPARAM wParam, LPARAM lPa
 			block_symbol_font_handle = CreateFont(-POINTS_TO_PIXELS(20), 0, 0, 0, FW_BOLD, FALSE, FALSE, FALSE, DEFAULT_CHARSET, OUT_TT_PRECIS,
 				CLIP_DEFAULT_PRECIS, PROOF_QUALITY, DEFAULT_PITCH | FF_DONTCARE, "MS Sans Serif");
 			SendMessage(block_icons_handle, WM_SETFONT, (WPARAM)block_symbol_font_handle, 0);
+			SendMessage(block_palette_handle, WM_SETFONT, (WPARAM)block_symbol_font_handle, 0);
 			SendMessage(selected_block_icon_handle, WM_SETFONT, (WPARAM)block_symbol_font_handle, 0);
 			ReleaseDC(block_icons_handle, dc_handle);
 
@@ -5050,7 +5119,7 @@ handle_builder_event(HWND window_handle, UINT message, WPARAM wParam, LPARAM lPa
 		}
 		return(TRUE);
 
-	// Draw the block icons static control.
+	// Draw items in various controls.
 
 	case WM_DRAWITEM:
 		{
@@ -5058,6 +5127,10 @@ handle_builder_event(HWND window_handle, UINT message, WPARAM wParam, LPARAM lPa
 			switch (wParam) {
 			case IDC_BLOCK_ICONS:
 				draw_block_icons(draw_item_ptr);
+				break;
+
+			case IDC_BLOCK_PALETTE:
+				draw_block_palette(draw_item_ptr);
 				break;
 
 			case IDC_SELECTED_BLOCK_ICON:
@@ -5120,6 +5193,8 @@ handle_builder_event(HWND window_handle, UINT message, WPARAM wParam, LPARAM lPa
 			case IDC_BLOCK_ICONS:
 				select_block_icon();
 				break;
+			case IDC_BLOCK_PALETTE:
+				set_block_palette_entry();
 			}
 			break;
 		case CBN_SELCHANGE:

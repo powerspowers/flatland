@@ -86,6 +86,7 @@ extern event spot_load_requested;
 extern event save_3DML_source_requested;
 extern event cached_blockset_load_requested;
 extern event cached_blockset_load_completed;
+extern event block_palette_entry_selected;
 #ifdef _DEBUG
 extern event polygon_info_requested;
 #endif
@@ -113,7 +114,8 @@ extern semaphore<int> visible_block_radius;
 extern semaphore<bool> fly_mode;
 extern semaphore<bool> build_mode;
 extern semaphore<block_def *> selected_block_def_ptr;
-extern semaphore<blockset *> selected_blockset_ptr;
+extern semaphore<block_def *> block_palette_list[10];
+extern semaphore<block_def *> placeable_block_def_ptr;
 
 // Saved spot file path.
 

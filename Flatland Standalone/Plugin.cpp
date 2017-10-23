@@ -85,6 +85,7 @@ event spot_load_requested;
 event save_3DML_source_requested;
 event cached_blockset_load_requested;
 event cached_blockset_load_completed;
+event block_palette_entry_selected;
 #ifdef _DEBUG
 event polygon_info_requested;
 #endif
@@ -111,7 +112,8 @@ semaphore<int> visible_block_radius;
 semaphore<bool> fly_mode;
 semaphore<bool> build_mode;
 semaphore<block_def *> selected_block_def_ptr;
-semaphore<blockset *> selected_blockset_ptr;
+semaphore<block_def *> block_palette_list[10];
+semaphore<block_def *> placeable_block_def_ptr;
 
 // Saved spot file path.
 
@@ -168,27 +170,28 @@ static float window_top_half_height, window_bottom_half_height;
 struct key_code_to_func {
 	byte key_code;
 	byte alt_key_code;
-	void (*func_ptr)(bool key_down);
+	void (*func_ptr)(bool key_down, byte key_code);
 };
 
 // Forward declaration of key functions.
 
-static void move_forward(bool key_down);
-static void move_back(bool key_down);
-static void sidle_left(bool key_down);
-static void move_left(bool key_down);
-static void sidle_right(bool key_down);
-static void move_right(bool key_down);
-static void look_up(bool key_down);
-static void look_down(bool key_down);
-static void go_faster(bool key_down);
-static void go_slower(bool key_down);
-static void sidle_mode(bool key_down);
-static void fast_mode(bool key_down);
-static void jump(bool key_down);
-static void exit_mouse_look_mode(bool key_down);
-static void toggle_fly_mode(bool key_down);
-static void toggle_build_mode(bool key_down);
+static void move_forward(bool key_down, byte key_code);
+static void move_back(bool key_down, byte key_code);
+static void sidle_left(bool key_down, byte key_code);
+static void move_left(bool key_down, byte key_code);
+static void sidle_right(bool key_down, byte key_code);
+static void move_right(bool key_down, byte key_code);
+static void look_up(bool key_down, byte key_code);
+static void look_down(bool key_down, byte key_code);
+static void go_faster(bool key_down, byte key_code);
+static void go_slower(bool key_down, byte key_code);
+static void sidle_mode(bool key_down, byte key_code);
+static void fast_mode(bool key_down, byte key_code);
+static void jump(bool key_down, byte key_code);
+static void exit_mouse_look_mode(bool key_down, byte key_code);
+static void toggle_fly_mode(bool key_down, byte key_code);
+static void toggle_build_mode(bool key_down, byte key_code);
+static void place_block(bool key_down, byte key_code);
 
 // Key code to function table.
 
@@ -206,6 +209,16 @@ static key_code_to_func classic_key_func_table[] = {
 	{SPACE_BAR_KEY, 0, jump},
 	{'F', 0, toggle_fly_mode},
 	{'B', 0, toggle_build_mode},
+	{'0', 0, place_block},
+	{'1', 0, place_block},
+	{'2', 0, place_block},
+	{'3', 0, place_block},
+	{'4', 0, place_block},
+	{'5', 0, place_block},
+	{'6', 0, place_block},
+	{'7', 0, place_block},
+	{'8', 0, place_block},
+	{'9', 0, place_block},
 	{0, 0, NULL}
 };
 static key_code_to_func new_key_func_table[] = {
@@ -217,6 +230,16 @@ static key_code_to_func new_key_func_table[] = {
 	{SPACE_BAR_KEY, 0, jump},
 	{'F', 0, toggle_fly_mode},
 	{'B', 0, toggle_build_mode},
+	{'0', 0, place_block},
+	{'1', 0, place_block},
+	{'2', 0, place_block},
+	{'3', 0, place_block},
+	{'4', 0, place_block},
+	{'5', 0, place_block},
+	{'6', 0, place_block},
+	{'7', 0, place_block},
+	{'8', 0, place_block},
+	{'9', 0, place_block},
 	{0, 0, NULL}
 };
 
@@ -231,7 +254,7 @@ static bool rover_started_up;
 // Forward declaration of callback functions.
 
 static void
-key_event_callback(byte key_code, bool key_down);
+key_event_callback(bool key_down, byte key_code);
 
 static void
 timer_event_callback(void);
@@ -479,7 +502,7 @@ update_motion_rates(int rate_dir)
 //------------------------------------------------------------------------------
 
 static void
-move_forward(bool key_down)
+move_forward(bool key_down, byte key_code)
 {
 	if (key_down) {
 		curr_move_delta.set(1.0f);
@@ -505,7 +528,7 @@ move_forward(bool key_down)
 //------------------------------------------------------------------------------
 
 static void
-move_back(bool key_down)
+move_back(bool key_down, byte key_code)
 {
 	if (key_down)
 		curr_move_delta.set(-1.0f);
@@ -518,7 +541,7 @@ move_back(bool key_down)
 //------------------------------------------------------------------------------
 
 static void
-sidle_left(bool key_down)
+sidle_left(bool key_down, byte key_code)
 {
 	if (key_down) {
 		curr_side_delta.set(-1.0f);
@@ -532,10 +555,10 @@ sidle_left(bool key_down)
 //------------------------------------------------------------------------------
 
 static void
-move_left(bool key_down)
+move_left(bool key_down, byte key_code)
 {
 	if (sidle_mode_enabled && use_classic_controls.get()) {
-		sidle_left(key_down);
+		sidle_left(key_down, key_code);
 	} else if (key_down) {
 		curr_turn_delta.set(-1.0f);
 	} else {
@@ -548,7 +571,7 @@ move_left(bool key_down)
 //------------------------------------------------------------------------------
 
 static void
-sidle_right(bool key_down)
+sidle_right(bool key_down, byte key_code)
 {
 	if (key_down) {
 		curr_side_delta.set(1.0f);
@@ -562,10 +585,10 @@ sidle_right(bool key_down)
 //------------------------------------------------------------------------------
 
 static void
-move_right(bool key_down)
+move_right(bool key_down, byte key_code)
 {
 	if (sidle_mode_enabled && use_classic_controls.get()) {
-		sidle_right(key_down);
+		sidle_right(key_down, key_code);
 	} else if (key_down) {
 		curr_turn_delta.set(1.0f);
 	} else {
@@ -578,7 +601,7 @@ move_right(bool key_down)
 //------------------------------------------------------------------------------
 
 static void
-look_up(bool key_down)
+look_up(bool key_down, byte key_code)
 {
 	if (key_down)
 		curr_look_delta.set(-1.0f);
@@ -591,7 +614,7 @@ look_up(bool key_down)
 //------------------------------------------------------------------------------
 
 static void
-look_down(bool key_down)
+look_down(bool key_down, byte key_code)
 {
 	if (key_down)
 		curr_look_delta.set(1.0f);
@@ -604,7 +627,7 @@ look_down(bool key_down)
 //------------------------------------------------------------------------------
 
 static void
-go_faster(bool key_down)
+go_faster(bool key_down, byte key_code)
 {
 	if (!key_down)
 		update_motion_rates(RATE_FASTER);
@@ -615,7 +638,7 @@ go_faster(bool key_down)
 //------------------------------------------------------------------------------
 
 static void
-go_slower(bool key_down)
+go_slower(bool key_down, byte key_code)
 {
 	if (!key_down)
 		update_motion_rates(RATE_SLOWER);
@@ -627,7 +650,7 @@ go_slower(bool key_down)
 //------------------------------------------------------------------------------
 
 static void
-sidle_mode(bool key_down)
+sidle_mode(bool key_down, byte key_code)
 {
 	sidle_mode_enabled = key_down;
 	float curr_side_delta_value = curr_side_delta.get();
@@ -644,7 +667,7 @@ sidle_mode(bool key_down)
 //------------------------------------------------------------------------------
 
 static void
-fast_mode(bool key_down)
+fast_mode(bool key_down, byte key_code)
 {
 	if (key_down && !fast_mode_enabled) {
 		fast_mode_enabled = true;
@@ -665,7 +688,7 @@ fast_mode(bool key_down)
 //------------------------------------------------------------------------------
 
 static void
-jump(bool key_down)
+jump(bool key_down, byte key_code)
 {
 	if (key_down) {
 		curr_jump_delta.set(MAXIMUM_JUMPING_SPEED);
@@ -677,7 +700,7 @@ jump(bool key_down)
 //------------------------------------------------------------------------------
 
 static void
-exit_mouse_look_mode(bool key_down)
+exit_mouse_look_mode(bool key_down, byte key_code)
 {
 	if (key_down) {
 		disable_mouse_look_mode();
@@ -689,7 +712,7 @@ exit_mouse_look_mode(bool key_down)
 //------------------------------------------------------------------------------
 
 static void
-toggle_fly_mode(bool key_down)
+toggle_fly_mode(bool key_down, byte key_code)
 {
 	if (key_down) {
 		if (fly_mode.get()) {
@@ -707,7 +730,7 @@ toggle_fly_mode(bool key_down)
 //------------------------------------------------------------------------------
 
 static void
-toggle_build_mode(bool key_down)
+toggle_build_mode(bool key_down, byte key_code)
 {
 	if (key_down) {
 		if (build_mode.get()) {
@@ -719,6 +742,23 @@ toggle_build_mode(bool key_down)
 
 			disable_mouse_look_mode();
 			open_builder_window();
+		}
+	}
+}
+
+//------------------------------------------------------------------------------
+// Toggle build mode.
+//------------------------------------------------------------------------------
+
+static void
+place_block(bool key_down, byte key_code)
+{
+	if (key_down && build_mode.get()) {
+		int block_palette_index = ((key_code - '0') + 1) % 10;
+		block_def *block_def_ptr = block_palette_list[key_code - '0'].get();
+		if (block_def_ptr != NULL) {
+			placeable_block_def_ptr.set(block_def_ptr);
+			block_palette_entry_selected.send_event(true);
 		}
 	}
 }
@@ -786,7 +826,7 @@ options_window_callback(int option_ID, int option_value)
 //------------------------------------------------------------------------------
 
 static void
-key_event_callback(byte key_code, bool key_down)
+key_event_callback(bool key_down, byte key_code)
 {
 	key_code_to_func *key_func_ptr;
 
@@ -813,7 +853,7 @@ key_event_callback(byte key_code, bool key_down)
 	key_func_ptr = use_classic_controls.get() ? classic_key_func_table : new_key_func_table;
 	while (key_func_ptr->key_code != 0) {
 		if (key_code == key_func_ptr->key_code || key_code == key_func_ptr->alt_key_code) {
-			(*key_func_ptr->func_ptr)(key_down);
+			(*key_func_ptr->func_ptr)(key_down, key_code);
 			break;
 		}
 		key_func_ptr++;
@@ -1316,6 +1356,7 @@ run_app(void *instance_handle, int show_command, char *spot_file_path)
 	save_3DML_source_requested.create_event();
 	cached_blockset_load_requested.create_event();
 	cached_blockset_load_completed.create_event();
+	block_palette_entry_selected.create_event();
 #ifdef _DEBUG
 	polygon_info_requested.create_event();
 #endif
@@ -1352,7 +1393,10 @@ run_app(void *instance_handle, int show_command, char *spot_file_path)
 	fly_mode.create_semaphore();
 	build_mode.create_semaphore();
 	selected_block_def_ptr.create_semaphore();
-	selected_blockset_ptr.create_semaphore();
+	for (int block_palette_index = 0; block_palette_index < 10; block_palette_index++) {
+		block_palette_list[block_palette_index].create_semaphore();
+	}
+	placeable_block_def_ptr.create_semaphore();
 
 	// Load the configuration file.
 
@@ -1377,7 +1421,10 @@ run_app(void *instance_handle, int show_command, char *spot_file_path)
 	fly_mode.set(false);
 	build_mode.set(false);
 	selected_block_def_ptr.set(NULL);
-	selected_blockset_ptr.set(NULL);
+	for (int block_palette_index = 0; block_palette_index < 10; block_palette_index++) {
+		block_palette_list[block_palette_index].set(NULL);
+	}
+	placeable_block_def_ptr.set(NULL);
 
 	// Initialise other variables.
 
@@ -1497,7 +1544,10 @@ shut_down_app()
 	fly_mode.destroy_semaphore();
 	build_mode.destroy_semaphore();
 	selected_block_def_ptr.destroy_semaphore();
-	selected_blockset_ptr.destroy_semaphore();
+	for (int block_palette_index = 0; block_palette_index < 10; block_palette_index++) {
+		block_palette_list[block_palette_index].destroy_semaphore();
+	}
+	placeable_block_def_ptr.destroy_semaphore();
 
 	// Destroy the events sent by the player thread.
 
@@ -1527,6 +1577,7 @@ shut_down_app()
 	save_3DML_source_requested.destroy_event();
 	cached_blockset_load_requested.destroy_event();
 	cached_blockset_load_completed.destroy_event();
+	block_palette_entry_selected.destroy_event();
 #ifdef _DEBUG
 	polygon_info_requested.destroy_event();
 #endif
