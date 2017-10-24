@@ -2167,30 +2167,6 @@ parse_blockset_tag(void)
 }
 
 //------------------------------------------------------------------------------
-// Parse the debug tag.
-//------------------------------------------------------------------------------
-
-static void
-parse_debug_tag(void)
-{
-	// If we've seen a debug tag already, this is an error.
-
-	if (got_debug_tag) {
-		warning("Duplicate <I>debug</I> tag");
-		return;
-	}
-	got_debug_tag = true;
-
-	// If the warning attribute was given, and it is TRUE, then show both
-	// errors and warnings.  Otherwise only show errors.
-
-	if (parsed_attribute[DEBUG_WARNINGS] && debug_warnings)
-		spot_debug_level = SHOW_ERRORS_AND_WARNINGS;
-	else
-		spot_debug_level = SHOW_ERRORS_ONLY; 
-}
-
-//------------------------------------------------------------------------------
 // Parse a meta tag.
 //------------------------------------------------------------------------------
 
@@ -4442,9 +4418,6 @@ parse_head_tags(void)
 		case TOKEN_BLOCKSET:
 			parse_blockset_tag();
 			break;
-		case TOKEN_DEBUG:
-			parse_debug_tag();
-			break;
 		case TOKEN_FOG:
 			parse_fog_tag(&global_fog);
 			break;
@@ -4926,18 +4899,6 @@ read_string(FILE *fp, char *buffer, int max_buffer_length)
 	return(ch != EOF);
 }
 
-//==============================================================================
-// Configuration file functions.
-//==============================================================================
-
-#define DEBUG_OPTION_VALUES 4
-static value_def debug_option_value_list[DEBUG_OPTION_VALUES] = {
-	{"be silent", BE_SILENT},
-	{"let spot decide", LET_SPOT_DECIDE},
-	{"show errors only", SHOW_ERRORS_ONLY},
-	{"show errors and warnings", SHOW_ERRORS_AND_WARNINGS}
-};
-
 //------------------------------------------------------------------------------
 // Read a configuration line.
 //------------------------------------------------------------------------------
@@ -5053,7 +5014,6 @@ load_config_file(void)
 	int use_classic_controls_value;
 	int visible_block_radius_value;
 	int curr_move_rate_value, curr_turn_rate_value;
-	int user_debug_level_value;
 	int force_software_rendering_value;
 	float brightness_value;
 
@@ -5064,15 +5024,13 @@ load_config_file(void)
 	curr_move_rate_value = DEFAULT_MOVE_RATE;
 	curr_turn_rate_value = DEFAULT_TURN_RATE;
 	min_blockset_update_period = SECONDS_PER_WEEK;
-	user_debug_level_value = BE_SILENT;
 	force_software_rendering_value = 0;
 	brightness_value = 0.0f;
 
 	// First attempt to parse the configuration file.
 
 	if ((fp = fopen(config_file_path, "r")) != NULL) {
-		if (read_string(fp, line, 80) && 
-			!_strnicmp(line, "Flatland Rover configuration:", 29))
+		if (read_string(fp, line, 80) && !_strnicmp(line, "Flatland Rover configuration:", 29))
 			while (read_string(fp, line, 80)) {
 				read_config_line(line, name, value);
 				if (!_stricmp(name, "use classic controls"))
@@ -5086,9 +5044,7 @@ load_config_file(void)
 				else if (!_stricmp(name, "minimum blockset update period")) {
 					if (read_config_int(value, &min_blockset_update_period))
 						min_blockset_update_period *= SECONDS_PER_DAY;
-				} else if (!_stricmp(name, "debug option"))
-					read_config_enum(value, &user_debug_level_value, debug_option_value_list, DEBUG_OPTION_VALUES);
-				else if (!_stricmp(name, "force software rendering"))
+				} else if (!_stricmp(name, "force software rendering"))
 					read_config_bool(value, &force_software_rendering_value);
 				else if (!_stricmp(name, "brightness"))
 					read_config_float(value, &brightness_value);
@@ -5102,7 +5058,6 @@ load_config_file(void)
 	visible_block_radius.set(visible_block_radius_value);
 	curr_move_rate.set(curr_move_rate_value);
 	curr_turn_rate.set(curr_turn_rate_value);
-	user_debug_level.set(user_debug_level_value);
 	force_software_rendering.set(force_software_rendering_value ? true : false);
 	master_brightness.set(brightness_value / 100.0f);
 }
@@ -5164,7 +5119,6 @@ save_config_file(void)
 		write_config_int(fp, "move rate multiplier", curr_move_rate.get(), "x blocks/second");
 		write_config_int(fp, "turn rate multiplier", curr_turn_rate.get(), "x degrees/second or degrees/mouse movement");
 		write_config_int(fp, "minimum blockset update period", min_blockset_update_period / SECONDS_PER_DAY, "days");
-		write_config_enum(fp, "debug option", user_debug_level.get(), debug_option_value_list, DEBUG_OPTION_VALUES);
 		write_config_bool(fp, "force software rendering", force_software_rendering.get());
 		write_config_float(fp, "brightness", master_brightness.get() * 100.0f, "% relative to ambient light");
 		fclose(fp);

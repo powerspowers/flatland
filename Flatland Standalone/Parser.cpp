@@ -150,7 +150,6 @@ static symbol_def symbol_table[] = {
 	{"content",			TOKEN_CONTENT},
 	{"create",			TOKEN_CREATE},
 	{"damp",			TOKEN_DAMP},
-	{"debug",			TOKEN_DEBUG},
 	{"define",			TOKEN_DEFINE},
 	{"delay",			TOKEN_DELAY},
 	{"density",			TOKEN_DENSITY},
@@ -284,7 +283,6 @@ static symbol_def symbol_table[] = {
 	{"vertex",			TOKEN_VERTEX},
 	{"vertices",		TOKEN_VERTICES},
 	{"volume",			TOKEN_VOLUME},
-	{"warnings",		TOKEN_WARNINGS},
 #ifdef STREAMING_MEDIA
 	{"wmp",				TOKEN_WMP},
 #endif
@@ -515,6 +513,7 @@ static value_def key_code_value_list[KEY_CODE_VALUES] = {
 static int curr_tag_token;
 static int curr_attr_token;
 static bool curr_attr_required;
+static bool curr_attr_error_as_warning;
 
 // Pointer to the current attribute value, and the part of it being parsed.
 
@@ -1675,10 +1674,6 @@ warning(int line_no, const char *format, ...)
 	// Add the line number of entity to the message.
 
 	write_error_log("<B>Warning on line %d of %s:</B> %s.\n<BR>\n", line_no, file_stack_ptr->file_URL, message);
-
-	// Set a flag indicating warnings are present in the error log.
-
-	warnings = true;
 }
 
 //------------------------------------------------------------------------------
@@ -1725,10 +1720,6 @@ warning(const char *format, ...)
 
 	else
 		write_error_log("<B>Warning:</B> %s.\n<BR>\n", message);
-
-	// Set a flag indicating warnings are present in the error log.
-
-	warnings = true;
 }
 
 //------------------------------------------------------------------------------
@@ -1903,9 +1894,12 @@ bad_attribute_value(const char *pre_message, const char *post_message)
 
 	// Display it as an error or warning.
 
-	if (curr_attr_required)
-		error(message);
-	else
+	if (curr_attr_required) {
+		if (curr_attr_error_as_warning)
+			warning("%s; ignoring this attribute", message);
+		else
+			error(message);
+	} else
 		warning("%s; using default value for this attribute instead", message);
 }
 
@@ -2135,7 +2129,7 @@ parse_name(const char *old_name, string *new_name, bool allow_list, bool allow_w
 //------------------------------------------------------------------------------
 
 void
-start_parsing_value(int tag_token, int attr_token, char *attr_value, bool attr_required)
+start_parsing_value(int tag_token, int attr_token, char *attr_value, bool attr_required, bool attr_error_as_warning)
 {
 	// Remember the tag token as the current one.
 
@@ -2145,6 +2139,7 @@ start_parsing_value(int tag_token, int attr_token, char *attr_value, bool attr_r
 
 	curr_attr_token = attr_token;
 	curr_attr_required = attr_required;
+	curr_attr_error_as_warning = attr_error_as_warning;
 
 	// Skip over leading white space.
 
@@ -4071,16 +4066,17 @@ parse_attribute_value(int value_type, void *value_ptr)
 
 //------------------------------------------------------------------------------
 // Parse an attribute list in accordance to the given attribute definition list.
-// Throws an exception upon an error.
+// Returns false if required attributes were missing.
 //------------------------------------------------------------------------------
 
-static void
-parse_attribute_list(attr_def *attr_def_list, int attributes)
+static bool
+parse_attribute_list(attr_def *attr_def_list, int attributes, bool attr_error_as_warning)
 {
 	int index, tag_token, attr_token;
 	attr *attr_ptr;
 	attr_def *attr_def_ptr;
 	entity *entity_ptr;
+	bool got_all_required_attributes;
 
 	// Clear the parsed attribute list.
 
@@ -4103,7 +4099,7 @@ parse_attribute_list(attr_def *attr_def_list, int attributes)
 					if (parsed_attribute[index])
 						warning("Duplicate <I>%s</I> attribute encountered", attr_ptr->name);
 					else {
-						start_parsing_value(tag_token, attr_token, attr_ptr->value, attr_def_ptr->required);
+						start_parsing_value(tag_token, attr_token, attr_ptr->value, attr_def_ptr->required, attr_error_as_warning);
 						if (parse_attribute_value(attr_def_ptr->value_type, attr_def_ptr->value_ptr) && stop_parsing_value(true))
 							parsed_attribute[index] = true;
 					}
@@ -4119,12 +4115,16 @@ parse_attribute_list(attr_def *attr_def_list, int attributes)
 
 	// Check if any attributes that were required are missing.
 
+	got_all_required_attributes = true;
 	attr_def_ptr = attr_def_list;
 	for (index = 0; index < attributes; index++) {
-		if (attr_def_ptr->required && !parsed_attribute[index])
-			error("The <I>%s</I> attribute is missing from the <I>%s</I> tag", get_name(attr_def_ptr->token), entity_ptr->text);
+		if (attr_def_ptr->required && !parsed_attribute[index]) {
+			warning("The <I>%s</I> attribute is missing from the <I>%s</I> tag; skipping over this tag", get_name(attr_def_ptr->token), entity_ptr->text);
+			got_all_required_attributes = false;
+		}
 		attr_def_ptr++;
 	}
+	return got_all_required_attributes;
 }
 
 //------------------------------------------------------------------------------
@@ -4289,7 +4289,7 @@ parse_start_of_document(int start_tag_token, attr_def *attr_def_list, int attrib
 
 	// Parse the attribute list of the document start tag.
 
-	parse_attribute_list(attr_def_list, attributes);
+	parse_attribute_list(attr_def_list, attributes, false);
 }
 
 //------------------------------------------------------------------------------
@@ -4394,14 +4394,19 @@ parse_next_nested_tag(int start_tag_token, tag_def *tag_def_list, bool allow_tex
 						if (entity_ptr->nested_entity_list != NULL && !tag_def_ptr->is_start_tag)
 							warning("The <I>%s</I> tag does not permit anything inside of it", entity_ptr->text);
 
-						// Parse the attribute list, if there is one.
+						// Parse the attribute list, if there is one.  If there are missing or bad required attributes,
+						// break out of this loop and switch case, and skip over this tag entity below.
 
-						parse_attribute_list(tag_def_ptr->attr_def_list, tag_def_ptr->attributes);
+						if (!parse_attribute_list(tag_def_ptr->attr_def_list, tag_def_ptr->attributes, true)) {
+							break;
+						}
 						return(true);
 					}
 					tag_def_ptr++;
 				}
-				warning(entity_ptr->line_no, "The <I>%s</I> tag is not permitted inside of the <I>%s</I> tag", entity_ptr->text, get_name(start_tag_token));
+				if (tag_def_ptr->token == TOKEN_NONE) {
+					warning(entity_ptr->line_no, "The <I>%s</I> tag is not permitted inside of the <I>%s</I> tag", entity_ptr->text, get_name(start_tag_token));
+				}
 			}
 		}
 

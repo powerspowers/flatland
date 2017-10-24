@@ -4128,18 +4128,6 @@ handle_options_event(HWND window_handle, UINT message, WPARAM wParam, LPARAM lPa
 				else
 					(*options_callback_ptr)(CLASSIC_CONTROLS_CHECKBOX, 0);
 				break;
-			case IDB_BE_SILENT:
-				(*options_callback_ptr)(DEBUG_LEVEL_OPTION, BE_SILENT);
-				break;
-			case IDB_LET_SPOT_DECIDE:
-				(*options_callback_ptr)(DEBUG_LEVEL_OPTION, LET_SPOT_DECIDE);
-				break;
-			case IDB_SHOW_ERRORS_ONLY:
-				(*options_callback_ptr)(DEBUG_LEVEL_OPTION, SHOW_ERRORS_ONLY);
-				break;
-			case IDB_SHOW_ERRORS_AND_WARNINGS:
-				(*options_callback_ptr)(DEBUG_LEVEL_OPTION, SHOW_ERRORS_AND_WARNINGS);
-				break;
 			case IDB_FORCE_SOFTWARE_RENDERING:
 				if (SendMessage(control_handle, BM_GETCHECK, 0, 0) == BST_CHECKED)
 					(*options_callback_ptr)(FORCE_SOFTWARE_RENDERING_CHECKBOX, 1);
@@ -4169,7 +4157,7 @@ handle_options_event(HWND window_handle, UINT message, WPARAM wParam, LPARAM lPa
 
 void
 open_options_window(int viewing_distance_value, bool use_classic_controls_value,
-					int move_rate_value, int turn_rate_value, int user_debug_level_value, bool force_software_rendering,
+					int move_rate_value, int turn_rate_value, bool force_software_rendering,
 					void (*options_callback)(int option_ID, int option_value))
 {
 	HWND control_handle;
@@ -4206,23 +4194,6 @@ open_options_window(int viewing_distance_value, bool use_classic_controls_value,
 
 	turn_rate_slider_handle = GetDlgItem(options_window_handle, IDC_SLIDER_TURN_RATE);
 	init_slider_control(turn_rate_slider_handle, MIN_TURN_RATE, MAX_TURN_RATE, turn_rate_value, 1);
-
-	// Initialise the "debug option" radio box.
-
-	switch (user_debug_level_value) {
-	case BE_SILENT:
-		control_handle = GetDlgItem(options_window_handle, IDB_BE_SILENT);
-		break;
-	case LET_SPOT_DECIDE:
-		control_handle = GetDlgItem(options_window_handle, IDB_LET_SPOT_DECIDE);
-		break;
-	case SHOW_ERRORS_ONLY:
-		control_handle = GetDlgItem(options_window_handle, IDB_SHOW_ERRORS_ONLY);
-		break;
-	case SHOW_ERRORS_AND_WARNINGS:
-		control_handle = GetDlgItem(options_window_handle, IDB_SHOW_ERRORS_AND_WARNINGS);
-	}
-	SendMessage(control_handle, BM_SETCHECK, BST_CHECKED, 0);
 
 	// Initialize the "force software rendering" check box.  This is hidden in release builds.
 

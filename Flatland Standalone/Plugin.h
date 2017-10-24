@@ -57,10 +57,6 @@ extern string requested_blockset_name;
 extern semaphore<string> downloaded_URL;
 extern semaphore<string> downloaded_file_path;
 
-// Flag indicating if error log should be displayed.
-
-extern bool show_error_log;
-
 // Events sent by player thread.
 
 extern event player_thread_initialised;
@@ -94,7 +90,6 @@ extern event polygon_info_requested;
 // Global variables that require synchronised access, and the semaphores that
 // protect them.
 
-extern semaphore<int> user_debug_level;
 extern semaphore<bool> force_software_rendering;
 extern semaphore<bool> spot_loaded;
 extern semaphore<bool> selection_active;

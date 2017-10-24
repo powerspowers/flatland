@@ -2639,33 +2639,6 @@ download_URL(const char *URL, const char *file_path, bool no_cache)
 }
 
 //------------------------------------------------------------------------------
-// Permit the user to display the error log file if the debug flag is on,
-// there were warnings written to the file, and it hasn't already been displayed
-// for this spot.
-//------------------------------------------------------------------------------
-
-void
-display_error_log_file(void)
-{
-	// If the error log file has already been displayed, don't do it again.
-
-	if (displayed_error_log_file)
-		return;
-	displayed_error_log_file = false;
-
-	// If the debug level allows warnings, and there are warnings in the error
-	// log, then allow it to be displayed in a new browser window if the user 
-	// requests it.
-
-	if ((user_debug_level.get() == SHOW_ERRORS_AND_WARNINGS ||
-		(user_debug_level.get() == LET_SPOT_DECIDE &&
-		spot_debug_level == SHOW_ERRORS_AND_WARNINGS)) && warnings) {
-		show_error_log = true;
-		display_error.send_event(true);
-	}
-}
-
-//------------------------------------------------------------------------------
 // Initiate the download of the first custom texture or wave.
 //------------------------------------------------------------------------------
 
@@ -2680,11 +2653,10 @@ initiate_first_download(void)
 	curr_download_completed = true;
 
 	// If there aren't any custom textures or waves to be loaded, display the
-	// spot title on the task bar, and display the error log file if necessary.
+	// spot title on the task bar.
 
 	if (curr_custom_texture_ptr == NULL && curr_custom_wave_ptr == NULL) {
 		set_title("%s", spot_title);
-		display_error_log_file();
 	}
 }
 
@@ -2958,11 +2930,10 @@ handle_current_download(void)
 	}
 
 	// If there are no more custom textures or waves, display the spot title in
-	// the task bar, and let the user display the error log file if necessary.
+	// the task bar.
 
 	if (curr_custom_texture_ptr == NULL && curr_custom_wave_ptr == NULL) {
 		set_title("%s", spot_title);
-		display_error_log_file();
 	}
 }
 

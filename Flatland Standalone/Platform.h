@@ -16,8 +16,7 @@
 #define	VIEW_RADIUS_SLIDER					3
 #define MOVE_RATE_SLIDER					4
 #define TURN_RATE_SLIDER					5
-#define	DEBUG_LEVEL_OPTION					6
-#define FORCE_SOFTWARE_RENDERING_CHECKBOX	7
+#define FORCE_SOFTWARE_RENDERING_CHECKBOX	6
 
 // Command menu item IDs.
 
@@ -297,7 +296,7 @@ close_light_window(void);
 
 void
 open_options_window(int viewing_distance_value, bool use_classic_controls_value,
-					int move_rate_value, int turn_rate_value, int user_debug_level_value, bool force_software_rendering,
+					int move_rate_value, int turn_rate_value, bool force_software_rendering,
 					void (*options_callback)(int option_ID, int option_value));
 
 void

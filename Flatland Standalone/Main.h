@@ -39,16 +39,8 @@ extern float half_viewport_height;
 extern float horz_pixels_per_degree;
 extern float vert_pixels_per_degree;
 
-// Debug levels, and warnings and low memory flags.
+// Low memory flag.
 
-#define BE_SILENT					0
-#define LET_SPOT_DECIDE				1
-#define SHOW_ERRORS_ONLY			2
-#define SHOW_ERRORS_AND_WARNINGS	3
-
-extern int spot_debug_level;
-extern bool debug_on;
-extern bool warnings;
 extern bool low_memory;
 
 // Cached blockset list.
@@ -269,10 +261,6 @@ extern bool viewpoint_has_changed;
 extern texture *curr_custom_texture_ptr;
 extern wave *curr_custom_wave_ptr;
 extern bool curr_download_completed;
-
-// Flag indicating if error log file has been displayed.
-
-extern bool	displayed_error_log_file;
 
 #ifdef STREAMING_MEDIA
 

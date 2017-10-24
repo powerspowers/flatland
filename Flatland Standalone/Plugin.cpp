@@ -56,10 +56,6 @@ string requested_blockset_name;			// Set if requesting a blockset.
 semaphore<string> downloaded_URL;
 semaphore<string> downloaded_file_path;
 
-// Flag indicating if error log should be displayed.
-
-bool show_error_log;
-
 // Events.
 
 event player_thread_initialised;
@@ -92,7 +88,6 @@ event polygon_info_requested;
 
 // Global variables that require synchronised access, and the semaphores that protect them.
 
-semaphore<int> user_debug_level;
 semaphore<bool> force_software_rendering;
 semaphore<bool> spot_loaded;
 semaphore<bool> selection_active;
@@ -160,7 +155,6 @@ static bool old_use_classic_controls;
 static int old_curr_move_rate;
 static int old_curr_turn_rate;
 static int old_visible_block_radius;
-static int old_user_debug_level;
 static bool old_force_software_rendering;
 static float window_half_width;
 static float window_top_half_height, window_bottom_half_height;
@@ -797,7 +791,6 @@ options_window_callback(int option_ID, int option_value)
 		use_classic_controls.set(old_use_classic_controls);
 		curr_move_rate.set(old_curr_move_rate);
 		curr_turn_rate.set(old_curr_turn_rate);
-		user_debug_level.set(old_user_debug_level);
 		force_software_rendering.set(old_force_software_rendering);
 		close_options_window();
 		break;
@@ -812,9 +805,6 @@ options_window_callback(int option_ID, int option_value)
 		break;
 	case TURN_RATE_SLIDER:
 		curr_turn_rate.set(option_value);
-		break;
-	case DEBUG_LEVEL_OPTION:
-		user_debug_level.set(option_value);
 		break;
 	case FORCE_SOFTWARE_RENDERING_CHECKBOX:
 		force_software_rendering.set(option_value ? true : false);
@@ -882,10 +872,9 @@ show_options_window()
 	old_use_classic_controls = use_classic_controls.get();
 	old_curr_move_rate = curr_move_rate.get();
 	old_curr_turn_rate = curr_turn_rate.get();
-	old_user_debug_level = user_debug_level.get();
 	old_force_software_rendering = force_software_rendering.get();
 	open_options_window(old_visible_block_radius, old_use_classic_controls, old_curr_move_rate, old_curr_turn_rate,
-		old_user_debug_level, old_force_software_rendering, options_window_callback);
+		old_force_software_rendering, options_window_callback);
 }
 
 void
@@ -1099,14 +1088,12 @@ timer_event_callback(void)
 		set_mouse_cursor();
 	}
 
-	// Check to see whether a display error request has been signalled by
-	// the player thread, and if so either display the error log if the player
-	// requests it, or display a generic error message.
+	// Check to see whether a display error request has been signalled by the player thread, 
+	// and if so either display the error log if the player requests it.
 
 	if (display_error.event_sent()) {
 
-		// Clear all movement deltas, so the player doesn't spin out of control
-		// when the error window comes up.
+		// Clear all movement deltas, so the player doesn't spin out of control when the error window comes up.
 
 		curr_turn_delta.set(0.0f);
 		curr_look_delta.set(0.0f);
@@ -1115,25 +1102,18 @@ timer_event_callback(void)
 
 		// Now show the error window.
 
-		if (show_error_log) {
-			if (query("Errors in 3DML document", true,
-				"One or more errors were encountered during the parsing of the "
-				"3DML document.\nDo you want to view the error log?")) {
-				FILE *fp;
+		if (query("Error in 3DML document", true,
+			"An error was encountered during the parsing of the 3DML document.\nDo you want to view the error log?")) {
+			FILE *fp;
 
-				// Finish off the error log file so that it's ready to display
-				// as a web page.
+			// Finish off the error log file so that it's ready to display as a web page.
 
-				if ((fp = fopen(error_log_file_path, "a")) != NULL) {
-					fprintf(fp, "</BODY>\n</HTML>\n");
-					fclose(fp);
-				}
-				display_file_as_web_page(error_log_file_path);
+			if ((fp = fopen(error_log_file_path, "a")) != NULL) {
+				fprintf(fp, "</BODY>\n</HTML>\n");
+				fclose(fp);
 			}
-		} else
-			fatal_error("Unable to display 3DML document", "One or more errors "
-				"in the 3DML document has prevented Flatland from "
-				"displaying it.");
+			display_file_as_web_page(error_log_file_path);
+		}
 	}
 }
 
@@ -1371,7 +1351,6 @@ run_app(void *instance_handle, int show_command, char *spot_file_path)
 	// Create the semaphores for all variables that require synchornised 
 	// access.
 
-	user_debug_level.create_semaphore();
 	force_software_rendering.create_semaphore();
 	spot_loaded.create_semaphore();
 	selection_active.create_semaphore();
@@ -1522,7 +1501,6 @@ shut_down_app()
 
 	// Destroy semaphores for all variables that required synchronised access.
 
-	user_debug_level.destroy_semaphore();
 	force_software_rendering.destroy_semaphore();
 	spot_loaded.destroy_semaphore();
 	selection_active.destroy_semaphore();

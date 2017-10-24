@@ -171,7 +171,7 @@ parse_name(const char *old_name, string *new_name, bool allow_list, bool allow_w
 // Attribute value parsing functions.
 
 void
-start_parsing_value(int tag_token, int attr_token, char *attr_value, bool attr_required);
+start_parsing_value(int tag_token, int attr_token, char *attr_value, bool attr_required, bool attr_error_as_warning = false);
 
 bool
 parse_integer_in_value(int *int_ptr);

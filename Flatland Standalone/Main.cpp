@@ -60,10 +60,8 @@ float half_viewport_height;
 float horz_pixels_per_degree;
 float vert_pixels_per_degree;
 
-// Debug level, and warnings and low memory flags.
+// Low memory flag.
 
-int spot_debug_level;
-bool warnings;
 bool low_memory;
 
 // Cached blockset list.
@@ -288,12 +286,6 @@ bool viewpoint_has_changed;
 texture *curr_custom_texture_ptr;
 wave *curr_custom_wave_ptr;
 bool curr_download_completed;
-
-// Flag indicating if the error log file has been displayed (this happens once
-// all textures and waves have been downloaded, but not if additional textures
-// and waves are downloaded later on).
-
-bool displayed_error_log_file;
 
 #ifdef STREAMING_MEDIA
 
@@ -884,10 +876,8 @@ start_up_spot(void)
 	for (int index = 0; index < 16384; index++)
 		block_symbol_table[index] = NULL;
 
-	// Rest the spot debug level, warnings and low memory flags.
+	// Reset the low memory flag.
 
-	spot_debug_level = BE_SILENT;
-	warnings = false;
 	low_memory = false;
 
 	// Start up SimKin.
@@ -945,15 +935,11 @@ start_up_spot(void)
 			spot_entity_list = NULL;
 		}
 
-		// If memory was low, display a low memory error.  Otherwise display
-		// the error.
+		// If memory was low, display a low memory error.  Otherwise display the error.
 
 		if (low_memory)
 			display_low_memory_error();
 		else {
-			show_error_log = (user_debug_level.get() >= SHOW_ERRORS_ONLY ||
-				(user_debug_level.get() == LET_SPOT_DECIDE && 
-				spot_debug_level >= SHOW_ERRORS_ONLY));
 			display_error.send_event(true);
 		}
 		return(false);
@@ -987,7 +973,6 @@ start_up_spot(void)
 
 	// Initiate the downloading of the first custom texture or wave.
 
-	displayed_error_log_file = false;
 	initiate_first_download();
 
 	// If hardware acceleration is enabled, then update the fog settings for the first time.

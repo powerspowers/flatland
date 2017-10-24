@@ -195,15 +195,6 @@ static attr_def category_attr_list[CATEGORY_ATTRIBUTES] = {
 	{TOKEN_NAME, VALUE_STRING, &category_name, true}
 };
 
-// DEBUG tag (spot file only).
-
-#define DEBUG_ATTRIBUTES	1
-#define DEBUG_WARNINGS		0
-static bool debug_warnings;
-static attr_def debug_attr_list[DEBUG_ATTRIBUTES] = {
-	{TOKEN_WARNINGS, VALUE_BOOLEAN, &debug_warnings, false}
-};
-
 // ENTRANCE tag (spot file only).
 
 #define ENTRANCE_ATTRIBUTES	3
@@ -1193,7 +1184,6 @@ static tag_def head_tag_list[] = {
 	{TOKEN_AMBIENT_SOUND, ambient_sound_attr_list, AMBIENT_SOUND_ATTRIBUTES, false},
 	{TOKEN_BASE, base_attr_list, BASE_ATTRIBUTES, false},
 	{TOKEN_BLOCKSET, blockset_attr_list, BLOCKSET_ATTRIBUTES, false},
-	{TOKEN_DEBUG, debug_attr_list, DEBUG_ATTRIBUTES, false},
 	{TOKEN_FOG, fog_attr_list, FOG_ATTRIBUTES, false},
 	{TOKEN_GROUND, ground_attr_list, GROUND_ATTRIBUTES, false},
 	{TOKEN_MAP, map_attr_list, MAP_ATTRIBUTES, false},
