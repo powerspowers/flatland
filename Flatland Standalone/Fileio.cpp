@@ -2064,16 +2064,20 @@ parse_blockset(char *blockset_URL, bool show_title)
 
 	// Open the blockset.
 
-	if (!open_blockset(blockset_URL, blockset_name))
-		error("Unable to open the %s blockset with URL %s", blockset_name, blockset_URL);
+	if (!open_blockset(blockset_URL, blockset_name)) {
+		warning("Unable to open the %s blockset with URL %s", blockset_name, blockset_URL);
+		return NULL;
+	}
 
 	// Add a ".style" extension to the blockset name, and open the file in
 	// the blockset that has this name.
 
 	style_file_name = blockset_name;
 	style_file_name += ".style";
-	if (!push_zip_file(style_file_name, true))
-		error("Unable to open %s from the %s blockset", style_file_name, blockset_name);
+	if (!push_zip_file(style_file_name, true)) {
+		warning("Unable to open %s from the %s blockset", style_file_name, blockset_name);
+		return NULL;
+	}
 
 	// Create the blockset object, and initialise it's URL and name.
 
@@ -2163,7 +2167,9 @@ parse_blockset_tag(void)
 	// Load and parse the blockset, then add it to the blockset list.
 
 	blockset_ptr = parse_blockset(blockset_href);
-	blockset_list_ptr->add_blockset(blockset_ptr);
+	if (blockset_ptr != NULL) {
+		blockset_list_ptr->add_blockset(blockset_ptr);
+	}
 }
 
 //------------------------------------------------------------------------------
@@ -3119,16 +3125,18 @@ parse_action_tag(block_def *block_def_ptr, bool need_location_param)
 	// error.
 
 	got_location_param = parsed_attribute[ACTION_LOCATION];
-	if (!got_location_param && need_location_param)
-		error("Stand-alone <I>action</I> tag must have a <I>location</I> "
-			"attribute");
+	if (!got_location_param && need_location_param) {
+		warning("Stand-alone <I>action</I> tag must have a <I>location</I> attribute; skipping over this tag");
+		return NULL;
+	}
 
 	// If the trigger is "key up/down/hold", make sure the key code parameter
 	// has also been given.
 
-	if (parsed_attribute[ACTION_TRIGGER] && !parsed_attribute[ACTION_KEY] &&
-		(action_trigger & KEY_TRIGGERS) != 0)
-		error("Expected the <I>key</I> attribute in the <I>action</I> tag");
+	if (parsed_attribute[ACTION_TRIGGER] && !parsed_attribute[ACTION_KEY] && (action_trigger & KEY_TRIGGERS) != 0) {
+		warning("Expected the <I>key</I> attribute in the <I>action</I> tag; skipping over this tag");
+		return NULL;
+	}
 
 	// Create a trigger.  If this fails, skip over the rest of the action tag.
 
@@ -3568,8 +3576,7 @@ parse_load_tag(void)
 
 	if ((!parsed_attribute[LOAD_TEXTURE] && !parsed_attribute[LOAD_SOUND]) ||
 		(parsed_attribute[LOAD_TEXTURE] && parsed_attribute[LOAD_SOUND])) {
-		warning("Expected one texture or sound attribute; "
-			"ignoring load tag");
+		warning("Expected one texture or sound attribute; ignoring load tag");
 		return;
 	}
 
@@ -3659,27 +3666,25 @@ parse_script_tag(block_def *block_def_ptr, bool need_location_param)
 	int part_no;
 	part *part_ptr;
 
-	// If the LOCATION parameter is missing and it is required, and the trigger is
-	// not "timer", this is an error.
+	// If the LOCATION parameter is missing and it is required, and the trigger is not "timer", this is an error.
 
 	got_location_param = parsed_attribute[ACTION_LOCATION];
-	if (!got_location_param && need_location_param &&
-		(!parsed_attribute[ACTION_TRIGGER] || action_trigger != TIMER))
-		error("Stand-alone <I>script</I> tag with a <I>trigger</I> attribute "
-			"other than \"timer\" must have a <I>location</I> attribute");
+	if (!got_location_param && need_location_param && (!parsed_attribute[ACTION_TRIGGER] || action_trigger != TIMER)) {
+		warning("Stand-alone <I>script</I> tag with a <I>trigger</I> attribute other than \"timer\" must have a <I>location</I> attribute; skipping over tag");
+		return NULL;
+	}
 
-	// If the trigger is "key up/down/hold", make sure the key code parameter
-	// has also been given.
+	// If the trigger is "key up/down/hold", make sure the key code parameter has also been given.
 
-	if (parsed_attribute[ACTION_TRIGGER] && !parsed_attribute[ACTION_KEY] &&
-		(action_trigger & KEY_TRIGGERS) != 0)
-		error("Expected the <I>key</I> attribute in the <I>script</I> tag");
+	if (parsed_attribute[ACTION_TRIGGER] && !parsed_attribute[ACTION_KEY] && (action_trigger & KEY_TRIGGERS) != 0) {
+		warning("Expected the <I>key</I> attribute in the <I>script</I> tag; skipping over tag");
+		return NULL;
+	}
 
 	// If the LOCATION parameter is not missing, and the trigger is "timer",
 	// indicate that the LOCATION parameter is not present.
 
-	if (got_location_param && parsed_attribute[ACTION_TRIGGER] &&
-		action_trigger == TIMER)
+	if (got_location_param && parsed_attribute[ACTION_TRIGGER] && action_trigger == TIMER)
 		got_location_param = false;
 
 	// Create a trigger.  If this fails, skip the script tag.
@@ -3888,20 +3893,22 @@ parse_next_create_tag(int tag_token, tag_def *create_tag_list,
 		
 			// Download and open the file specified in the HREF attribute.
 
-			if (!download_URL(import_href, NULL, true))
-				error("Unable to import file from URL %s", import_href);
-			if (!push_file(curr_file_path, import_href, true))
-				error("Unable to open file %s", curr_file_path);
+			if (!download_URL(import_href, NULL, true)) {
+				warning("Unable to import file from URL %s", import_href);
+				break;
+			}
+			if (!push_file(curr_file_path, import_href, true)) {
+				warning("Unable to open file %s", curr_file_path);
+				break;
+			}
 
 			// Parse the imported file.
 
 			parse_start_of_document(TOKEN_IMPORT, NULL, 0); 
 			parse_rest_of_document(spot_XML_compliance);
 			start_parsing_nested_tags();
-			while (parse_next_nested_tag(TOKEN_IMPORT, create_tag_list, false,
-				&tag_token)) 
-				parse_next_create_tag(tag_token, create_tag_list,
-					custom_block_def_ptr, false);
+			while (parse_next_nested_tag(TOKEN_IMPORT, create_tag_list, false, &tag_token)) 
+				parse_next_create_tag(tag_token, create_tag_list, custom_block_def_ptr, false);
 			stop_parsing_nested_tags();
 			pop_file();
 		}
@@ -3909,7 +3916,7 @@ parse_next_create_tag(int tag_token, tag_def *create_tag_list,
 		// Generate an error for nested IMPORT tags.
 
 		else
-			error("Nested <I>import</I> tags are not permitted");
+			warning("Nested <I>import</I> tags are not permitted");
 	}
 }
 
@@ -4088,10 +4095,14 @@ parse_next_body_tag(int tag_token, bool allow_import_tag)
 		
 			// Download and open the file specified in the HREF attribute.
 
-			if (!download_URL(import_href, NULL, true))
-				error("Unable to import file from URL %s", import_href);
-			if (!push_file(curr_file_path, import_href, true))
-				error("Unable to open file %s", curr_file_path);
+			if (!download_URL(import_href, NULL, true)) {
+				warning("Unable to import file from URL %s", import_href);
+				break;
+			}
+			if (!push_file(curr_file_path, import_href, true)) {
+				warning("Unable to open file %s", curr_file_path);
+				break;
+			}
 
 			// Parse the imported file.
 
@@ -4105,10 +4116,10 @@ parse_next_body_tag(int tag_token, bool allow_import_tag)
 			pop_file();
 		}
 
-		// Generate an error for nested IMPORT tags.
+		// Generate a warning for nested IMPORT tags.
 
 		else
-			error("A nested <I>import</I> tag is not permitted");
+			warning("A nested <I>import</I> tag is not permitted");
 		break;
 	
 	case TOKEN_LEVEL:
@@ -4296,10 +4307,12 @@ parse_body_tags(void)
 	int tag_token;
 
 	// If the body has been seen before, or the head tag hasn't yet been seen,
-	// then this is an error.
+	// then generate a warning.
 
-	if (!got_head_tag)
-		error("Missing <I>head</I> tag");
+	if (!got_head_tag) {
+		warning("Missing <I>head</I> tag");
+		return;
+	}
 	if (got_body_tag) {
 		warning("Duplicate <I>body</I> tag");
 		return;
@@ -4376,10 +4389,12 @@ parse_head_tags(void)
 	int tag_token;
 
 	// If the head tag has been seen already, or has appeared after the body
-	// tag, this is an error.
+	// tag, generate a warning.
 
-	if (got_body_tag)
-		error("The <I>head</I> tag must appear before the <I>body</I> tag");
+	if (got_body_tag) {
+		warning("The <I>head</I> tag must appear before the <I>body</I> tag");
+		return;
+	}
 	if (got_head_tag) {
 		warning("Duplicate <I>head</I> tag");
 		return;

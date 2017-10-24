@@ -3859,17 +3859,21 @@ handle_spot_events(void)
 				loaded_blockset_ptr = blockset_list_ptr->find_blockset(selected_cached_blockset_ptr->href);
 				if (loaded_blockset_ptr == NULL) {
 					loaded_blockset_ptr = parse_blockset(selected_cached_blockset_ptr->href, false);
-					blockset_list_ptr->add_blockset(loaded_blockset_ptr);
-					add_block_symbols(loaded_blockset_ptr);
-					clean_up_renderer();
-					set_up_renderer();
+					if (loaded_blockset_ptr != NULL) {
+						blockset_list_ptr->add_blockset(loaded_blockset_ptr);
+						add_block_symbols(loaded_blockset_ptr);
+						clean_up_renderer();
+						set_up_renderer();
+					}
 				}
 			} else {
 				loaded_blockset_ptr = custom_blockset_ptr;
 			}
-			activate_builder_render_target();
-			render_builder_icons_for_blockset(loaded_blockset_ptr);
-			deactivate_builder_render_target();
+			if (loaded_blockset_ptr != NULL) {
+				activate_builder_render_target();
+				render_builder_icons_for_blockset(loaded_blockset_ptr);
+				deactivate_builder_render_target();
+			}
 			cached_blockset_load_completed.send_event(true);
 		}
 		catch (char *) {
