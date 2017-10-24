@@ -2226,6 +2226,9 @@ LRESULT CALLBACK app_window_proc(HWND hWnd, UINT message, WPARAM wParam, LPARAM 
 			case ID_FILE_MANAGEBLOCKSETS:
 				open_blockset_manager_window();
 				break;
+			case ID_FILE_EDITSPOT:
+				open_builder_window();
+				break;
 			case ID_FILE_VIEW3DMLSOURCE:
 				display_file_as_web_page(curr_spot_file_path);
 				break;
