@@ -5225,7 +5225,7 @@ open_builder_window()
 
 	// Create the builder window.
 
-	builder_window_handle = CreateDialog(app_instance_handle, MAKEINTRESOURCE(IDD_BUILDER), app_window_handle, handle_builder_event);
+	builder_window_handle = CreateDialog(app_instance_handle, MAKEINTRESOURCE(IDD_BUILDER), NULL, handle_builder_event);
 
 	// Show the builder window.
 
