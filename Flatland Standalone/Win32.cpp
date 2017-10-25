@@ -4909,7 +4909,7 @@ draw_block_palette(DRAWITEMSTRUCT *draw_item_ptr)
 		if (block_def_ptr != NULL) {
 			draw_block_icon(block_def_ptr, x, 0, 60, 60, source_hdc, draw_item_ptr->hDC, false);
 		}
-		RECT rect = {x, 64, x + 60, 84};
+		RECT rect = {x, 60, x + 60, 80};
 		char palette_index_string[2];
 		sprintf(palette_index_string, "%d", block_palette_index);
 		DrawText(draw_item_ptr->hDC, palette_index_string, 1, &rect, DT_SINGLELINE | DT_CENTER | DT_VCENTER);
@@ -5044,7 +5044,6 @@ handle_builder_event(HWND window_handle, UINT message, WPARAM wParam, LPARAM lPa
 			block_symbol_font_handle = CreateFont(-POINTS_TO_PIXELS(20), 0, 0, 0, FW_BOLD, FALSE, FALSE, FALSE, DEFAULT_CHARSET, OUT_TT_PRECIS,
 				CLIP_DEFAULT_PRECIS, PROOF_QUALITY, DEFAULT_PITCH | FF_DONTCARE, "MS Sans Serif");
 			SendMessage(block_icons_handle, WM_SETFONT, (WPARAM)block_symbol_font_handle, 0);
-			SendMessage(block_palette_handle, WM_SETFONT, (WPARAM)block_symbol_font_handle, 0);
 			SendMessage(selected_block_icon_handle, WM_SETFONT, (WPARAM)block_symbol_font_handle, 0);
 			ReleaseDC(block_icons_handle, dc_handle);
 
