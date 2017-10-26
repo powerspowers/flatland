@@ -34,6 +34,7 @@
 extern string flatland_dir;
 extern string log_file_path;
 extern string error_log_file_path;
+extern string prev_error_log_file_path;
 extern string config_file_path;
 extern string version_file_path;
 extern string curr_spot_file_path;

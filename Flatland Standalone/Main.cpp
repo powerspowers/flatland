@@ -922,11 +922,21 @@ start_up_spot(void)
 		parse_spot_file();
 	}
 	catch (char *message) {
+		FILE *fp;
 
 		// Pop all files and write the message to the error log.
 
 		pop_all_files();
 		write_error_log(message);
+
+		// Finish off the error log file so that it's ready to display as a web page,
+		// then rename it so it doesn't get overwritten by the next spot.
+
+		if ((fp = fopen(error_log_file_path, "a")) != NULL) {
+			fprintf(fp, "</BODY>\n</HTML>\n");
+			fclose(fp);
+		}
+		rename(error_log_file_path, prev_error_log_file_path);
 
 		// If we got as far as producing an entity list, destroy it.
 
@@ -941,6 +951,13 @@ start_up_spot(void)
 			display_low_memory_error();
 		else {
 			display_error.send_event(true);
+		}
+
+		// Request the reload the splash spot, if the spot we just attempted to load wasn't the same file!
+
+		spot_URL_to_load = flatland_dir + "splash.3dml";
+		if (spot_URL_to_load != curr_URL) {
+			spot_load_requested.send_event(true);
 		}
 		return(false);
 	}

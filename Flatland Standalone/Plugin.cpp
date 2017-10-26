@@ -28,6 +28,7 @@
 string flatland_dir;
 string log_file_path;
 string error_log_file_path;
+string prev_error_log_file_path;
 string config_file_path;
 string version_file_path;
 string curr_spot_file_path;
@@ -1100,19 +1101,11 @@ timer_event_callback(void)
 		curr_move_delta.set(0.0f);
 		curr_side_delta.set(0.0f);
 
-		// Now show the error window.
+		// Now show the error window, and if the user requests to see the error log, display it as a web page.
 
 		if (query("Error in 3DML document", true,
 			"An error was encountered during the parsing of the 3DML document.\nDo you want to view the error log?")) {
-			FILE *fp;
-
-			// Finish off the error log file so that it's ready to display as a web page.
-
-			if ((fp = fopen(error_log_file_path, "a")) != NULL) {
-				fprintf(fp, "</BODY>\n</HTML>\n");
-				fclose(fp);
-			}
-			display_file_as_web_page(error_log_file_path);
+			display_file_as_web_page(prev_error_log_file_path);
 		}
 	}
 }

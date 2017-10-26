@@ -2420,6 +2420,7 @@ start_up_platform_API(void *instance_handle, int show_command, void (*quit_callb
 
 	log_file_path = flatland_dir + "log.txt";
 	error_log_file_path = flatland_dir + "errlog.html";
+	prev_error_log_file_path = flatland_dir + "prev_errlog.html";
 	config_file_path = flatland_dir + "config.txt";
 	version_file_path = flatland_dir + "version.txt";
 	curr_spot_file_path = flatland_dir + "curr_spot.txt";
