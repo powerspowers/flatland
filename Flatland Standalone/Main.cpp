@@ -1607,16 +1607,16 @@ adjust_trajectory(vector &trajectory, float elapsed_time)
 			// move at all.
 
 			if (FLT(new_position.y, floor_y)) {
-				if (FLT(floor_y - new_position.y, player_step_height))
+				if (FLT(floor_y - new_position.y, player_step_height)) {
 					new_position.y = floor_y + player_step_height;
-				else
+				} else {
 					new_position = old_position;
+				}
 			} 
 		
-			// If the player height is above the floor height, we are in free
-			// fall...
+			// If the player height is above the floor height and we're not jumping, we are in free fall...
 	
-			else {
+			else if (FEQ(jump_delta, 0.0f)) {
 		
 				// If we can step down to the floor height, do so.
 
@@ -1625,15 +1625,12 @@ adjust_trajectory(vector &trajectory, float elapsed_time)
 					player_fall_delta = 0.0f;
 				} 
 		
-				// Otherwise, if we're not jumping, allow gravity to pull the player down by the given
-				// fall delta.  If this puts the player below the floor height, put them at the floor
-				// height and zero the fall delta.  Otherwise increase the fall delta over time until
-				// a maximum delta is reached.
+				// Otherwise allow gravity to pull the player down by the given fall delta.  
+				// If this puts the player below the floor height, put them at the floor height and zero the fall delta.  
+				// Otherwise increase the fall delta over time until a maximum delta is reached.
 			
-				else if (FEQ(jump_delta, 0.0f)) {
-					if (FGT(elapsed_time, 0.0f)) {
-						new_position.y -= player_fall_delta * elapsed_time;
-					}
+				else {
+					new_position.y -= player_fall_delta * elapsed_time;
 					if (FLE(new_position.y, floor_y)) {
 						new_position.y = floor_y;
 						player_fall_delta = 0.0f;
