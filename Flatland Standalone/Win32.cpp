@@ -2232,6 +2232,10 @@ LRESULT CALLBACK app_window_proc(HWND hWnd, UINT message, WPARAM wParam, LPARAM 
 			case ID_FILE_VIEW3DMLSOURCE:
 				display_file_as_web_page(curr_spot_file_path);
 				break;
+			case ID_FILE_VIEWERRORLOG:
+				copy_error_log();
+				display_file_as_web_page(prev_error_log_file_path);
+				break;
 			case IDM_EXIT:
 				DestroyWindow(hWnd);
 				break;

@@ -139,6 +139,9 @@ vbprintf(char *buffer, int size, const char *format, va_list arg_ptr);
 void
 write_error_log(const char *format, ...);
 
+void
+copy_error_log(void);
+
 void 
 diagnose(const char *format, ...);
 

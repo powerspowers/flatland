@@ -1613,6 +1613,31 @@ write_error_log(const char *format, ...)
 }
 
 //------------------------------------------------------------------------------
+// Copy the error log to a new file.
+//------------------------------------------------------------------------------
+
+void
+copy_error_log(void)
+{
+	FILE *old_fp;
+	FILE *new_fp;
+
+	// Copy the error log to a new file, then add the final body and html tags.
+
+	if ((old_fp = fopen(error_log_file_path, "r")) != NULL) {
+		if ((new_fp = fopen(prev_error_log_file_path, "w")) != NULL) {
+			int ch;
+			while ((ch = fgetc(old_fp)) != EOF) {
+				fputc(ch, new_fp);
+			}
+			fprintf(new_fp, "</BODY>\n</HTML>\n");
+			fclose(new_fp);
+		}
+		fclose(old_fp);
+	}
+}
+
+//------------------------------------------------------------------------------
 // Write a formatted diagnostic message to the log file in the Flatland 
 // directory.
 //------------------------------------------------------------------------------
