@@ -2290,11 +2290,6 @@ spot_URL_edit_box_window_proc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
 {
 	switch (msg)
 	{
-	case WM_COMMAND:
-		if (HIWORD(wParam) == EN_SETFOCUS) {
-			SendMessage(spot_URL_edit_box_handle, EM_SETSEL, 0, -1);
-		}
-		break;
 	case WM_KEYDOWN:
 		if (wParam == VK_RETURN) {
 			char buffer[_MAX_PATH + 1];
