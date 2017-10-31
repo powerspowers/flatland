@@ -2290,6 +2290,11 @@ spot_URL_edit_box_window_proc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
 {
 	switch (msg)
 	{
+	case WM_COMMAND:
+		if (HIWORD(wParam) == EN_SETFOCUS) {
+			SendMessage(spot_URL_edit_box_handle, EM_SETSEL, 0, -1);
+		}
+		break;
 	case WM_KEYDOWN:
 		if (wParam == VK_RETURN) {
 			char buffer[_MAX_PATH + 1];
@@ -2299,6 +2304,13 @@ spot_URL_edit_box_window_proc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
 			spot_load_requested.send_event(true);
 			break;
 		}
+	case WM_LBUTTONDOWN:
+		if (GetFocus() != hwnd) {
+			CallWindowProc(old_spot_URL_edit_box_window_proc, hwnd, msg, wParam, lParam);
+			SendMessage(hwnd, EM_SETSEL, 0, -1);
+			return 0;
+		}
+		// Deliberately falling through here.
 	default:
 		return CallWindowProc(old_spot_URL_edit_box_window_proc, hwnd, msg, wParam, lParam);
 	}
@@ -2373,7 +2385,7 @@ start_up_platform_API(void *instance_handle, int show_command, void (*quit_callb
 		return FALSE;
 	}
 	GetClientRect(app_window_handle, &app_window_rect);
-	spot_URL_edit_box_handle = CreateWindow("EDIT", NULL, WS_CHILD | WS_VISIBLE | WS_BORDER | ES_LEFT | ES_AUTOHSCROLL, 
+	spot_URL_edit_box_handle = CreateWindow("EDIT", NULL, WS_CHILD | WS_VISIBLE | WS_BORDER | ES_LEFT | ES_AUTOHSCROLL | ES_NOHIDESEL, 
 		SPOT_URL_LABEL_WIDTH, 0, app_window_rect.right - SPOT_URL_LABEL_WIDTH, SPOT_URL_BAR_HEIGHT, app_window_handle, NULL, app_instance_handle, NULL);
 	if (!spot_URL_edit_box_handle) {
 		return FALSE;
