@@ -1263,6 +1263,7 @@ handle_exit(const char *exit_URL, const char *exit_target, bool is_spot_URL, boo
 		string file_name;
 		string entrance_name;
 		char *ext_ptr;
+		bool has_3dml_extension;
 
 		// Create the URL by prepending the spot file directory if the
 		// exit reference is a relative path.  Then split the URL into
@@ -1271,10 +1272,23 @@ handle_exit(const char *exit_URL, const char *exit_target, bool is_spot_URL, boo
 		URL = create_URL(spot_URL_dir, exit_URL);
 		split_URL(URL, &URL_dir, &file_name, &entrance_name);
 
-		// If this is a spot URL, or the file name ends with ".3dml"...
+		// If the file name does not end with ".3dml" and the the URL wasn't
+		// marked as being a spot URL, then assume the URL is for a directory.
+		// In this case, add the file name to the directory path, and force
+		// the file name to be "index.3dml" instead.
 
 		ext_ptr = strrchr(file_name, '.');
-		if (is_spot_URL || (ext_ptr != NULL && !_stricmp(ext_ptr, ".3dml"))) {
+		has_3dml_extension = ext_ptr != NULL && !_stricmp(ext_ptr, ".3dml");
+		if (!has_3dml_extension && !is_spot_URL) {
+			URL_dir += file_name;
+			URL_dir += "/";
+			file_name = "index.3dml";
+			has_3dml_extension = true;
+		}
+
+		// If this is a spot URL, or the file name ends with ".3dml"...
+		
+		if (has_3dml_extension || is_spot_URL) {
 			string spot_URL;
 
 			// If there is a custom texture or wave currently being downloaded,
@@ -3972,7 +3986,7 @@ player_thread(void *arg_list)
 			if (spot_load_requested.event_sent()) {
 				bool loaded;
 				if (strlen(spot_URL_to_load) > 0) {
-					loaded = handle_exit(spot_URL_to_load, NULL, true, true);
+					loaded = handle_exit(spot_URL_to_load, NULL, false, true);
 				} else {
 					curr_URL = "";
 					loaded = load_new_spot();
