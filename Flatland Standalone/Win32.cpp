@@ -2223,10 +2223,10 @@ LRESULT CALLBACK app_window_proc(HWND hWnd, UINT message, WPARAM wParam, LPARAM 
 			case ID_FILE_BRIGHTNESS:
 				show_light_window();
 				break;
-			case ID_FILE_MANAGEBLOCKSETS:
+			case ID_EDIT_BLOCKSETMANAGER:
 				open_blockset_manager_window();
 				break;
-			case ID_FILE_EDITSPOT:
+			case ID_EDIT_SPOTBUILDER:
 				open_builder_window();
 				break;
 			case ID_VIEW_3DMLSOURCE:
