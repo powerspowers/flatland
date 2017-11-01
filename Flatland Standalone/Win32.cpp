@@ -2229,10 +2229,10 @@ LRESULT CALLBACK app_window_proc(HWND hWnd, UINT message, WPARAM wParam, LPARAM 
 			case ID_FILE_EDITSPOT:
 				open_builder_window();
 				break;
-			case ID_FILE_VIEW3DMLSOURCE:
+			case ID_VIEW_3DMLSOURCE:
 				display_file_as_web_page(curr_spot_file_path);
 				break;
-			case ID_FILE_VIEWERRORLOG:
+			case ID_VIEW_ERRORLOG:
 				copy_error_log();
 				display_file_as_web_page(prev_error_log_file_path);
 				break;
