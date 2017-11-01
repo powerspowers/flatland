@@ -208,16 +208,39 @@ string::truncate(unsigned int new_length)
 }
 
 void
+string::remove_leading_whitespace()
+{
+	// Search forwards from the start of the string to find the first non-whitespace character,
+	// copy the remaining characters to the start of the string, then truncate the string to its
+	// new length.
+
+	int index = 0;
+	while (text[index] == ' ' || text[index] == '\t' || text[index] == '\n')
+		index++;
+	if (index > 0) {
+		int new_index = 0;
+		while (text[index] != '\0') {
+			text[new_index++] = text[index++];
+		}
+		text[new_index] = '\0';
+		truncate(new_index);
+	}
+}
+
+void
 string::remove_trailing_whitespace()
 {
 	// Search backwards from the end of the string to find the first non-whitespace character,
 	// then truncate the string at that point.
 
 	int len = strlen(text);
-	while (len > 0 && (text[len - 1] == ' ' || text[len - 1] == '\t' || text[len - 1] == '\n')) {
-		len--;
+	int new_len = len;
+	while (new_len > 0 && (text[new_len - 1] == ' ' || text[new_len - 1] == '\t' || text[new_len - 1] == '\n')) {
+		new_len--;
 	}
-	truncate(len);
+	if (new_len < len) {
+		truncate(new_len);
+	}
 }
 
 // Method to copy a fixed number of characters from a string.  It is assumed

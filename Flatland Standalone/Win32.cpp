@@ -2296,6 +2296,15 @@ spot_URL_edit_box_window_proc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
 			int size = Edit_GetLine(hwnd, 0, buffer, _MAX_PATH);
 			buffer[size] = '\0';
 			spot_URL_to_load = buffer;
+			debug_message("URL = '%s'\n", (char *)spot_URL_to_load);
+			spot_URL_to_load.remove_leading_whitespace();
+			debug_message("URL leading stripped = '%s'\n", (char *)spot_URL_to_load);
+			spot_URL_to_load.remove_trailing_whitespace();
+			debug_message("URL trailing stripped = '%s'\n", (char *)spot_URL_to_load);
+			if (_strnicmp(spot_URL_to_load, "http://", 7) && _strnicmp(spot_URL_to_load, "file:", 5) &&
+				(!isalpha(spot_URL_to_load[0]) || spot_URL_to_load[1] != ':')) {
+				spot_URL_to_load = string("http://") + spot_URL_to_load;
+			}
 			spot_load_requested.send_event(true);
 			break;
 		}

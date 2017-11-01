@@ -314,6 +314,7 @@ struct string {
 	string operator +(char add_char);
 	string operator +(const char *add_text);
 	void truncate(unsigned int new_length);
+	void remove_leading_whitespace();
 	void remove_trailing_whitespace();
 	void copy(const char *new_text, unsigned int new_length);
 	void append(const char *add_text, unsigned int add_length);
