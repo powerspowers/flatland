@@ -1217,31 +1217,6 @@ quit_callback()
 }
 
 //------------------------------------------------------------------------------
-// Open a local file.
-//------------------------------------------------------------------------------
-
-void
-open_local_file(char *file_path)
-{
-	char full_file_path[_MAX_PATH];
-
-	// Convert the file path to a full path.
-
-	_fullpath(full_file_path, file_path, _MAX_PATH);
-
-	// Signal that a URL was opened.
-
-	URL_was_opened.reset_event();
-	URL_was_opened.send_event(true);
-
-	// Set up the downloaded URL and file path, and signal that it was downloaded.
-
-	downloaded_URL.set(full_file_path);
-	downloaded_file_path.set(full_file_path);
-	URL_was_downloaded.send_event(true);
-}
-
-//------------------------------------------------------------------------------
 // Downloader thread.
 //------------------------------------------------------------------------------
 
@@ -1286,6 +1261,8 @@ downloader_thread(void *arg_list)
 int
 run_app(void *instance_handle, int show_command, char *spot_file_path)
 {
+	char full_file_path[_MAX_PATH];
+
 	// Start the memory trace.
 
 #if MEM_TRACE
@@ -1437,11 +1414,15 @@ run_app(void *instance_handle, int show_command, char *spot_file_path)
 	// Open the spot at the provided file path on the command line, or the splash spot if the command line is empty.
 
 	if (strlen(spot_file_path) > 0) {
-		open_local_file(spot_file_path);
+		_fullpath(full_file_path, spot_file_path, _MAX_PATH);
 	} else {
-		string splash_file_path = flatland_dir + "splash.3dml";
-		open_local_file(splash_file_path);
+		strcpy(full_file_path, flatland_dir);
+		strcat(full_file_path, "splash.3dml");
+		//strcpy(full_file_path, "http://spots.flatland.com/splash.3dml");
 	}
+	curr_download_completed = true;
+	spot_URL_to_load = full_file_path;
+	spot_load_requested.send_event(true);
 
 	// Indicate Rover started up sucessfully.
 

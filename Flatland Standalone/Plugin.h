@@ -143,9 +143,6 @@ int
 run_app(void *instance_handle, int show_command, char *spot_file_path);
 
 void
-open_local_file(char *file_path);
-
-void
 show_options_window();
 
 void

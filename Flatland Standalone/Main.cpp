@@ -944,13 +944,6 @@ start_up_spot(void)
 		else {
 			display_error.send_event(true);
 		}
-
-		// Request the reload the splash spot, if the spot we just attempted to load wasn't the same file!
-
-		spot_URL_to_load = flatland_dir + "splash.3dml";
-		if (spot_URL_to_load != curr_URL) {
-			spot_load_requested.send_event(true);
-		}
 		return(false);
 	}
 
@@ -3945,16 +3938,6 @@ player_thread(void *arg_list)
 			player_window_initialised.send_event(false);
 			shut_down_player_window();
 			continue;
-		}
-
-		// Attempt to load the spot that was passed in as the initial URL for
-		// this plugin window.
-
-		if (load_spot())
-			spot_loaded.set(true);
-		else {
-			spot_loaded.set(false);
-			set_title("No spot loaded");
 		}
 
 		// Run the event loop until plugin thread signals the player window to
