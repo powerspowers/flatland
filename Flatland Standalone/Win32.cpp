@@ -2386,7 +2386,7 @@ start_up_platform_API(void *instance_handle, int show_command, void (*quit_callb
 		return FALSE;
 	}
 	GetClientRect(app_window_handle, &app_window_rect);
-	spot_URL_edit_box_handle = CreateWindow("EDIT", NULL, WS_CHILD | WS_VISIBLE | WS_BORDER | ES_LEFT | ES_AUTOHSCROLL | ES_NOHIDESEL, 
+	spot_URL_edit_box_handle = CreateWindow("EDIT", NULL, WS_CHILD | WS_VISIBLE | WS_BORDER | ES_LEFT | ES_AUTOHSCROLL, 
 		SPOT_URL_LABEL_WIDTH, 0, app_window_rect.right - SPOT_URL_LABEL_WIDTH, SPOT_URL_BAR_HEIGHT, app_window_handle, NULL, app_instance_handle, NULL);
 	if (!spot_URL_edit_box_handle) {
 		return FALSE;
@@ -3932,7 +3932,7 @@ handle_new_spot_event(HWND window_handle, UINT message, WPARAM wParam, LPARAM lP
 					spot_file_contents += version_number_to_string(ROVER_VERSION_NUMBER);
 					spot_file_contents += "\">\n\t<head>\n";
 					spot_file_contents += "\t\t<blockset href=\"http://original.flatland.com/blocksets/flatsets/basic.bset\"/>\n";
-					spot_file_contents += "\t\t<map dimensions=\"(";
+					spot_file_contents += "\t\t<map style=\"double\" dimensions=\"(";
 					spot_file_contents += int_to_string(columns);
 					spot_file_contents += ", ";
 					spot_file_contents += int_to_string(rows);
