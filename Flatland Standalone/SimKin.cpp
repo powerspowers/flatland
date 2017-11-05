@@ -2022,7 +2022,9 @@ map_simkin_object::method(const skString& method, skRValueArray& arguments, skRV
 			block_ptr = NULL;
 			if (string_to_symbol(symbol_str, &symbol, false)) {
 				block_def_ptr = block_symbol_table[symbol];
-				block_ptr = block_def_ptr->used_block_list;
+				if (block_def_ptr) {
+					block_ptr = block_def_ptr->used_block_list;
+				}
 			}
 
 			// If the block exists, return it's SimKin object.  Otherwise
@@ -2076,8 +2078,7 @@ map_simkin_object::method(const skString& method, skRValueArray& arguments, skRV
 				block_ptr = movable_block_list;
 				while (block_ptr != NULL) {
 					block_ptr->translation.get_map_position(&block_column, &block_row, &block_level);
-					if (block_column == column && block_row == row &&
-						block_level == level) {
+					if (block_column == column && block_row == row && block_level == level) {
 						returnValue = get_block_simkin_object(block_ptr);
 						return(true);
 					}
@@ -2120,11 +2121,12 @@ map_simkin_object::method(const skString& method, skRValueArray& arguments, skRV
 				// Insert all blocks that have been created from this block
 				// definition into the array.
 
+				if (block_def_ptr != NULL) {
 				block_ptr = block_def_ptr->used_block_list;
-				while (block_ptr != NULL) {
-					array_simkin_object_ptr->array.append(
-						get_block_simkin_object(block_ptr));
-					block_ptr = block_ptr->next_used_block_ptr;
+					while (block_ptr != NULL) {
+						array_simkin_object_ptr->array.append(get_block_simkin_object(block_ptr));
+						block_ptr = block_ptr->next_used_block_ptr;
+					}
 				}
 			}
 
@@ -2153,22 +2155,17 @@ map_simkin_object::method(const skString& method, skRValueArray& arguments, skRV
 			level = arguments[2].intValue() - 1;
  			if (world_ptr->ground_level_exists)
 				level++;
-			if ((square_ptr = world_ptr->get_square_ptr(column, row, level)) 
-				!= NULL && (block_ptr = square_ptr->block_ptr) != NULL)
-				array_simkin_object_ptr->array.append(
-					get_block_simkin_object(block_ptr));
+			if ((square_ptr = world_ptr->get_square_ptr(column, row, level)) != NULL && (block_ptr = square_ptr->block_ptr) != NULL)
+				array_simkin_object_ptr->array.append(get_block_simkin_object(block_ptr));
 
 			// Now step through the movable block list, and add all blocks
 			// that are on this square to the array.
 
 			block_ptr = movable_block_list;
 			while (block_ptr != NULL) {
-				block_ptr->translation.get_map_position(&block_column, 
-					&block_row, &block_level);
-				if (block_column == column && block_row == row &&
-					block_level == level)
-					array_simkin_object_ptr->array.append(
-						get_block_simkin_object(block_ptr));
+				block_ptr->translation.get_map_position(&block_column, &block_row, &block_level);
+				if (block_column == column && block_row == row && block_level == level)
+					array_simkin_object_ptr->array.append(get_block_simkin_object(block_ptr));
 				block_ptr = block_ptr->next_block_ptr;
 			}
 
