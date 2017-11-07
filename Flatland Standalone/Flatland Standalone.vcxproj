@@ -157,6 +157,12 @@
     <ClInclude Include="Collision\Mat.h" />
     <ClInclude Include="Collision\Maths.h" />
     <ClInclude Include="Collision\Vec.h" />
+    <ClInclude Include="DirectXTK\dds.h" />
+    <ClInclude Include="DirectXTK\DDSTextureLoader.h" />
+    <ClInclude Include="DirectXTK\DirectXHelpers.h" />
+    <ClInclude Include="DirectXTK\LoaderHelpers.h" />
+    <ClInclude Include="DirectXTK\pch.h" />
+    <ClInclude Include="DirectXTK\PlatformHelpers.h" />
     <ClInclude Include="Expat\ascii.h" />
     <ClInclude Include="Expat\asciitab.h" />
     <ClInclude Include="Expat\expat.h" />
@@ -271,6 +277,7 @@
     <ClCompile Include="Collision\Mat.cpp" />
     <ClCompile Include="Collision\Maths.cpp" />
     <ClCompile Include="Collision\Vec.cpp" />
+    <ClCompile Include="DirectXTK\DDSTextureLoader.cpp" />
     <ClCompile Include="Expat\xmlparse.c" />
     <ClCompile Include="Expat\xmlrole.c" />
     <ClCompile Include="Expat\xmltok.c" />

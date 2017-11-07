@@ -858,6 +858,18 @@ static attr_def sky_attr_list[SKY_ATTRIBUTES] = {
 
 #endif
 
+// SKYBOX tag (style and spot files)
+
+#define SKYBOX_ATTRIBUTES	2
+#define SKYBOX_CUBEMAP		0
+#define SKYBOX_BRIGHTNESS	1
+static string skybox_cubemap;
+static float skybox_intensity;
+static attr_def skybox_attr_list[SKYBOX_ATTRIBUTES] = {
+	{TOKEN_CUBEMAP,	VALUE_STRING, &skybox_cubemap, false},
+	{TOKEN_BRIGHTNESS, VALUE_PERCENTAGE, &skybox_intensity, false}
+};
+
 // SOUND tag (block and spot files)
 
 #define SOUND_ATTRIBUTES	9
@@ -1191,6 +1203,7 @@ static tag_def head_tag_list[] = {
 	{TOKEN_ORB, orb_attr_list, ORB_ATTRIBUTES, false},
 	{TOKEN_PLACEHOLDER, placeholder_attr_list, PLACEHOLDER_ATTRIBUTES, false},
 	{TOKEN_SKY, sky_attr_list, SKY_ATTRIBUTES, false},
+	{TOKEN_SKYBOX, skybox_attr_list, SKYBOX_ATTRIBUTES, false},
 #ifdef STREAMING_MEDIA
 	{TOKEN_STREAM, stream_attr_list, STREAM_ATTRIBUTES, false},
 #endif

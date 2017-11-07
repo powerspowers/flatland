@@ -1473,6 +1473,10 @@ struct blockset {
 	RGBcolour sky_colour;						// Sky colour.
 	bool sky_brightness_set;					// TRUE if sky brightness set.
 	float sky_brightness;						// Sky brightness.
+	bool skybox_defined;						// TRUE if skybox defined.
+	string skybox_cubemap_URL;					// URL of skybox cubemap.
+	bool skybox_brightness_set;					// TRUE if skybox brightness set.
+	float skybox_brightness;					// Skybox brightness.
 	bool ground_defined;						// TRUE if ground defined.
 	string ground_texture_URL;					// URL of ground texture.
 	texture *ground_texture_ptr;				// Pointer to ground texture.

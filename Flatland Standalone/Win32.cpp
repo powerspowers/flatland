@@ -35,6 +35,7 @@
 #include <DirectXColors.h>
 #include <DirectXMath.h>
 #include <DirectXCollision.h>
+#include "DirectXTK/DDSTextureLoader.h"
 #include <d3dcompiler.h>
 #include <ddraw.h>
 #include <dsound.h>
@@ -317,7 +318,7 @@ struct MYBITMAPINFO {
 // Vertex and pixel shaders.
 //------------------------------------------------------------------------------
 
-char *colour_vertex_shader_source =
+static char *colour_vertex_shader_source =
 	"cbuffer fog_constant_buffer : register(b0) {\n"
 	"	int fog_style;\n"
 	"	float fog_start;\n"
@@ -348,7 +349,7 @@ char *colour_vertex_shader_source =
 	"	return output;\n"
 	"}\n";
 
-char *colour_pixel_shader_source =
+static char *colour_pixel_shader_source =
 	"cbuffer fog_constant_buffer : register(b0) {\n"
 	"	int fog_style;\n"
 	"	float fog_start;\n"
@@ -368,7 +369,7 @@ char *colour_pixel_shader_source =
 	"	return input.colour;\n"
 	"}\n";
 
-char *texture_vertex_shader_source =
+static char *texture_vertex_shader_source =
 	"cbuffer fog_constant_buffer : register(b0) {\n"
 	"	int fog_style;\n"
 	"	float fog_start;\n"
@@ -401,7 +402,7 @@ char *texture_vertex_shader_source =
 	"	return output;\n"
 	"}\n";
 
-char *texture_pixel_shader_source =
+static char *texture_pixel_shader_source =
 	"cbuffer fog_constant_buffer : register(b0) {\n"
 	"	int fog_style;\n"
 	"	float fog_start;\n"
@@ -423,6 +424,35 @@ char *texture_pixel_shader_source =
 	"		return (input.fog_factor * texture_colour) + ((1.0 - input.fog_factor) * fog_colour);\n"
 	"	}\n"
 	"	return texture_colour;\n"
+	"}\n";
+
+static char *skybox_vertex_shader_source =
+	"cbuffer matrix_constant_buffer : register(b1) {\n"
+	"	matrix projection;\n"
+	"};\n"
+	"struct VS_INPUT {\n"
+	"	float4 pos : POSITION;\n"
+	"};\n"
+	"struct PS_INPUT {\n"
+	"	float4 pos : SV_POSITION;\n"
+	"	float3 tex : TEXCOORD;\n"
+	"};\n"
+	"PS_INPUT VS(VS_INPUT input) {\n"
+	"	PS_INPUT output = (PS_INPUT)0;\n"
+	"	output.pos = mul(input.pos, projection).xyww;\n"
+	"	output.tex = input.pos;\n"
+	"	return output;\n"
+	"}\n";
+
+static char *skybox_pixel_shader_source =
+	"SamplerState sam_linear : register(s0);\n"
+	"TextureCube cubemap;\n"
+	"struct PS_INPUT {\n"
+	"	float4 pos : SV_POSITION;\n"
+	"	float3 tex : TEXCOORD;\n"
+	"};\n"
+	"float4 PS(PS_INPUT input) : SV_Target {\n"
+	"	return cubemap.Sample(sam_linear, input.tex);\n"
 	"}\n";
 
 //------------------------------------------------------------------------------
@@ -527,15 +557,19 @@ static ID3D11DepthStencilState *d3d_3D_depth_stencil_state_ptr;
 static ID3D11DepthStencilState *d3d_2D_depth_stencil_state_ptr;
 static ID3D11VertexShader *d3d_colour_vertex_shader_ptr;
 static ID3D11VertexShader *d3d_texture_vertex_shader_ptr;
+static ID3D11VertexShader *d3d_skybox_vertex_shader_ptr;
 static ID3D11InputLayout *d3d_vertex_layout_ptr;
 #define MAX_VERTICES 256
 static ID3D11Buffer *d3d_vertex_buffer_ptr;
 static ID3D11PixelShader *d3d_colour_pixel_shader_ptr;
 static ID3D11PixelShader *d3d_texture_pixel_shader_ptr;
+static ID3D11PixelShader *d3d_skybox_pixel_shader_ptr;
 static ID3D11BlendState *d3d_blend_state_ptr;
 static ID3D11RasterizerState *d3d_rasterizer_state_ptr;
 static ID3D11SamplerState *d3d_sampler_state_ptr;
 static ID3D11Buffer *d3d_constant_buffer_list[2];
+static ID3D11Resource *d3d_skybox_texture_ptr;
+static ID3D11ShaderResourceView *d3d_skybox_shader_resource_view_ptr;
 
 // Intermediate 16-bit frame buffer used by 8-bit display depth.
 
@@ -2741,9 +2775,9 @@ start_up_hardware_renderer(void)
 		0, 0, &shader_blob_ptr, NULL))) {
 		return false;
 	}
-	if (FAILED(d3d_device_ptr->CreateVertexShader(shader_blob_ptr->GetBufferPointer(), shader_blob_ptr->GetBufferSize(), NULL,
-		&d3d_texture_vertex_shader_ptr))) {
-		shader_blob_ptr->Release();
+	result = d3d_device_ptr->CreateVertexShader(shader_blob_ptr->GetBufferPointer(), shader_blob_ptr->GetBufferSize(), NULL,
+		&d3d_texture_vertex_shader_ptr);
+	if (FAILED(result)) {
 		return false;
 	}
 
@@ -2757,6 +2791,19 @@ start_up_hardware_renderer(void)
 	UINT num_elements = ARRAYSIZE(vertex_layout);
 	result = d3d_device_ptr->CreateInputLayout(vertex_layout, num_elements, shader_blob_ptr->GetBufferPointer(),
 		shader_blob_ptr->GetBufferSize(), &d3d_vertex_layout_ptr);
+	shader_blob_ptr->Release();
+	if (FAILED(result)) {
+		return false;
+	}
+
+	// Compile and create the skybox vertex shader.
+	
+	if (FAILED(D3DCompile(skybox_vertex_shader_source, strlen(skybox_vertex_shader_source), "skybox vertex shader", NULL, NULL, "VS", "vs_4_0",
+		0, 0, &shader_blob_ptr, NULL))) {
+		return false;
+	}
+	result = d3d_device_ptr->CreateVertexShader(shader_blob_ptr->GetBufferPointer(), shader_blob_ptr->GetBufferSize(), NULL,
+		&d3d_skybox_vertex_shader_ptr);
 	shader_blob_ptr->Release();
 	if (FAILED(result)) {
 		return false;
@@ -2783,6 +2830,21 @@ start_up_hardware_renderer(void)
 	}
 	result = d3d_device_ptr->CreatePixelShader(shader_blob_ptr->GetBufferPointer(), shader_blob_ptr->GetBufferSize(), NULL,
 		&d3d_texture_pixel_shader_ptr);
+	shader_blob_ptr->Release();
+	if (FAILED(result)) {
+		return false;
+	}
+
+	// Compile and create the skybox pixel shader.
+
+	ID3DBlob *error_blob_ptr;
+	if (FAILED(D3DCompile(skybox_pixel_shader_source, strlen(skybox_pixel_shader_source), "skybox pixel shader", NULL, NULL, "PS", "ps_4_0",
+		0, 0, &shader_blob_ptr, &error_blob_ptr))) {
+		OutputDebugString((char *)error_blob_ptr->GetBufferPointer());
+		return false;
+	}
+	result = d3d_device_ptr->CreatePixelShader(shader_blob_ptr->GetBufferPointer(), shader_blob_ptr->GetBufferSize(), NULL,
+		&d3d_skybox_pixel_shader_ptr);
 	shader_blob_ptr->Release();
 	if (FAILED(result)) {
 		return false;
@@ -2880,6 +2942,14 @@ shut_down_hardware_renderer(void)
 	if (d3d_device_context_ptr) {
 		d3d_device_context_ptr->ClearState();
 	}
+	if (d3d_skybox_shader_resource_view_ptr) {
+		d3d_skybox_shader_resource_view_ptr->Release();
+		d3d_skybox_shader_resource_view_ptr = NULL;
+	}
+	if (d3d_skybox_texture_ptr) {
+		d3d_skybox_texture_ptr->Release();
+		d3d_skybox_texture_ptr = NULL;
+	}
 	if (d3d_constant_buffer_list[1]) {
 		d3d_constant_buffer_list[1]->Release();
 		d3d_constant_buffer_list[1] = NULL;
@@ -2900,6 +2970,10 @@ shut_down_hardware_renderer(void)
 		d3d_blend_state_ptr->Release();
 		d3d_blend_state_ptr = NULL;
 	}
+	if (d3d_skybox_pixel_shader_ptr) {
+		d3d_skybox_pixel_shader_ptr->Release();
+		d3d_skybox_pixel_shader_ptr = NULL;
+	}
 	if (d3d_texture_pixel_shader_ptr) {
 		d3d_texture_pixel_shader_ptr->Release();
 		d3d_texture_pixel_shader_ptr = NULL;
@@ -2911,6 +2985,10 @@ shut_down_hardware_renderer(void)
 	if (d3d_vertex_layout_ptr) {
 		d3d_vertex_layout_ptr->Release();
 		d3d_vertex_layout_ptr = NULL;
+	}
+	if (d3d_skybox_vertex_shader_ptr) {
+		d3d_skybox_vertex_shader_ptr->Release();
+		d3d_skybox_vertex_shader_ptr = NULL;
 	}
 	if (d3d_texture_vertex_shader_ptr) {
 		d3d_texture_vertex_shader_ptr->Release();
@@ -3336,14 +3414,18 @@ create_main_window(void (*key_callback)(bool key_down, byte key_code),
 	d3d_2D_depth_stencil_state_ptr = NULL;
 	d3d_colour_vertex_shader_ptr = NULL;
 	d3d_texture_vertex_shader_ptr = NULL;
+	d3d_skybox_vertex_shader_ptr = NULL;
 	d3d_vertex_layout_ptr = NULL;
 	d3d_colour_pixel_shader_ptr = NULL;
 	d3d_texture_pixel_shader_ptr = NULL;
+	d3d_skybox_pixel_shader_ptr = NULL;
 	d3d_blend_state_ptr = NULL;
 	d3d_rasterizer_state_ptr = NULL;
 	d3d_sampler_state_ptr = NULL;
 	d3d_constant_buffer_list[0] = NULL;
 	d3d_constant_buffer_list[1] = NULL;
+	d3d_skybox_texture_ptr = NULL;
+	d3d_skybox_shader_resource_view_ptr = NULL;
 	frame_buffer_ptr = NULL;
 	dsound_object_ptr = NULL;
 	label_visible = false;
@@ -8113,6 +8195,23 @@ hardware_render_lines(vertex *vertex_list, int vertices, RGBcolour colour)
 	d3d_device_context_ptr->OMSetBlendState(d3d_blend_state_ptr, NULL, 0xFFFFFFFF);
 	d3d_device_context_ptr->RSSetState(d3d_rasterizer_state_ptr);
 	d3d_device_context_ptr->Draw(vertices, 0);
+}
+
+//------------------------------------------------------------------------------
+// Set up the skybox.
+//------------------------------------------------------------------------------
+
+void
+hardware_set_skybox(string skybox_cubemap_URL, float skybox_brightness)
+{
+	WCHAR wide_URL[MAX_PATH];
+
+	// Load the skybox cubemap from a DDS file, and create a texture and shader resource view for it.
+
+	MultiByteToWideChar(CP_ACP, 0, (char *)skybox_cubemap_URL, -1, wide_URL, MAX_PATH);  
+	if (FAILED(CreateDDSTextureFromFile(d3d_device_ptr, wide_URL, &d3d_skybox_texture_ptr, &d3d_skybox_shader_resource_view_ptr))) {
+		return;
+	}
 }
 
 //==============================================================================

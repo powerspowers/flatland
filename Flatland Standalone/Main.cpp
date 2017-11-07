@@ -187,6 +187,11 @@ pixel sky_colour_pixel;
 float sky_brightness;
 int sky_brightness_index;
 
+// Skybox definition.
+
+string skybox_cubemap_URL;
+float skybox_brightness;
+
 // Ground block definition.
 
 block_def *ground_block_def_ptr;
@@ -977,7 +982,8 @@ start_up_spot(void)
 
 	initiate_first_download();
 
-	// If hardware acceleration is enabled, then update the fog settings for the first time.
+	// If hardware acceleration is enabled, then update the fog settings for the first time,
+	// and set the skybox if it's present.
 
 	if (hardware_acceleration) {
 		hardware_update_fog_settings(global_fog_enabled, &global_fog, visible_radius);

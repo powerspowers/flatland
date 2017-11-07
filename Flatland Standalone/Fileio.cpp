@@ -1863,7 +1863,7 @@ parse_orb_tag(blockset *blockset_ptr)
 // Parse the placeholder tag.
 //------------------------------------------------------------------------------
 
-void
+static void
 parse_placeholder_tag(blockset *blockset_ptr)
 {
 	texture *texture_ptr;
@@ -1895,7 +1895,7 @@ parse_placeholder_tag(blockset *blockset_ptr)
 // Parse the sky tag.
 //------------------------------------------------------------------------------
 
-void
+static void
 parse_sky_tag(blockset *blockset_ptr)
 {
 	// If this blockset already has a sky defined, do nothing.
@@ -1926,6 +1926,30 @@ parse_sky_tag(blockset *blockset_ptr)
 	if (parsed_attribute[SKY_BRIGHTNESS]) {
 		blockset_ptr->sky_brightness_set = true;
 		blockset_ptr->sky_brightness = sky_intensity;
+	}
+}
+
+//------------------------------------------------------------------------------
+// Parse the skybox tag.
+//------------------------------------------------------------------------------
+
+static void
+parse_skybox_tag(blockset *blockset_ptr)
+{
+	// If this blockset already has a skybox defined, do nothing.
+
+	if (blockset_ptr->skybox_defined)
+		return;
+	blockset_ptr->skybox_defined = true;
+
+	// Initialise the skybox parameters that were given.
+
+	if (parsed_attribute[SKYBOX_CUBEMAP]) {
+		blockset_ptr->skybox_cubemap_URL = skybox_cubemap;
+	}
+	if (parsed_attribute[SKYBOX_BRIGHTNESS]) {
+		blockset_ptr->skybox_brightness_set = true;
+		blockset_ptr->skybox_brightness = skybox_intensity;
 	}
 }
 
@@ -2110,6 +2134,9 @@ parse_blockset(char *blockset_URL, bool show_title)
 				break;
 			case TOKEN_SKY:
 				parse_sky_tag(blockset_ptr);
+				break;
+			case TOKEN_SKYBOX:
+				parse_skybox_tag(blockset_ptr);
 			}
 		stop_parsing_nested_tags();
 
@@ -4454,6 +4481,9 @@ parse_head_tags(void)
 			break;
 		case TOKEN_SKY:
 			parse_sky_tag(custom_blockset_ptr);
+			break;
+		case TOKEN_SKYBOX:
+			parse_skybox_tag(custom_blockset_ptr);
 			break;
 #ifdef STREAMING_MEDIA
 		case TOKEN_STREAM:

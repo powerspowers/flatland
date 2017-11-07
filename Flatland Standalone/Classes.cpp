@@ -3475,6 +3475,9 @@ blockset::blockset()
 	sky_colour.set_RGB(0,0,0);
 	sky_brightness_set = false;
 	sky_brightness = 1.0f;
+	skybox_defined = false;
+	skybox_brightness_set = false;
+	skybox_brightness = 1.0f;
 	ground_defined = false;
 	ground_texture_ptr = NULL;
 	ground_colour_set = false;

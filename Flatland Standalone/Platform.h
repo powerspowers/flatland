@@ -447,6 +447,9 @@ hardware_render_polygon(tpolygon *tpolygon_ptr);
 void
 hardware_render_lines(vertex *vertex_list, int vertices, RGBcolour colour);
 
+void
+hardware_set_skybox(string skybox_cubemap_URL, float skybox_brightness);
+
 // Pixmap drawing function (called by the player thread only).
 
 void

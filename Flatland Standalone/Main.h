@@ -164,6 +164,11 @@ extern pixel sky_colour_pixel;
 extern float sky_brightness;
 extern int sky_brightness_index;
 
+// Skybox definition.
+
+extern string skybox_cubemap_URL;
+extern float skybox_brightness;
+
 // Ground block definition.
 
 extern block_def *ground_block_def_ptr;

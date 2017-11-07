@@ -2084,6 +2084,42 @@ create_sky(void)
 }
 
 //------------------------------------------------------------------------------
+// Create the skybox.
+//------------------------------------------------------------------------------
+
+static void
+create_skybox(void)
+{
+	blockset *blockset_ptr;
+
+	// Find the first blockset that defines a skybox, if there is one.
+	// A custom skybox takes precedence over a blockset skybox.
+
+	if (custom_blockset_ptr->skybox_defined) {
+		blockset_ptr = custom_blockset_ptr;
+	} else {
+		blockset_ptr = blockset_list_ptr->first_blockset_ptr;
+		while (blockset_ptr != NULL) {
+			if (blockset_ptr->skybox_defined) {
+				break;
+			}
+			blockset_ptr = blockset_ptr->next_blockset_ptr;
+		}
+	}
+
+	// Initialise the skybox, if found.
+
+	if (blockset_ptr != NULL) {
+		skybox_cubemap_URL = blockset_ptr->skybox_cubemap_URL;
+		skybox_brightness = blockset_ptr->skybox_brightness;
+		hardware_set_skybox(skybox_cubemap_URL, skybox_brightness);
+	} else {
+		skybox_cubemap_URL = "";
+		skybox_brightness = 1.0f;
+	}
+}
+
+//------------------------------------------------------------------------------
 // Create the ground block definition.
 //------------------------------------------------------------------------------
 
@@ -2371,9 +2407,12 @@ init_spot(void)
 		}
 	}
 
-	// Create the sky and orb, and the ground block definition.
+	// Create the sky, skybox and orb, and the ground block definition.
 
 	create_sky();
+	if (hardware_acceleration) {
+		create_skybox();
+	}
 	create_orb();
 	create_ground_block_def();
 
