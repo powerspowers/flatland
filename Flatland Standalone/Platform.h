@@ -425,6 +425,9 @@ void
 hardware_set_projection_transform(float viewport_width, float viewport_height, float near_z, float far_z);
 
 void
+hardware_set_skybox_transform(float turn_angle_radians, float look_angle_radians);
+
+void
 hardware_update_fog_settings(bool enabled, fog *fog_ptr, float max_radius);
 
 void *

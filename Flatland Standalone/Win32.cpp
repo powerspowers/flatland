@@ -307,6 +307,10 @@ struct hardware_matrix_constant_buffer {
 	XMMATRIX projection;
 };
 
+struct hardware_skybox_constant_buffer {
+	XMMATRIX rotation;
+};
+
 // Structure to hold the colour palette.
 
 struct MYLOGPALETTE {
@@ -438,6 +442,9 @@ static char *skybox_vertex_shader_source =
 	"cbuffer matrix_constant_buffer : register(b1) {\n"
 	"	matrix projection;\n"
 	"};\n"
+	"cbuffer skybox_constant_buffer : register(b2) {\n"
+	"	matrix rotation;\n"
+	"};\n"
 	"struct VS_INPUT {\n"
 	"	float4 pos : POSITION;\n"
 	"};\n"
@@ -447,7 +454,7 @@ static char *skybox_vertex_shader_source =
 	"};\n"
 	"PS_INPUT VS(VS_INPUT input) {\n"
 	"	PS_INPUT output = (PS_INPUT)0;\n"
-	"	output.pos = mul(input.pos, projection).xyww;\n"
+	"	output.pos = mul(mul(input.pos, rotation), projection).xyww;\n"
 	"	output.tex = input.pos;\n"
 	"	return output;\n"
 	"}\n";
@@ -576,7 +583,7 @@ static ID3D11PixelShader *d3d_skybox_pixel_shader_ptr;
 static ID3D11BlendState *d3d_blend_state_ptr;
 static ID3D11RasterizerState *d3d_rasterizer_state_ptr;
 static ID3D11SamplerState *d3d_sampler_state_ptr;
-static ID3D11Buffer *d3d_constant_buffer_list[2];
+static ID3D11Buffer *d3d_constant_buffer_list[3];
 static ID3D11Resource *d3d_skybox_texture_ptr;
 static ID3D11ShaderResourceView *d3d_skybox_shader_resource_view_ptr;
 static ID3D11Buffer *d3d_skybox_index_buffer_ptr;
@@ -3039,7 +3046,7 @@ start_up_hardware_renderer(void)
 		return false;
 	}
 
-	// Create the fog and matrix constant buffers.
+	// Create the constant buffers.
 
 	D3D11_BUFFER_DESC constant_buffer_desc;
 	ZeroMemory(&constant_buffer_desc, sizeof(constant_buffer_desc));
@@ -3052,6 +3059,10 @@ start_up_hardware_renderer(void)
 	}
 	constant_buffer_desc.ByteWidth = sizeof(hardware_matrix_constant_buffer);
 	if (FAILED(d3d_device_ptr->CreateBuffer(&constant_buffer_desc, NULL, &d3d_constant_buffer_list[1]))) {
+		return false;
+	}
+	constant_buffer_desc.ByteWidth = sizeof(hardware_skybox_constant_buffer);
+	if (FAILED(d3d_device_ptr->CreateBuffer(&constant_buffer_desc, NULL, &d3d_constant_buffer_list[2]))) {
 		return false;
 	}
 
@@ -3099,6 +3110,10 @@ shut_down_hardware_renderer(void)
 	if (d3d_skybox_texture_ptr) {
 		d3d_skybox_texture_ptr->Release();
 		d3d_skybox_texture_ptr = NULL;
+	}
+	if (d3d_constant_buffer_list[2]) {
+		d3d_constant_buffer_list[2]->Release();
+		d3d_constant_buffer_list[2] = NULL;
 	}
 	if (d3d_constant_buffer_list[1]) {
 		d3d_constant_buffer_list[1]->Release();
@@ -3574,6 +3589,7 @@ create_main_window(void (*key_callback)(bool key_down, byte key_code),
 	d3d_sampler_state_ptr = NULL;
 	d3d_constant_buffer_list[0] = NULL;
 	d3d_constant_buffer_list[1] = NULL;
+	d3d_constant_buffer_list[2] = NULL;
 	d3d_skybox_texture_ptr = NULL;
 	d3d_skybox_shader_resource_view_ptr = NULL;
 	frame_buffer_ptr = NULL;
@@ -7877,6 +7893,19 @@ hardware_set_projection_transform(float viewport_width, float viewport_height, f
 }
 
 //------------------------------------------------------------------------------
+// Set the skybox direction transform.
+//------------------------------------------------------------------------------
+
+void
+hardware_set_skybox_transform(float turn_angle_radians, float look_angle_radians)
+{
+	XMMATRIX d3d_rotation_matrix = XMMatrixRotationX(look_angle_radians) * XMMatrixRotationY(turn_angle_radians);
+	hardware_skybox_constant_buffer constant_buffer;
+	constant_buffer.rotation = d3d_rotation_matrix;
+	d3d_device_context_ptr->UpdateSubresource(d3d_constant_buffer_list[2], 0, nullptr, &constant_buffer, 0, 0);
+}
+
+//------------------------------------------------------------------------------
 // Update fog settings.
 //------------------------------------------------------------------------------
 
@@ -8392,8 +8421,7 @@ hardware_render_skybox()
 	d3d_device_context_ptr->IASetIndexBuffer(d3d_skybox_index_buffer_ptr, DXGI_FORMAT_R32_UINT, 0);
 	d3d_device_context_ptr->IASetInputLayout(d3d_skybox_vertex_layout_ptr);
 	d3d_device_context_ptr->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
-	d3d_device_context_ptr->VSSetConstantBuffers(0, 2, d3d_constant_buffer_list);
-	d3d_device_context_ptr->PSSetConstantBuffers(0, 1, d3d_constant_buffer_list);
+	d3d_device_context_ptr->VSSetConstantBuffers(0, 3, d3d_constant_buffer_list);
 	d3d_device_context_ptr->PSSetSamplers(0, 1, &d3d_sampler_state_ptr);
 	d3d_device_context_ptr->OMSetDepthStencilState(d3d_2D_depth_stencil_state_ptr, 1);
 	d3d_device_context_ptr->OMSetBlendState(d3d_blend_state_ptr, NULL, 0xFFFFFFFF);
