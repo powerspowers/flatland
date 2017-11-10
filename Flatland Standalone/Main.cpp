@@ -189,8 +189,7 @@ int sky_brightness_index;
 
 // Skybox definition.
 
-string skybox_cubemap_URL;
-float skybox_brightness;
+bool skybox_available;
 
 // Ground block definition.
 

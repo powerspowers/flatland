@@ -3179,17 +3179,21 @@ render_frame(void)
 	
 	if (hardware_acceleration) {
 
-		// Render the sky and orb polygon.  If fog is enabled, render the sky using the fog colour instead,
-		// and don't show the orb.
+		// Render the skybox if there is one, otherwise render the sky.  Then render the orb.
+		// If fog is enabled, render the sky using the fog colour instead, and don't show the orb.
 
 		if (global_fog_enabled) {
 			hardware_render_2D_polygon(NULL, global_fog.colour, 1.0f,
 				0.0f, 0.0f, frame_buffer_width, frame_buffer_height, 
 				sky_start_u, sky_start_v, sky_end_u, sky_end_v);
 		} else {
-			hardware_render_2D_polygon(sky_pixmap_ptr, sky_colour, sky_brightness,
-				0.0f, 0.0f, frame_buffer_width, frame_buffer_height, 
-				sky_start_u, sky_start_v, sky_end_u, sky_end_v);
+			if (skybox_available) {
+				hardware_render_skybox();
+			} else {
+				hardware_render_2D_polygon(sky_pixmap_ptr, sky_colour, sky_brightness,
+					0.0f, 0.0f, frame_buffer_width, frame_buffer_height, 
+					sky_start_u, sky_start_v, sky_end_u, sky_end_v);
+			}
 			render_orb();
 		}
 	}

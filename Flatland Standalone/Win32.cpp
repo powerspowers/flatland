@@ -40,6 +40,8 @@
 #include <ddraw.h>
 #include <dsound.h>
 
+#include <vector>
+
 using namespace DirectX;
 
 #ifdef STREAMING_MEDIA
@@ -283,6 +285,12 @@ struct hardware_vertex {
 		texture_coords = XMFLOAT2(u, v);
 		diffuse_colour = XMFLOAT4(diffuse_colour_ptr->red, diffuse_colour_ptr->green, diffuse_colour_ptr->blue, diffuse_alpha);
 	}
+};
+
+// Skybox vertex class.
+
+struct skybox_vertex {
+	XMFLOAT3 position;
 };
 
 // Hardware constant buffers.
@@ -559,6 +567,7 @@ static ID3D11VertexShader *d3d_colour_vertex_shader_ptr;
 static ID3D11VertexShader *d3d_texture_vertex_shader_ptr;
 static ID3D11VertexShader *d3d_skybox_vertex_shader_ptr;
 static ID3D11InputLayout *d3d_vertex_layout_ptr;
+static ID3D11InputLayout *d3d_skybox_vertex_layout_ptr;
 #define MAX_VERTICES 256
 static ID3D11Buffer *d3d_vertex_buffer_ptr;
 static ID3D11PixelShader *d3d_colour_pixel_shader_ptr;
@@ -570,6 +579,10 @@ static ID3D11SamplerState *d3d_sampler_state_ptr;
 static ID3D11Buffer *d3d_constant_buffer_list[2];
 static ID3D11Resource *d3d_skybox_texture_ptr;
 static ID3D11ShaderResourceView *d3d_skybox_shader_resource_view_ptr;
+static ID3D11Buffer *d3d_skybox_index_buffer_ptr;
+static ID3D11Buffer *d3d_skybox_vertex_buffer_ptr;
+static int skybox_vertices;
+static int skybox_faces;
 
 // Intermediate 16-bit frame buffer used by 8-bit display depth.
 
@@ -2618,6 +2631,120 @@ init_d3d_viewport(D3D11_VIEWPORT *d3d_viewport_ptr, int width, int height)
 }
 
 //------------------------------------------------------------------------------
+// Create the geometry for the skybox.
+//------------------------------------------------------------------------------
+
+static void 
+create_skybox(int latitude_lines, int longitude_lines)
+{
+	skybox_vertices = ((latitude_lines - 2) * longitude_lines) + 2;
+	skybox_faces = ((latitude_lines - 3) * longitude_lines * 2) + (longitude_lines * 2);
+
+	float sphere_yaw = 0.0f;
+	float sphere_pitch = 0.0f;
+
+	std::vector<skybox_vertex> vertices(skybox_vertices);
+
+	XMVECTOR curr_vertex_position = XMVectorSet(0.0f, 0.0f, 1.0f, 0.0f);
+
+	vertices[0].position.x = 0.0f;
+	vertices[0].position.y = 0.0f;
+	vertices[0].position.z = 1.0f;
+
+	for (int i = 0; i < latitude_lines - 2; ++i) {
+		sphere_pitch = (i + 1) * (3.14f / (latitude_lines - 1));
+		XMMATRIX rotation_x = XMMatrixRotationX(sphere_pitch);
+		for (int j = 0; j < longitude_lines; ++j) {
+			sphere_yaw = j * (6.28f / longitude_lines);
+			XMMATRIX rotation_y = XMMatrixRotationZ(sphere_yaw);
+			curr_vertex_position = XMVector3TransformNormal(XMVectorSet(0.0f, 0.0f, 1.0f, 0.0f), rotation_x * rotation_y);    
+			curr_vertex_position = XMVector3Normalize(curr_vertex_position);
+			vertices[i * longitude_lines + j + 1].position.x = XMVectorGetX(curr_vertex_position);
+			vertices[i * longitude_lines + j + 1].position.y = XMVectorGetY(curr_vertex_position);
+			vertices[i * longitude_lines + j + 1].position.z = XMVectorGetZ(curr_vertex_position);
+		}
+	}
+
+	vertices[skybox_vertices - 1].position.x = 0.0f;
+	vertices[skybox_vertices - 1].position.y = 0.0f;
+	vertices[skybox_vertices - 1].position.z = -1.0f;
+
+	D3D11_BUFFER_DESC vertex_buffer_desc;
+	ZeroMemory(&vertex_buffer_desc, sizeof(vertex_buffer_desc));
+	vertex_buffer_desc.Usage = D3D11_USAGE_DEFAULT;
+	vertex_buffer_desc.ByteWidth = sizeof(skybox_vertex) * skybox_vertices;
+	vertex_buffer_desc.BindFlags = D3D11_BIND_VERTEX_BUFFER;
+	vertex_buffer_desc.CPUAccessFlags = 0;
+	vertex_buffer_desc.MiscFlags = 0;
+
+	D3D11_SUBRESOURCE_DATA vertex_buffer_data; 
+	ZeroMemory(&vertex_buffer_data, sizeof(vertex_buffer_data));
+	vertex_buffer_data.pSysMem = &vertices[0];
+	HRESULT hr = d3d_device_ptr->CreateBuffer(&vertex_buffer_desc, &vertex_buffer_data, &d3d_skybox_vertex_buffer_ptr);
+
+	std::vector<DWORD> indices(skybox_faces * 3);
+
+	int k = 0;
+	for (int l = 0; l < longitude_lines - 1; ++l) {
+		indices[k] = 0;
+		indices[k + 1] = l + 1;
+		indices[k + 2] = l + 2;
+		k += 3;
+	}
+	indices[k] = 0;
+	indices[k + 1] = longitude_lines;
+	indices[k + 2] = 1;
+	k += 3;
+
+	for (int i = 0; i < latitude_lines - 3; ++i) {
+		for (int j = 0; j < longitude_lines - 1; ++j) {
+			indices[k] = i * longitude_lines + j + 1;
+			indices[k + 1] = i * longitude_lines + j + 2;
+			indices[k + 2] = (i + 1) * longitude_lines + j + 1;
+
+			indices[k + 3] = (i + 1) * longitude_lines + j + 1;
+			indices[k + 4] = i * longitude_lines + j + 2;
+			indices[k + 5] = (i + 1) * longitude_lines + j + 2;
+
+			k += 6; // next quad
+		}
+
+		indices[k]   = (i * longitude_lines) + longitude_lines;
+		indices[k + 1] = (i * longitude_lines) + 1;
+		indices[k + 2] = ((i + 1) * longitude_lines) + longitude_lines;
+
+		indices[k + 3] = ((i + 1) * longitude_lines) + longitude_lines;
+		indices[k + 4] = (i * longitude_lines) + 1;
+		indices[k + 5] = ((i + 1) * longitude_lines) + 1;
+
+		k += 6;
+	}
+
+	for (int l = 0; l < longitude_lines - 1; ++l) {
+		indices[k] = skybox_vertices - 1;
+		indices[k + 1] = (skybox_vertices - 1) - (l + 1);
+		indices[k + 2] = (skybox_vertices - 1) - (l + 2);
+		k += 3;
+	}
+
+	indices[k] = skybox_vertices - 1;
+	indices[k + 1] = (skybox_vertices - 1) - longitude_lines;
+	indices[k + 2] = skybox_vertices - 2;
+
+	D3D11_BUFFER_DESC index_buffer_desc;
+	ZeroMemory(&index_buffer_desc, sizeof(index_buffer_desc));
+	index_buffer_desc.Usage = D3D11_USAGE_DEFAULT;
+	index_buffer_desc.ByteWidth = sizeof(DWORD) * skybox_faces * 3;
+	index_buffer_desc.BindFlags = D3D11_BIND_INDEX_BUFFER;
+	index_buffer_desc.CPUAccessFlags = 0;
+	index_buffer_desc.MiscFlags = 0;
+
+	D3D11_SUBRESOURCE_DATA index_init_data;
+	index_init_data.pSysMem = &indices[0];
+	d3d_device_ptr->CreateBuffer(&index_buffer_desc, &index_init_data, &d3d_skybox_index_buffer_ptr);
+}
+
+//------------------------------------------------------------------------------
 // Start up the hardware accelerated renderer.
 //------------------------------------------------------------------------------
 
@@ -2750,9 +2877,6 @@ start_up_hardware_renderer(void)
 	if (FAILED(d3d_device_ptr->CreateBuffer(&bufferDesc, NULL, &d3d_vertex_buffer_ptr))) {
 		return false;
 	}
-	UINT stride = sizeof(hardware_vertex);
-	UINT offset = 0;
-	d3d_device_context_ptr->IASetVertexBuffers(0, 1, &d3d_vertex_buffer_ptr, &stride, &offset);
 
 	// Compile and create the colour vertex shader.
 
@@ -2778,6 +2902,7 @@ start_up_hardware_renderer(void)
 	result = d3d_device_ptr->CreateVertexShader(shader_blob_ptr->GetBufferPointer(), shader_blob_ptr->GetBufferSize(), NULL,
 		&d3d_texture_vertex_shader_ptr);
 	if (FAILED(result)) {
+		shader_blob_ptr->Release();
 		return false;
 	}
 
@@ -2804,6 +2929,19 @@ start_up_hardware_renderer(void)
 	}
 	result = d3d_device_ptr->CreateVertexShader(shader_blob_ptr->GetBufferPointer(), shader_blob_ptr->GetBufferSize(), NULL,
 		&d3d_skybox_vertex_shader_ptr);
+	if (FAILED(result)) {
+		shader_blob_ptr->Release();
+		return false;
+	}
+
+	// Define and create the skybox vertex layout.
+
+	D3D11_INPUT_ELEMENT_DESC skybox_vertex_layout[] = {
+		{"POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 0, D3D11_INPUT_PER_VERTEX_DATA, 0},
+	};
+	num_elements = ARRAYSIZE(skybox_vertex_layout);
+	result = d3d_device_ptr->CreateInputLayout(skybox_vertex_layout, num_elements, shader_blob_ptr->GetBufferPointer(),
+		shader_blob_ptr->GetBufferSize(), &d3d_skybox_vertex_layout_ptr);
 	shader_blob_ptr->Release();
 	if (FAILED(result)) {
 		return false;
@@ -2917,6 +3055,10 @@ start_up_hardware_renderer(void)
 		return false;
 	}
 
+	// Create the skybox.
+
+	create_skybox(10, 10);
+
 	// Select the main render target.
 
 	select_main_render_target();
@@ -2941,6 +3083,14 @@ shut_down_hardware_renderer(void)
 {
 	if (d3d_device_context_ptr) {
 		d3d_device_context_ptr->ClearState();
+	}
+	if (d3d_skybox_index_buffer_ptr) {
+		d3d_skybox_index_buffer_ptr->Release();
+		d3d_skybox_index_buffer_ptr = NULL;
+	}
+	if (d3d_skybox_vertex_buffer_ptr) {
+		d3d_skybox_vertex_buffer_ptr->Release();
+		d3d_skybox_vertex_buffer_ptr = NULL;
 	}
 	if (d3d_skybox_shader_resource_view_ptr) {
 		d3d_skybox_shader_resource_view_ptr->Release();
@@ -8087,6 +8237,9 @@ hardware_render_2D_polygon(pixmap *pixmap_ptr, RGBcolour colour, float brightnes
 
 	// Set up the context for the draw, then render the polygon.  We turn off the depth buffer during the draw.
 
+	UINT stride = sizeof(hardware_vertex);
+	UINT offset = 0;
+	d3d_device_context_ptr->IASetVertexBuffers(0, 1, &d3d_vertex_buffer_ptr, &stride, &offset);
 	d3d_device_context_ptr->IASetInputLayout(d3d_vertex_layout_ptr);
 	d3d_device_context_ptr->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP);
 	d3d_device_context_ptr->VSSetConstantBuffers(0, 2, d3d_constant_buffer_list);
@@ -8143,6 +8296,9 @@ hardware_render_polygon(tpolygon *tpolygon_ptr)
 
 	// Set up the context for the draw, then render the polygon.
 
+	UINT stride = sizeof(hardware_vertex);
+	UINT offset = 0;
+	d3d_device_context_ptr->IASetVertexBuffers(0, 1, &d3d_vertex_buffer_ptr, &stride, &offset);
 	d3d_device_context_ptr->IASetInputLayout(d3d_vertex_layout_ptr);
 	d3d_device_context_ptr->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP);
 	d3d_device_context_ptr->VSSetConstantBuffers(0, 2, d3d_constant_buffer_list);
@@ -8186,6 +8342,9 @@ hardware_render_lines(vertex *vertex_list, int vertices, RGBcolour colour)
 
 	// Set up the context for the draw, then render the lines.  We turn off the depth buffer during the draw.
 
+	UINT stride = sizeof(hardware_vertex);
+	UINT offset = 0;
+	d3d_device_context_ptr->IASetVertexBuffers(0, 1, &d3d_vertex_buffer_ptr, &stride, &offset);
 	d3d_device_context_ptr->IASetInputLayout(d3d_vertex_layout_ptr);
 	d3d_device_context_ptr->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_LINELIST);
 	d3d_device_context_ptr->VSSetConstantBuffers(0, 2, d3d_constant_buffer_list);
@@ -8201,7 +8360,7 @@ hardware_render_lines(vertex *vertex_list, int vertices, RGBcolour colour)
 // Set up the skybox.
 //------------------------------------------------------------------------------
 
-void
+bool
 hardware_set_skybox(string skybox_cubemap_URL, float skybox_brightness)
 {
 	WCHAR wide_URL[MAX_PATH];
@@ -8210,8 +8369,36 @@ hardware_set_skybox(string skybox_cubemap_URL, float skybox_brightness)
 
 	MultiByteToWideChar(CP_ACP, 0, (char *)skybox_cubemap_URL, -1, wide_URL, MAX_PATH);  
 	if (FAILED(CreateDDSTextureFromFile(d3d_device_ptr, wide_URL, &d3d_skybox_texture_ptr, &d3d_skybox_shader_resource_view_ptr))) {
-		return;
+		return false;
 	}
+	return true;
+}
+
+//------------------------------------------------------------------------------
+// Render the skybox.
+//------------------------------------------------------------------------------
+
+void
+hardware_render_skybox()
+{
+	// Set up the context for the draw, then render the skybox.  We turn off the depth buffer during the draw.
+
+	d3d_device_context_ptr->VSSetShader(d3d_skybox_vertex_shader_ptr, NULL, 0);
+	d3d_device_context_ptr->PSSetShader(d3d_skybox_pixel_shader_ptr, NULL, 0);
+	d3d_device_context_ptr->PSSetShaderResources(0, 1, &d3d_skybox_shader_resource_view_ptr);
+	UINT stride = sizeof(skybox_vertex);
+	UINT offset = 0;
+	d3d_device_context_ptr->IASetVertexBuffers(0, 1, &d3d_skybox_vertex_buffer_ptr, &stride, &offset);
+	d3d_device_context_ptr->IASetIndexBuffer(d3d_skybox_index_buffer_ptr, DXGI_FORMAT_R32_UINT, 0);
+	d3d_device_context_ptr->IASetInputLayout(d3d_skybox_vertex_layout_ptr);
+	d3d_device_context_ptr->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+	d3d_device_context_ptr->VSSetConstantBuffers(0, 2, d3d_constant_buffer_list);
+	d3d_device_context_ptr->PSSetConstantBuffers(0, 1, d3d_constant_buffer_list);
+	d3d_device_context_ptr->PSSetSamplers(0, 1, &d3d_sampler_state_ptr);
+	d3d_device_context_ptr->OMSetDepthStencilState(d3d_2D_depth_stencil_state_ptr, 1);
+	d3d_device_context_ptr->OMSetBlendState(d3d_blend_state_ptr, NULL, 0xFFFFFFFF);
+	d3d_device_context_ptr->RSSetState(d3d_rasterizer_state_ptr);
+	d3d_device_context_ptr->DrawIndexed(skybox_faces * 3, 0, 0);
 }
 
 //==============================================================================

@@ -166,8 +166,7 @@ extern int sky_brightness_index;
 
 // Skybox definition.
 
-extern string skybox_cubemap_URL;
-extern float skybox_brightness;
+extern bool skybox_available;
 
 // Ground block definition.
 
