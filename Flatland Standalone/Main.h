@@ -166,6 +166,8 @@ extern int sky_brightness_index;
 
 // Skybox definition.
 
+extern skybox_def *skybox_def_ptr;
+extern bool skybox_loaded;
 extern bool skybox_available;
 
 // Ground block definition.

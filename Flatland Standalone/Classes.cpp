@@ -3458,6 +3458,47 @@ block_def::get_symbol(void)
 }
 
 //------------------------------------------------------------------------------
+// Skybox definition class.
+//------------------------------------------------------------------------------
+
+skybox_def::skybox_def(blockset *blockset_ptr, string skybox_texture_URL)
+{
+	static string postfixes[6] = {"left", "right", "up", "down", "front", "back"};
+	char *ext_ptr;
+	string skybox_texture_path;
+
+	// Remove the file extension from the skybox texture URL.
+
+	skybox_texture_path = skybox_texture_URL;
+	ext_ptr = strrchr(skybox_texture_URL, '.');
+	if (ext_ptr != NULL) {
+		skybox_texture_path.truncate(ext_ptr - (char *)skybox_texture_URL);
+	}
+	
+	// Generate a URL for each texture in the skybox by appending a postfix and the
+	// file extension, then load that texture.
+
+	for (int i = 0; i < 6; i++) {
+		string skybox_face_URL = skybox_texture_path + "_" + postfixes[i];
+		if (ext_ptr != NULL) {
+			skybox_face_URL += ext_ptr;
+		}
+		skybox_texture_list[i] = load_texture(blockset_ptr, skybox_face_URL, true);
+	}
+}
+
+skybox_def::~skybox_def()
+{
+	// Delete all skybox textures.
+
+	for (int i = 0; i < 6; i++) {
+		if (skybox_texture_list[i] != NULL) {
+			delete skybox_texture_list[i];
+		}
+	}
+}
+
+//------------------------------------------------------------------------------
 // Blockset class.
 //------------------------------------------------------------------------------
 
@@ -3478,6 +3519,7 @@ blockset::blockset()
 	skybox_defined = false;
 	skybox_brightness_set = false;
 	skybox_brightness = 1.0f;
+	skybox_def_ptr = NULL;
 	ground_defined = false;
 	ground_texture_ptr = NULL;
 	ground_colour_set = false;

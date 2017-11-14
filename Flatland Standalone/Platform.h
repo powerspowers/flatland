@@ -451,7 +451,7 @@ void
 hardware_render_lines(vertex *vertex_list, int vertices, RGBcolour colour);
 
 bool
-hardware_set_skybox(string skybox_cubemap_URL, float skybox_brightness);
+hardware_set_skybox(skybox_def *skybox_def_ptr, float skybox_brightness);
 
 void
 hardware_render_skybox();

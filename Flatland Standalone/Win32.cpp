@@ -35,7 +35,6 @@
 #include <DirectXColors.h>
 #include <DirectXMath.h>
 #include <DirectXCollision.h>
-#include "DirectXTK/DDSTextureLoader.h"
 #include <d3dcompiler.h>
 #include <ddraw.h>
 #include <dsound.h>
@@ -584,7 +583,7 @@ static ID3D11BlendState *d3d_blend_state_ptr;
 static ID3D11RasterizerState *d3d_rasterizer_state_ptr;
 static ID3D11SamplerState *d3d_sampler_state_ptr;
 static ID3D11Buffer *d3d_constant_buffer_list[3];
-static ID3D11Resource *d3d_skybox_texture_ptr;
+static ID3D11Texture2D *d3d_skybox_texture_ptr;
 static ID3D11ShaderResourceView *d3d_skybox_shader_resource_view_ptr;
 static ID3D11Buffer *d3d_skybox_index_buffer_ptr;
 static ID3D11Buffer *d3d_skybox_vertex_buffer_ptr;
@@ -2642,7 +2641,7 @@ init_d3d_viewport(D3D11_VIEWPORT *d3d_viewport_ptr, int width, int height)
 //------------------------------------------------------------------------------
 
 static void 
-create_skybox(int latitude_lines, int longitude_lines)
+create_skybox_sphere(int latitude_lines, int longitude_lines)
 {
 	skybox_vertices = ((latitude_lines - 2) * longitude_lines) + 2;
 	skybox_faces = ((latitude_lines - 3) * longitude_lines * 2) + (longitude_lines * 2);
@@ -3068,7 +3067,7 @@ start_up_hardware_renderer(void)
 
 	// Create the skybox.
 
-	create_skybox(10, 10);
+	create_skybox_sphere(10, 10);
 
 	// Select the main render target.
 
@@ -8390,16 +8389,72 @@ hardware_render_lines(vertex *vertex_list, int vertices, RGBcolour colour)
 //------------------------------------------------------------------------------
 
 bool
-hardware_set_skybox(string skybox_cubemap_URL, float skybox_brightness)
+hardware_set_skybox(skybox_def *skybox_def_ptr, float skybox_brightness)
 {
-	WCHAR wide_URL[MAX_PATH];
+	hardware_texture *skybox_hardware_texture_list[6];
 
-	// Load the skybox cubemap from a DDS file, and create a texture and shader resource view for it.
+	// Get the hardware texture for each skybox texture.
 
-	MultiByteToWideChar(CP_ACP, 0, (char *)skybox_cubemap_URL, -1, wide_URL, MAX_PATH);  
-	if (FAILED(CreateDDSTextureFromFile(d3d_device_ptr, wide_URL, &d3d_skybox_texture_ptr, &d3d_skybox_shader_resource_view_ptr))) {
-		return false;
+	for (int i = 0; i < 6; i++) {
+		texture *skybox_texture_ptr = skybox_def_ptr->skybox_texture_list[i];
+		cache_entry *cache_entry_ptr = get_cache_entry(&skybox_texture_ptr->pixmap_list[0], 0);
+		skybox_hardware_texture_list[i] = (hardware_texture *)cache_entry_ptr->hardware_texture_ptr;
 	}
+
+	D3D11_TEXTURE2D_DESC texElementDesc;
+	skybox_hardware_texture_list[0]->d3d_texture_ptr->GetDesc(&texElementDesc);
+
+	D3D11_TEXTURE2D_DESC texArrayDesc;
+	texArrayDesc.Width = texElementDesc.Width;
+	texArrayDesc.Height = texElementDesc.Height;
+	texArrayDesc.MipLevels = texElementDesc.MipLevels;
+	texArrayDesc.ArraySize = 6;
+	texArrayDesc.Format = texElementDesc.Format;
+	texArrayDesc.SampleDesc.Count = 1;
+	texArrayDesc.SampleDesc.Quality = 0;
+	texArrayDesc.Usage = D3D11_USAGE_DEFAULT;
+	texArrayDesc.BindFlags = D3D11_BIND_SHADER_RESOURCE;
+	texArrayDesc.CPUAccessFlags = 0;
+	texArrayDesc.MiscFlags = D3D11_RESOURCE_MISC_TEXTURECUBE;
+
+	if (FAILED(d3d_device_ptr->CreateTexture2D(&texArrayDesc, 0, &d3d_skybox_texture_ptr)))
+		return false;
+
+	// Copy individual texture elements into texture array.
+	ID3D11DeviceContext* pd3dContext;
+	d3d_device_ptr->GetImmediateContext(&pd3dContext);
+	D3D11_BOX sourceRegion;
+
+	//Here i copy the mip map levels of the textures
+	for (UINT x = 0; x < 6; x++)
+	{
+		for (UINT mipLevel = 0; mipLevel < texArrayDesc.MipLevels; mipLevel++)
+		{
+			sourceRegion.left = 0;
+			sourceRegion.right = (texArrayDesc.Width >> mipLevel);
+			sourceRegion.top = 0;
+			sourceRegion.bottom = (texArrayDesc.Height >> mipLevel);
+			sourceRegion.front = 0;
+			sourceRegion.back = 1;
+
+			//test for overflow
+			if (sourceRegion.bottom == 0 || sourceRegion.right == 0)
+				break;
+
+			pd3dContext->CopySubresourceRegion(d3d_skybox_texture_ptr, D3D11CalcSubresource(mipLevel, x, texArrayDesc.MipLevels), 0, 0, 0, 
+				skybox_hardware_texture_list[x]->d3d_texture_ptr, mipLevel, &sourceRegion);
+		}
+	}
+
+	// Create a resource view to the texture array.
+	D3D11_SHADER_RESOURCE_VIEW_DESC viewDesc;
+	viewDesc.Format = texArrayDesc.Format;
+	viewDesc.ViewDimension = D3D11_SRV_DIMENSION_TEXTURECUBE;
+	viewDesc.TextureCube.MostDetailedMip = 0;
+	viewDesc.TextureCube.MipLevels = texArrayDesc.MipLevels;
+
+	if (FAILED(d3d_device_ptr->CreateShaderResourceView(d3d_skybox_texture_ptr, &viewDesc, &d3d_skybox_shader_resource_view_ptr)))
+		return false;
 	return true;
 }
 

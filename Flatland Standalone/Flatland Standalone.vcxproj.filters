@@ -55,12 +55,6 @@
     <Filter Include="Source Files\zlib">
       <UniqueIdentifier>{11640244-79bc-40d2-b2db-80a92919dc1c}</UniqueIdentifier>
     </Filter>
-    <Filter Include="Header Files\DirectXTK">
-      <UniqueIdentifier>{dfa55afd-b7ae-46af-9bbb-8a16dda52884}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="Source Files\DirectXTK">
-      <UniqueIdentifier>{b208fa7f-3bc4-4b84-aa9b-4d5d4c0f2035}</UniqueIdentifier>
-    </Filter>
   </ItemGroup>
   <ItemGroup>
     <Text Include="ReadMe.txt" />
@@ -401,24 +395,6 @@
     </ClInclude>
     <ClInclude Include="zlib\zutil.h">
       <Filter>Header Files\zlib</Filter>
-    </ClInclude>
-    <ClInclude Include="DirectXTK\DDSTextureLoader.h">
-      <Filter>Header Files\DirectXTK</Filter>
-    </ClInclude>
-    <ClInclude Include="DirectXTK\pch.h">
-      <Filter>Header Files\DirectXTK</Filter>
-    </ClInclude>
-    <ClInclude Include="DirectXTK\dds.h">
-      <Filter>Header Files\DirectXTK</Filter>
-    </ClInclude>
-    <ClInclude Include="DirectXTK\DirectXHelpers.h">
-      <Filter>Header Files\DirectXTK</Filter>
-    </ClInclude>
-    <ClInclude Include="DirectXTK\PlatformHelpers.h">
-      <Filter>Header Files\DirectXTK</Filter>
-    </ClInclude>
-    <ClInclude Include="DirectXTK\LoaderHelpers.h">
-      <Filter>Header Files\DirectXTK</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
@@ -820,9 +796,6 @@
     </ClCompile>
     <ClCompile Include="zlib\zutil.c">
       <Filter>Source Files\zlib</Filter>
-    </ClCompile>
-    <ClCompile Include="DirectXTK\DDSTextureLoader.cpp">
-      <Filter>Source Files\DirectXTK</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>

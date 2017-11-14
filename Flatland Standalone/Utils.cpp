@@ -2110,7 +2110,7 @@ create_skybox(void)
 	// Initialise the skybox, if found.
 
 	if (blockset_ptr != NULL) {
-		skybox_available = hardware_set_skybox(blockset_ptr->skybox_cubemap_URL, blockset_ptr->skybox_brightness);
+		skybox_def_ptr = blockset_ptr->skybox_def_ptr;
 	}
 }
 
@@ -2405,7 +2405,6 @@ init_spot(void)
 	// Create the sky, skybox and orb, and the ground block definition.
 
 	create_sky();
-	skybox_available = false;
 	if (hardware_acceleration) {
 		create_skybox();
 	}

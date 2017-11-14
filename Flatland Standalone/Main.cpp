@@ -189,6 +189,8 @@ int sky_brightness_index;
 
 // Skybox definition.
 
+skybox_def *skybox_def_ptr;
+bool skybox_loaded;
 bool skybox_available;
 
 // Ground block definition.
@@ -880,9 +882,15 @@ start_up_spot(void)
 	for (int index = 0; index < 16384; index++)
 		block_symbol_table[index] = NULL;
 
-	// Reset the low memory flag.
+	// Reset low memory flag.
 
 	low_memory = false;
+
+	// Reset skybox definition.
+
+	skybox_def_ptr = NULL;
+	skybox_loaded = false;
+	skybox_available = false;
 
 	// Start up SimKin.
 
@@ -3996,6 +4004,22 @@ player_thread(void *arg_list)
 	
 			if (curr_custom_texture_ptr != NULL || curr_custom_wave_ptr != NULL)
 				handle_current_download();
+
+			// If there is a skybox definition, and it hasn't yet been loaded, check whether all of the skybox textures have
+			// been downloaded, and if so create the skybox.
+
+			if (skybox_def_ptr != NULL && !skybox_loaded) {
+				skybox_loaded = true;
+				for (int i = 0; i < 6; i++) {
+					if (skybox_def_ptr->skybox_texture_list[i]->pixmap_list == NULL) {
+						skybox_loaded = false;
+						break;
+					}
+				}
+				if (skybox_loaded) {
+					skybox_available = hardware_set_skybox(skybox_def_ptr, 1.0f);
+				}
+			}
 
 		} while (!player_window_shutdown_requested.event_sent());
 

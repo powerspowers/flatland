@@ -149,7 +149,6 @@ static symbol_def symbol_table[] = {
 	{"command",			TOKEN_COMMAND},
 	{"content",			TOKEN_CONTENT},
 	{"create",			TOKEN_CREATE},
-	{"cubemap",			TOKEN_CUBEMAP},
 	{"damp",			TOKEN_DAMP},
 	{"define",			TOKEN_DEFINE},
 	{"delay",			TOKEN_DELAY},

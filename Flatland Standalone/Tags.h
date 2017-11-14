@@ -861,12 +861,12 @@ static attr_def sky_attr_list[SKY_ATTRIBUTES] = {
 // SKYBOX tag (style and spot files)
 
 #define SKYBOX_ATTRIBUTES	2
-#define SKYBOX_CUBEMAP		0
+#define SKYBOX_TEXTURE		0
 #define SKYBOX_BRIGHTNESS	1
-static string skybox_cubemap;
+static string skybox_texture;
 static float skybox_intensity;
 static attr_def skybox_attr_list[SKYBOX_ATTRIBUTES] = {
-	{TOKEN_CUBEMAP,	VALUE_STRING, &skybox_cubemap, false},
+	{TOKEN_TEXTURE, VALUE_STRING, &skybox_texture, true},
 	{TOKEN_BRIGHTNESS, VALUE_PERCENTAGE, &skybox_intensity, false}
 };
 

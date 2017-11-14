@@ -1944,9 +1944,8 @@ parse_skybox_tag(blockset *blockset_ptr)
 
 	// Initialise the skybox parameters that were given.
 
-	if (parsed_attribute[SKYBOX_CUBEMAP]) {
-		blockset_ptr->skybox_cubemap_URL = skybox_cubemap;
-	}
+	blockset_ptr->skybox_texture_URL = skybox_texture;
+	blockset_ptr->skybox_def_ptr = new skybox_def(blockset_ptr, skybox_texture);
 	if (parsed_attribute[SKYBOX_BRIGHTNESS]) {
 		blockset_ptr->skybox_brightness_set = true;
 		blockset_ptr->skybox_brightness = skybox_intensity;
