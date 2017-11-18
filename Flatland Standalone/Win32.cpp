@@ -8401,6 +8401,8 @@ hardware_set_skybox(skybox_def *skybox_def_ptr, float skybox_brightness)
 		skybox_hardware_texture_list[i] = (hardware_texture *)cache_entry_ptr->hardware_texture_ptr;
 	}
 
+	// Get the description of the first skybox texture, and use it to create the texture cube.
+
 	D3D11_TEXTURE2D_DESC texElementDesc;
 	skybox_hardware_texture_list[0]->d3d_texture_ptr->GetDesc(&texElementDesc);
 
@@ -8416,43 +8418,36 @@ hardware_set_skybox(skybox_def *skybox_def_ptr, float skybox_brightness)
 	texArrayDesc.BindFlags = D3D11_BIND_SHADER_RESOURCE;
 	texArrayDesc.CPUAccessFlags = 0;
 	texArrayDesc.MiscFlags = D3D11_RESOURCE_MISC_TEXTURECUBE;
-
 	if (FAILED(d3d_device_ptr->CreateTexture2D(&texArrayDesc, 0, &d3d_skybox_texture_ptr)))
 		return false;
 
-	// Copy individual texture elements into texture array.
+	// Copy the individual skybox textures to the texture cube.
+
 	ID3D11DeviceContext* pd3dContext;
 	d3d_device_ptr->GetImmediateContext(&pd3dContext);
 	D3D11_BOX sourceRegion;
-
-	//Here i copy the mip map levels of the textures
-	for (UINT x = 0; x < 6; x++)
-	{
-		for (UINT mipLevel = 0; mipLevel < texArrayDesc.MipLevels; mipLevel++)
-		{
+	for (UINT x = 0; x < 6; x++) {
+		for (UINT mipLevel = 0; mipLevel < texArrayDesc.MipLevels; mipLevel++) {
 			sourceRegion.left = 0;
 			sourceRegion.right = (texArrayDesc.Width >> mipLevel);
 			sourceRegion.top = 0;
 			sourceRegion.bottom = (texArrayDesc.Height >> mipLevel);
 			sourceRegion.front = 0;
 			sourceRegion.back = 1;
-
-			//test for overflow
 			if (sourceRegion.bottom == 0 || sourceRegion.right == 0)
 				break;
-
 			pd3dContext->CopySubresourceRegion(d3d_skybox_texture_ptr, D3D11CalcSubresource(mipLevel, x, texArrayDesc.MipLevels), 0, 0, 0, 
 				skybox_hardware_texture_list[x]->d3d_texture_ptr, mipLevel, &sourceRegion);
 		}
 	}
 
-	// Create a resource view to the texture array.
+	// Create a resource view for the texture cube.
+
 	D3D11_SHADER_RESOURCE_VIEW_DESC viewDesc;
 	viewDesc.Format = texArrayDesc.Format;
 	viewDesc.ViewDimension = D3D11_SRV_DIMENSION_TEXTURECUBE;
 	viewDesc.TextureCube.MostDetailedMip = 0;
 	viewDesc.TextureCube.MipLevels = texArrayDesc.MipLevels;
-
 	if (FAILED(d3d_device_ptr->CreateShaderResourceView(d3d_skybox_texture_ptr, &viewDesc, &d3d_skybox_shader_resource_view_ptr)))
 		return false;
 	return true;

@@ -3713,6 +3713,9 @@ handle_window_resize(void)
 	if (init_player_window()) {
 		if (hardware_acceleration) {
 			hardware_update_fog_settings(global_fog_enabled, &global_fog, visible_radius);
+			if (skybox_available) {
+				skybox_available = hardware_set_skybox(skybox_def_ptr, 1.0f);
+			}
 		}
 		player_window_initialised.send_event(true);
 		return(true);
