@@ -1457,10 +1457,14 @@ struct block_def {
 // Skybox definition class.
 //------------------------------------------------------------------------------
 
+extern string skybox_sides[6];
+
 struct skybox_def {
 	texture *skybox_texture_list[6];
 
 	skybox_def(blockset *blockset_ptr, string skybox_texture_URL);
+	skybox_def::skybox_def(blockset *blockset_ptr, string skybox_left_texture_URL, string skybox_right_texture_URL,
+		string skybox_up_texture_URL, string skybox_down_texture_URL, string skybox_front_texture_URL, string skybox_back_texture_URL);
 	~skybox_def();
 };
 
@@ -1482,11 +1486,8 @@ struct blockset {
 	texture *sky_texture_ptr;					// Pointer to sky texture.
 	bool sky_colour_set;						// TRUE is sky colour set.
 	RGBcolour sky_colour;						// Sky colour.
-	bool sky_brightness_set;					// TRUE if sky brightness set.
 	float sky_brightness;						// Sky brightness.
 	bool skybox_defined;						// TRUE if skybox defined.
-	string skybox_texture_URL;					// URL of skybox texture (actually, a directory).
-	bool skybox_brightness_set;					// TRUE if skybox brightness set.
 	float skybox_brightness;					// Skybox brightness.
 	skybox_def *skybox_def_ptr;					// Pointer to skybox definition.
 	bool ground_defined;						// TRUE if ground defined.

@@ -3461,9 +3461,10 @@ block_def::get_symbol(void)
 // Skybox definition class.
 //------------------------------------------------------------------------------
 
+string skybox_sides[6] = {"left", "right", "up", "down", "front", "back"};
+
 skybox_def::skybox_def(blockset *blockset_ptr, string skybox_texture_URL)
 {
-	static string postfixes[6] = {"left", "right", "up", "down", "front", "back"};
 	char *ext_ptr;
 	string skybox_texture_path;
 
@@ -3479,12 +3480,23 @@ skybox_def::skybox_def(blockset *blockset_ptr, string skybox_texture_URL)
 	// file extension, then load that texture.
 
 	for (int i = 0; i < 6; i++) {
-		string skybox_face_URL = skybox_texture_path + "_" + postfixes[i];
+		string skybox_face_URL = skybox_texture_path + "_" + skybox_sides[i];
 		if (ext_ptr != NULL) {
 			skybox_face_URL += ext_ptr;
 		}
 		skybox_texture_list[i] = load_texture(blockset_ptr, skybox_face_URL, true);
 	}
+}
+
+skybox_def::skybox_def(blockset *blockset_ptr, string skybox_left_texture_URL, string skybox_right_texture_URL,
+	string skybox_up_texture_URL, string skybox_down_texture_URL, string skybox_front_texture_URL, string skybox_back_texture_URL)
+{
+	skybox_texture_list[0] = load_texture(blockset_ptr, skybox_left_texture_URL, true);
+	skybox_texture_list[1] = load_texture(blockset_ptr, skybox_right_texture_URL, true);
+	skybox_texture_list[2] = load_texture(blockset_ptr, skybox_up_texture_URL, true);
+	skybox_texture_list[3] = load_texture(blockset_ptr, skybox_down_texture_URL, true);
+	skybox_texture_list[4] = load_texture(blockset_ptr, skybox_front_texture_URL, true);
+	skybox_texture_list[5] = load_texture(blockset_ptr, skybox_back_texture_URL, true);
 }
 
 skybox_def::~skybox_def()
@@ -3514,10 +3526,8 @@ blockset::blockset()
 	sky_texture_ptr = NULL;
 	sky_colour_set = false;
 	sky_colour.set_RGB(0,0,0);
-	sky_brightness_set = false;
 	sky_brightness = 1.0f;
 	skybox_defined = false;
-	skybox_brightness_set = false;
 	skybox_brightness = 1.0f;
 	skybox_def_ptr = NULL;
 	ground_defined = false;

@@ -860,13 +860,31 @@ static attr_def sky_attr_list[SKY_ATTRIBUTES] = {
 
 // SKYBOX tag (style and spot files)
 
-#define SKYBOX_ATTRIBUTES	2
+#define SKYBOX_ATTRIBUTES	8
 #define SKYBOX_TEXTURE		0
-#define SKYBOX_BRIGHTNESS	1
+#define SKYBOX_LEFT			1
+#define SKYBOX_RIGHT		2
+#define SKYBOX_UP			3
+#define SKYBOX_DOWN			4
+#define SKYBOX_FRONT		5
+#define SKYBOX_BACK			6
+#define SKYBOX_BRIGHTNESS	7
 static string skybox_texture;
+static string skybox_left;
+static string skybox_right;
+static string skybox_up;
+static string skybox_down;
+static string skybox_front;
+static string skybox_back;
 static float skybox_intensity;
 static attr_def skybox_attr_list[SKYBOX_ATTRIBUTES] = {
-	{TOKEN_TEXTURE, VALUE_STRING, &skybox_texture, true},
+	{TOKEN_TEXTURE, VALUE_STRING, &skybox_texture, false},
+	{TOKEN_LEFT, VALUE_STRING, &skybox_left, false},
+	{TOKEN_RIGHT, VALUE_STRING, &skybox_right, false},
+	{TOKEN_UP, VALUE_STRING, &skybox_up, false},
+	{TOKEN_DOWN, VALUE_STRING, &skybox_down, false},
+	{TOKEN_FRONT, VALUE_STRING, &skybox_front, false},
+	{TOKEN_BACK, VALUE_STRING, &skybox_back, false},
 	{TOKEN_BRIGHTNESS, VALUE_PERCENTAGE, &skybox_intensity, false}
 };
 

@@ -1924,7 +1924,6 @@ parse_sky_tag(blockset *blockset_ptr)
 		blockset_ptr->sky_colour = sky_color;
 	}
 	if (parsed_attribute[SKY_BRIGHTNESS]) {
-		blockset_ptr->sky_brightness_set = true;
 		blockset_ptr->sky_brightness = sky_intensity;
 	}
 }
@@ -1942,12 +1941,24 @@ parse_skybox_tag(blockset *blockset_ptr)
 		return;
 	blockset_ptr->skybox_defined = true;
 
-	// Initialise the skybox parameters that were given.
+	// Initialise the skybox parameters that were given.  Either a TEXTURE parameter
+	// or LEFT, RIGHT, UP, DOWN, FRONT and BACK parameters must be given.
 
-	blockset_ptr->skybox_texture_URL = skybox_texture;
-	blockset_ptr->skybox_def_ptr = new skybox_def(blockset_ptr, skybox_texture);
+	if (parsed_attribute[SKYBOX_TEXTURE]) {
+		blockset_ptr->skybox_def_ptr = new skybox_def(blockset_ptr, skybox_texture);
+	} else {
+		bool got_all_attributes = true;
+		for (int i = 0; i < 6; i++) {
+			if (!parsed_attribute[SKYBOX_LEFT + i]) {
+				got_all_attributes = false;
+				warning("Missing <I>%s</I> attribute in <I>skybox</I> tag", skybox_sides[i]);
+			}
+		}
+		if (got_all_attributes) {
+			blockset_ptr->skybox_def_ptr = new skybox_def(blockset_ptr, skybox_left, skybox_right, skybox_up, skybox_down, skybox_front, skybox_back);
+		}
+	}
 	if (parsed_attribute[SKYBOX_BRIGHTNESS]) {
-		blockset_ptr->skybox_brightness_set = true;
 		blockset_ptr->skybox_brightness = skybox_intensity;
 	}
 }
