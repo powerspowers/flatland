@@ -261,8 +261,8 @@ enum audiostyle { PASS_AUDIO, OCCLUDE_AUDIO };
 
 // Number of image sizes, and maximum texture size supported.
 
-#define IMAGE_SIZES				10
-#define MAX_TEXTURE_SIZE		1024
+#define IMAGE_SIZES				11
+#define MAX_TEXTURE_SIZE		2048
 
 // Rate changes.
 

@@ -89,12 +89,13 @@ static float half_texel_v;
 // Texture coordinate scaling list.
 
 static float uv_scale_list[IMAGE_SIZES] = {
-	1.0f, 1.0f, 1.0f, 2.0f, 4.0f, 8.0f, 16.0f, 32.0f, 64.0f, 128.0f
+	1.0f, 1.0f, 1.0f, 1.0f, 2.0f, 4.0f, 8.0f, 16.0f, 32.0f, 64.0f, 128.0f
 };
 
 // One over texture dimensions list.
 
 static float one_on_dimensions_list[IMAGE_SIZES] = {
+	1.0f / 2048.0f,
 	1.0f / 1024.0f, 
 	1.0f / 512.0f, 
 	1.0f / 256.0f, 

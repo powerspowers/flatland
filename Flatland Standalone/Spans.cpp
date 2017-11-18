@@ -22,7 +22,7 @@ static cache *image_cache_list[IMAGE_SIZES];
 // Dimensions of each image size.
 
 int image_dimensions_list[IMAGE_SIZES] = { 
-	1024, 512, 256, 128, 64, 32, 16, 8, 4, 2
+	2048, 1024, 512, 256, 128, 64, 32, 16, 8, 4, 2
 };
 
 #ifdef STREAMING_MEDIA
