@@ -3191,6 +3191,10 @@ render_frame(void)
 			if (skybox_available) {
 				hardware_set_skybox_transform(player_viewpoint.turn_angle_radians, player_viewpoint.look_angle_radians);
 				hardware_render_skybox();
+			} else if (skybox_def_ptr != NULL && !skybox_loaded) {
+				hardware_render_2D_polygon(NULL, RGBcolour(), 0.0f,
+					0.0f, 0.0f, frame_buffer_width, frame_buffer_height, 
+					sky_start_u, sky_start_v, sky_end_u, sky_end_v);
 			} else {
 				hardware_render_2D_polygon(sky_pixmap_ptr, sky_colour, sky_brightness,
 					0.0f, 0.0f, frame_buffer_width, frame_buffer_height, 
