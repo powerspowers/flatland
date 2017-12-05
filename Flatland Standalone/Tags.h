@@ -1289,6 +1289,7 @@ static tag_def style_tag_list[] = {
 	{TOKEN_ORB, orb_attr_list, ORB_ATTRIBUTES, false},
 	{TOKEN_PLACEHOLDER, placeholder_attr_list, PLACEHOLDER_ATTRIBUTES, false},
 	{TOKEN_SKY, sky_attr_list, SKY_ATTRIBUTES, false},
+	{TOKEN_SKYBOX, skybox_attr_list, SKYBOX_ATTRIBUTES, false},
 	{TOKEN_NONE}
 };
 
