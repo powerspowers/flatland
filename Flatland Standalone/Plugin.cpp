@@ -1416,9 +1416,7 @@ run_app(void *instance_handle, int show_command, char *spot_file_path)
 	if (strlen(spot_file_path) > 0) {
 		_fullpath(full_file_path, spot_file_path, _MAX_PATH);
 	} else {
-		strcpy(full_file_path, flatland_dir);
-		strcat(full_file_path, "splash.3dml");
-		//strcpy(full_file_path, "http://spots.flatland.com/splash.3dml");
+		strcpy(full_file_path, "http://spots.flatland.com/flatland");
 	}
 	curr_download_completed = true;
 	spot_URL_to_load = full_file_path;
