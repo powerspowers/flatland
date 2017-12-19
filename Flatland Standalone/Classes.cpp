@@ -1536,6 +1536,17 @@ pixmap::~pixmap()
 	}
 }
 
+void 
+pixmap::clear_cache_entries()
+{
+	for (int index = 0; index < BRIGHTNESS_LEVELS; index++) {
+		cache_entry *cache_entry_ptr = cache_entry_list[index];
+		if (cache_entry_ptr != NULL)
+			cache_entry_ptr->pixmap_ptr = NULL;
+		cache_entry_list[index] = NULL;
+	}
+}
+
 //------------------------------------------------------------------------------
 // Texture class.
 //------------------------------------------------------------------------------

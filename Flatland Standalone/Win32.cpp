@@ -8779,9 +8779,13 @@ show_label(const char *label)
 	// If the label is visible, draw the label text into the label texture,
 	// and remember the width of the text.
 
-	if (label_visible)
-		label_width = draw_text_on_pixmap(label_texture_ptr, label_text, 
-			LEFT, false);
+	if (label_visible) {
+		if (hardware_acceleration) {
+			pixmap *pixmap_ptr = label_texture_ptr->pixmap_list;
+			pixmap_ptr->clear_cache_entries();
+		}
+		label_width = draw_text_on_pixmap(label_texture_ptr, label_text, LEFT, false);
+	}
 }
 
 //------------------------------------------------------------------------------
