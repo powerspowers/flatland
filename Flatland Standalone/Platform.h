@@ -6,7 +6,7 @@
 
 // Version string.
 
-#define ROVER_VERSION_NUMBER	0x04000001	// 4.0b1
+#define ROVER_VERSION_NUMBER	0x040000ff	// 4.0
 
 // Option window control IDs.
 
