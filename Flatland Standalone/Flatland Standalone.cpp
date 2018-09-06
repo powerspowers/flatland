@@ -1,5 +1,7 @@
-// Flatland Standalone.cpp : Defines the entry point for the application.
-//
+//******************************************************************************
+// Copyright (C) 2018 Flatland Online Inc., Philip Stephens, Michael Powers.
+// This code is licensed under the MIT license (see LICENCE file for details).
+//******************************************************************************
 
 #include "stdafx.h"
 #include <Shellapi.h>

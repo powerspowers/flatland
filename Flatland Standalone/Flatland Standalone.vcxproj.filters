@@ -58,6 +58,9 @@
   </ItemGroup>
   <ItemGroup>
     <Text Include="ReadMe.txt" />
+    <Text Include="Simkin\LGPL.txt">
+      <Filter>Source Files\Simkin</Filter>
+    </Text>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="stdafx.h">
@@ -908,5 +911,12 @@
     <None Include="Simkin\skKeywords.inl">
       <Filter>Header Files\Simkin</Filter>
     </None>
+    <None Include="Expat\COPYING">
+      <Filter>Source Files\Expat</Filter>
+    </None>
+    <None Include="Jpeg\README">
+      <Filter>Source Files\Jpeg</Filter>
+    </None>
+    <None Include="..\LICENSE" />
   </ItemGroup>
 </Project>

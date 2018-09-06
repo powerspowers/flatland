@@ -149,6 +149,7 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <Text Include="ReadMe.txt" />
+    <Text Include="Simkin\LGPL.txt" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Classes.h" />
@@ -429,6 +430,7 @@
     <Image Include="small.ico" />
   </ItemGroup>
   <ItemGroup>
+    <None Include="..\LICENSE" />
     <None Include="bitmaps\arrow_e.cur" />
     <None Include="bitmaps\arrow_n.cur" />
     <None Include="bitmaps\arrow_ne.cur" />
@@ -438,6 +440,8 @@
     <None Include="bitmaps\arrow_sw.cur" />
     <None Include="bitmaps\arrow_w.cur" />
     <None Include="bitmaps\hand.cur" />
+    <None Include="Expat\COPYING" />
+    <None Include="Jpeg\README" />
     <None Include="Simkin\skAlist.inl" />
     <None Include="Simkin\skHashTable.inl" />
     <None Include="Simkin\skKeywords.inl" />

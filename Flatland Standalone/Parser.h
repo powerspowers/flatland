@@ -1,7 +1,6 @@
 //******************************************************************************
-// $Header$
-// Copyright (C) 1998-2002 Flatland Online Inc.
-// All Rights Reserved. 
+// Copyright (C) 2018 Flatland Online Inc., Philip Stephens, Michael Powers.
+// This code is licensed under the MIT license (see LICENCE file for details).
 //******************************************************************************
 
 #include "tokens.h"
