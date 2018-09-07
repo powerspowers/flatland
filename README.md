@@ -7,7 +7,7 @@ To run the latest Flatland app for Windows 10 / DirectX 11 just download the zip
 
 ## Compiling
 
-If you want to compiled the source ...
+If you want to compiled the source the project file for Visual Studio 2017 is included.
 
 ## Want to help?
 
