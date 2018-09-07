@@ -16,8 +16,8 @@ Wishlist
 ## Authors
 
 * **Philip Stephens** - *Initial work* 
-* **Michael Powers ** - *Original design - version 3.5 additions*
-* **TC Chang ** - *Block models and textures*
+* **Michael Powers** - *Original design and version 3.5 additions*
+* **TC Chang** - *Block models and textures*
 
 See also the list of [contributors](https://github.com/your/project/contributors) who participated in this project.
 
