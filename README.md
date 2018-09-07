@@ -5,7 +5,7 @@
 
 To run the latest Flatland app for Windows 10 / DirectX 11 just download the zip file with the executable from [Flatland](http://www.flatland.com)
 
-### Compiling
+## Compiling
 
 If you want to compiled the source ...
 
