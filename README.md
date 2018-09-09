@@ -9,9 +9,13 @@ To run the latest Flatland app for Windows 10 / DirectX 11 just download the zip
 
 If you want to compiled the source the project file for Visual Studio 2017 is included.
 
-## Want to help?
+## Want to help? Here are some ideas for extending the feature set
 
-Wishlist
+* Native VR support
+* Ports to other platforms via Emscripten (we are working on readying the engine for conversion)
+* Cloud support for spot storage and delivery
+* More natural first person player movement
+* 3rd person player character support
 
 ## Authors
 
